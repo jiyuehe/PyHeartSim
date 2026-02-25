@@ -1,4 +1,3 @@
-# PyHeartSim
 # Introduction
 - This is an electrophysiological heart simulator written in Python.  
 - It can simulate patient-specific focal and rotor arrhythmias. And simulate fibrillations.  
