@@ -7,7 +7,8 @@ pio.renderers.default = "browser" # simulation result mesh display in internet b
 def execute(directory, geometry_name, result_folder):
     # load geometry data
     file_path = directory['data'] / geometry_name
-    geometry_data = np.load(file_path, allow_pickle=True).item()
+    data = np.load(file_path, allow_pickle=True)
+    geometry_data = {k: data[k] for k in data.files}
 
     n_node = geometry_data['voxel'].shape[0]
 

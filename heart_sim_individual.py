@@ -107,7 +107,7 @@ if __name__ == "__main__":
     directory['data'] = script_dir.parent / '0_data'
     directory['result'] = directory['home'] / 'result'
     
-    geometry_name = '6-1-1-1-DP W CS 3 4 270CL_CS 13 14 300_processed.npy'
+    geometry_name = '6-1-1-1-LA PACING CL 300 FROM CS 13 14_processed.npz'
     input_arguments = heart_sim_setting.execute(directory, geometry_name, directory['result'])
 
     # ==============================
