@@ -114,7 +114,7 @@ if __name__ == "__main__":
     # find the pacing locations
     activation_uni = input_arguments['geometry_data']['activation_uni']
     activation_uni = activation_uni.astype(float)
-    activation_uni[activation_uni==-1] = np.nan
+    activation_uni[activation_uni==0] = np.nan
     electrode_node_id = input_arguments['geometry_data']['electrode_node_id']
     node = input_arguments['geometry_data']['voxel']
     electrode_nodes = node[electrode_node_id, :]
