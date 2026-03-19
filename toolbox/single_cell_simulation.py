@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #%%
-heart_model_flag = 2 # 1: Mitchell–Schaeffer. 2: Aliev-Panfilov
+heart_model_flag = 1 # 1: Mitchell–Schaeffer. 2: Aliev-Panfilov
 
 # simulation parameters
 dt = 0.05 # ms
@@ -132,5 +132,7 @@ axes[2].set_xlabel("Time (ms)")
 axes[2].grid(True)
 
 plt.tight_layout()
-plt.savefig(script_dir.parent / 'result/single_cell_simulation.png', dpi=300)
-plt.show()
+plt.savefig(script_dir.parent / f'result/single_cell_simulation_{heart_model_flag}.png', dpi=300)
+plt.close()
+
+print('done')
