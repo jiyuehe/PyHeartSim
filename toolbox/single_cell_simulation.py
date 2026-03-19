@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #%%
-heart_model_flag = 1 # 1: Mitchell–Schaeffer. 2: Aliev-Panfilov
+heart_model_flag = 1 # 1: Mitchell-Schaeffer. 2: Aliev-Panfilov
 
 # simulation parameters
 dt = 0.05 # ms
@@ -22,7 +22,9 @@ pacing_duration = 5 # ms
 J_stim_value = 1 # pacing strength
 
 # heart model parameters
-if heart_model_flag == 1: # Mitchell–Schaeffer
+if heart_model_flag == 1: # Mitchell-Schaeffer
+    model_name = "Mitchell-Schaeffer"
+
     tau_in = 0.08 # 0.3. 
     tau_out = 6 # 6. 
     tau_open = 80 # 120. 
@@ -35,6 +37,8 @@ if heart_model_flag == 1: # Mitchell–Schaeffer
 
     time_scale = 1 # 1 model time unit = 1 ms
 elif heart_model_flag == 2: # Aliev-Panfilov
+    model_name = "Aliev-Panfilov"
+
     k = 12.0
     a = 0.15
     epsilon_0 = 0.002
@@ -109,16 +113,14 @@ for n in range(nsteps):
     gate_variable.append(h)
 
 #%%
+# plot the simulation
 fig, axes = plt.subplots(3, 1, figsize=(8,8), sharex=True)
 
 # action potential
 axes[0].plot(time, action_potential, 'b')
 axes[0].grid(True)
 axes[0].set_ylabel("u (action potential)")
-if heart_model_flag == 1: # Mitchell–Schaeffer
-    axes[0].set_title("Mitchell–Schaeffer model, single cell simulation")
-elif heart_model_flag == 2: # Aliev-Panfilov
-    axes[0].set_title("Aliev-Panfilov model, single cell simulation")
+axes[0].set_title(f"{model_name} model, single cell simulation")
 
 # gate variable
 axes[1].plot(time, gate_variable, 'b')
@@ -132,7 +134,7 @@ axes[2].set_xlabel("Time (ms)")
 axes[2].grid(True)
 
 plt.tight_layout()
-plt.savefig(script_dir.parent / f'result/single_cell_simulation_{heart_model_flag}.png', dpi=300)
+plt.savefig(script_dir.parent / f'result/single_cell_simulation_{model_name.replace("-", "_")}.png', dpi=300)
 plt.close()
 
 print('done')
