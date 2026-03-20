@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #%%
-heart_model_flag = 1 # 1: Mitchell-Schaeffer. 2: Aliev-Panfilov
+heart_model_flag = 2 # 1: Mitchell-Schaeffer. 2: Aliev-Panfilov
 
 # simulation parameters
 dt = 0.05 # ms
@@ -130,7 +130,7 @@ axes[1].grid(True)
 # pacing signal
 axes[2].plot(time, pacing_signal, 'b')
 axes[2].set_ylabel("Pacing signal")
-axes[2].set_xlabel("Time (ms)")
+axes[2].set_xlabel(f"Time (ms), # steps: {time.shape[0]}")
 axes[2].grid(True)
 
 plt.tight_layout()
