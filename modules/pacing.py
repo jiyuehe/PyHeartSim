@@ -63,7 +63,7 @@ def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, 
     
     if arrhythmia_flag == 6:
         f1_time = 0/simulation_parameters['time_scale'] # focal 1 pacing time
-        f2_time = 15/simulation_parameters['time_scale'] # focal 2 pacing time
+        f2_time = 50/simulation_parameters['time_scale'] # focal 2 pacing time
         if model_time >= f1_time and model_time <= f1_time + pacing_duration:
             J_stim[s1_pacing_voxel_id] = J_stim_magnitude
         if model_time >= f2_time and model_time <= f2_time + pacing_duration:

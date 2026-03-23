@@ -47,7 +47,7 @@ def execute(directory, geometry_name, result_folder):
         # 3: for debugging, manually assign s1 and s2 region 
         # 4: 2 focal 2 locations both at 0ms
         # 5: 2 focal 2 locations 300ms apart
-        # 6: 2 focal 2 locations 15ms apart
+        # 6: 2 focal 2 locations 50ms apart
         'compute_electrogram_flag': 1, 
         # 1: compute electrogram 
         # 0: do not compute electrogram
