@@ -1,7 +1,19 @@
 import numpy as np # pip install numpy
-import common
 import modules
 import toolbox
+
+import os
+from pathlib import Path
+script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
+os.chdir(script_dir) # change the working directory
+script_dir = Path(script_dir)
+
+# add the workspace root to Python path
+import sys
+workspace_root = Path().resolve().parent # Path().resolve() returns an absolute path, the full path
+if str(workspace_root) not in sys.path:
+    sys.path.insert(0, str(workspace_root))
+import common
 
 def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
     # load simulation results
@@ -29,4 +41,4 @@ def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
     else:
         np.save(result_folder / f'lat_{focal_1}_{focal_2}.npy', lat)
 
-    common.corp_image.execute(fig_name)
+    common.crop_image.execute(fig_name)
