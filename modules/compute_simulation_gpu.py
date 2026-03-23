@@ -251,7 +251,7 @@ def execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     Delta = geometry_data['Delta']
     
     # simulation parameters
-    t_final = int(simulation_parameters['t_final'])
+    t_final = float(simulation_parameters['t_final'])
     dt = simulation_parameters['dt']
     arrhythmia_flag = simulation_parameters['arrhythmia_flag']
     
@@ -268,9 +268,9 @@ def execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     
     # calculate the number of samples needed for 1 kHz sampling
     if simulation_parameters['heart_model_flag'] == 0:
-        n_samples = t_final
+        n_samples = int(np.round(t_final))
     elif simulation_parameters['heart_model_flag'] == 1:
-        n_samples = int(t_final * simulation_parameters['time_scale'])
+        n_samples = int(np.round(t_final * simulation_parameters['time_scale']))
     
     sim_u_voxel = np.zeros((n_samples, n_voxel), dtype=np.float32)
     sim_h_voxel = np.zeros((n_samples, n_voxel), dtype=np.float32)
@@ -318,7 +318,7 @@ def execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     cuda_J_stim = cuda.as_cuda_array(d_J_stim)
     
     id_save = 0
-    total_model_time_steps = int(t_final/dt)
+    total_model_time_steps = int(np.round(t_final / dt))
     number_of_steps_per_ms = int(1 / (dt * simulation_parameters['time_scale']))
     
     for model_time_step in range(total_model_time_steps):
@@ -367,10 +367,4 @@ def execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
                 physical_time[id_save] = model_time * simulation_parameters['time_scale']
                 id_save = id_save + 1
 
-    # if dt > 1, it might not have filled the array, delete the zeros at the end
-    while sim_u_voxel[-1, 0] == 0:
-        sim_u_voxel = sim_u_voxel[:-1, :]
-        sim_h_voxel = sim_h_voxel[:-1, :]
-        physical_time = physical_time[:-1]
-
-    return sim_u_voxel, sim_h_voxel, physical_time
+    return sim_u_voxel[:id_save, :], sim_h_voxel[:id_save, :], physical_time[:id_save]

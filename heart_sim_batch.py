@@ -28,14 +28,14 @@ directory['home'] = script_dir
 directory['data'] = script_dir.parent / '0_data'
 directory['result'] = Path('/home/j/Desktop/hdd/atrium 2, 2 focal 2 location 15ms apart')
 
-geometry_name = '6-1-1-1-DP W CS 3 4 270CL_CS 13 14 300_processed.npy'
+geometry_name = '103_1-lagood_geometry.npz'
 input_arguments = heart_sim_setting.execute(directory, geometry_name, directory['result'])
 
 # save s1 and s2 to text file
 n_simulations = 2000
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
-s2 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
+s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 
 #%%
 plot_lat_map_flag = 1
