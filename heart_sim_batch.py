@@ -52,23 +52,23 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
         heart_sim_individual.execute(input_arguments)
     lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
-    # # focal 2
-    # focal_1 = s2[loop_id]
-    # focal_2 = []
-    # if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npy'):
-    #     input_arguments['s1'] = focal_1
-    #     input_arguments['s2'] = focal_2
-    #     heart_sim_individual.execute(input_arguments)
-    # lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+    # focal 2
+    focal_1 = s2[loop_id]
+    focal_2 = []
+    if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npy'):
+        input_arguments['s1'] = focal_1
+        input_arguments['s2'] = focal_2
+        heart_sim_individual.execute(input_arguments)
+    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
-    # # dual focals
-    # focal_1 = s1[loop_id]
-    # focal_2 = s2[loop_id]
-    # if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npy'):
-    #     input_arguments['s1'] = focal_1
-    #     input_arguments['s2'] = focal_2
-    #     heart_sim_individual.execute(input_arguments)
-    # lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+    # dual focals
+    focal_1 = s1[loop_id]
+    focal_2 = s2[loop_id]
+    if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npy'):
+        input_arguments['s1'] = focal_1
+        input_arguments['s2'] = focal_2
+        heart_sim_individual.execute(input_arguments)
+    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
 #%%
 # ensures the kernel dies. 
