@@ -46,7 +46,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     # focal 1
     focal_1 = s1[loop_id]
     focal_2 = []
-    if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npy'):
+    if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
         heart_sim_individual.execute(input_arguments)
@@ -55,7 +55,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     # focal 2
     focal_1 = s2[loop_id]
     focal_2 = []
-    if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npy'):
+    if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
         heart_sim_individual.execute(input_arguments)
@@ -64,7 +64,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     # dual focals
     focal_1 = s1[loop_id]
     focal_2 = s2[loop_id]
-    if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npy'):
+    if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
         heart_sim_individual.execute(input_arguments)

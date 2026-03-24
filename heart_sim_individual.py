@@ -91,11 +91,11 @@ def execute(input_arguments):
 
         # save simulation results
         if str(s1) != '[]' and str(s2) == '[]':
-            np.save(result_folder / f'simulation_results_{str(s1)}', simulation_results)
+            np.savez(result_folder / f'simulation_results_{str(s1)}', **simulation_results)
         elif str(s1) == '[]' and str(s2) == '[]':
-            np.save(result_folder / 'simulation_results', simulation_results)
+            np.savez(result_folder / 'simulation_results', **simulation_results)
         elif str(s1) != '[]' and str(s2) != '[]':
-            np.save(result_folder / f'simulation_results_{str(s1)}_{str(s2)}', simulation_results)
+            np.savez(result_folder / f'simulation_results_{str(s1)}_{str(s2)}', **simulation_results)
 
 #%%
 # NOTE: 
@@ -219,10 +219,9 @@ if __name__ == "__main__":
 
         # load simulation results
         if str(s2) == '[]':
-            sim_data = np.load(directory['result'] / f'simulation_results_{str(s1)}.npy', allow_pickle=True)
+            sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}.npz', allow_pickle=False))
         else:
-            sim_data = np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npy', allow_pickle=True)
-        sim_data = sim_data.item()
+            sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
 
         action_potential = sim_data['action_potential']
         physical_time = sim_data['physical_time']
@@ -260,11 +259,10 @@ if __name__ == "__main__":
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
         ending_time = [] # ms. []: till the end. or specify a value
-        sim_file_name = f'simulation_results_{str(s1)}_{str(s2)}.npy'
+        sim_file_name = f'simulation_results_{str(s1)}_{str(s2)}.npz'
         simulation_results_file_name = directory['result'] / sim_file_name
-        movie_save_dir = directory['result'] / sim_file_name.replace('.npy', '.gif') 
-        simulation_results = np.load(directory['result'] / simulation_results_file_name, allow_pickle=True) # load simulation results
-        simulation_results = simulation_results.item()
+        movie_save_dir = directory['result'] / sim_file_name.replace('.npz', '.gif')
+        simulation_results = dict(np.load(directory['result'] / simulation_results_file_name, allow_pickle=False)) # load simulation results
         in_arg = {}
         in_arg['save_movie_flag'] = save_movie_flag
         in_arg['starting_time'] = starting_time

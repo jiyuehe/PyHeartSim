@@ -42,7 +42,7 @@ def execute(node, signal, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
             common.set_axes_equal.execute(ax)
             plt.tight_layout()
 
-        plt.savefig(fig_name, dpi=300, bbox_inches="tight", pad_inches=0)
+        plt.savefig(fig_name, dpi=100, bbox_inches="tight", pad_inches=0)
         plt.close()
 
     return lat
