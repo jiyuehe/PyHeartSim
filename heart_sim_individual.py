@@ -254,7 +254,7 @@ if __name__ == "__main__":
         plt.close()
 
     # display simulation movie
-    do_flag = 1
+    do_flag = 0
     if do_flag == 1:
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms

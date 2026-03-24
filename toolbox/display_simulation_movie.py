@@ -72,6 +72,7 @@ def execute(input_arguments):
         ax = plt.axes(projection='3d')
         plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0)
         plt.axis('off')
+        ax.view_init(elev=70, azim=-70)
         common.set_axes_equal.execute(ax)
     elif geometry_flag == 0: # 2D sheet
         nx = int(np.max(node[:,0]) - np.min(node[:,0])) + 1

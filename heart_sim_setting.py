@@ -52,7 +52,7 @@ def execute(directory, geometry_name, result_folder):
         # 1: compute electrogram 
         # 0: do not compute electrogram
         'electrode_id': e_id, # electrode locations for computing electrograms
-        't_final': 1000, # ms
+        't_final': 300, # ms
         'dt': 0.5, # ms. if dt is too large, simulation will become numerically unstable
     }
 

@@ -39,6 +39,7 @@ def execute(node, signal, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
             ax = plt.axes(projection='3d')
             ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=color, edgecolor='none', linewidth=0, s=6)
             plt.axis('off')
+            ax.view_init(elev=70, azim=-70)
             common.set_axes_equal.execute(ax)
             plt.tight_layout()
 

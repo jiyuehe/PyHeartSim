@@ -25,10 +25,11 @@ def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
     electrogram_unipolar = simulation_results['electrogram_unipolar']
 
     # compute and plot local activation time map
+    (result_folder / 'lat_map').mkdir(parents=True, exist_ok=True)
     if str(focal_2) == '[]':
-        fig_name = result_folder / 'lat map' / f'lat_{str(focal_1)}.png'
+        fig_name = result_folder / 'lat_map' / f'lat_{str(focal_1)}.png'
     else:
-        fig_name = result_folder / 'lat map' / f'lat_{str(focal_1)}_{str(focal_2)}.png'
+        fig_name = result_folder / 'lat_map' / f'lat_{str(focal_1)}_{str(focal_2)}.png'
 
     data_flag = 1 # 0: action potential, 1: electrogram
     geometry_flag = 2 # 2: 3D atrium
