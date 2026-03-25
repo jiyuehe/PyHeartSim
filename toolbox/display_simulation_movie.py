@@ -83,12 +83,12 @@ def execute(input_arguments):
             plt.axis('off')
             ax.view_init(elev=70, azim=-70)
             common.set_axes_equal.execute(ax)
-        elif plot_type == 'trisurf':
+        elif plot_type == 'trisurf': # this is slow
             triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
             ax = plt.axes(projection='3d')
             face_color = map_color[0][face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
-            surf = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0.1, antialiased=False, shade=False)
-            surf.set_facecolor(face_color)
+            plot_handle = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
+            plot_handle.set_facecolor(face_color)
             plt.axis('off')
             ax.view_init(elev=70, azim=-70)
             common.set_axes_equal.execute(ax)
@@ -114,7 +114,11 @@ def execute(input_arguments):
             color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
             plot_handle.set_data(color_image)
         elif geometry_flag != 0: # 3D
-            plot_handle.set_color(map_color[n])
+            if plot_type == 'scatter':
+                plot_handle.set_color(map_color[n])
+            elif plot_type == 'trisurf':
+                face_color = map_color[n][face].mean(axis=1)
+                plot_handle.set_facecolor(face_color)
         
         ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
@@ -135,7 +139,11 @@ def execute(input_arguments):
                 color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
                 plot_handle.set_data(color_image)
             elif geometry_flag != 0: # 3D
-                plot_handle.set_color(map_color[n])
+                if plot_type == 'scatter':
+                    plot_handle.set_color(map_color[n])
+                elif plot_type == 'trisurf':
+                    face_color = map_color[n][face].mean(axis=1)
+                    plot_handle.set_facecolor(face_color)
 
             ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
