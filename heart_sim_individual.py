@@ -198,7 +198,6 @@ if __name__ == "__main__":
 
     # s1 = nearest_node_ids[0] # node id for s1 pacing
     # s2 = nearest_node_ids[1] # node id for s2 pacing
-    node = input_arguments['geometry_data']['voxel']
     s1 = 1000
     s2 = 1000
     input_arguments['s1'] = s1
@@ -210,6 +209,8 @@ if __name__ == "__main__":
     focal_1 = s1
     focal_2 = s2
     plot_lat_map_flag = 1
+    voxel_for_each_vertex_3mm = input_arguments['geometry_data']['voxel_for_each_vertex_3mm']
+    node = input_arguments['geometry_data']['voxel'][voxel_for_each_vertex_3mm, :]
     lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # plot some action potentials and electrograms
@@ -254,7 +255,7 @@ if __name__ == "__main__":
         plt.close()
 
     # display simulation movie
-    do_flag = 0
+    do_flag = 1
     if do_flag == 1:
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms

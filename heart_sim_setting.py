@@ -7,16 +7,16 @@ pio.renderers.default = "browser" # simulation result mesh display in internet b
 def execute(directory, geometry_name, result_folder):
     # load geometry data
     file_path = directory['data'] / geometry_name
-    data = np.load(file_path, allow_pickle=True)
+    data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
-    n_node = geometry_data['voxel'].shape[0]
-
-    e_id = np.arange(n_node) # use all nodes as electrode locations
+    e_id = geometry_data['voxel_for_each_vertex_3mm'] # use the 3mm resolution vertices as electrode locations
 
     debug_plot = 0
     if debug_plot == 1: # show geometry voxel
         voxel = geometry_data['voxel']
+        n_node = voxel.shape[0]
+
         # Create color array: red for all nodes, blue for electrode nodes
         colors = np.array(['black'] * n_node)
         colors[e_id] = 'blue'

@@ -127,7 +127,6 @@ def heart_model_parameters(simulation_parameters, n_voxel):
             epsilon_0 = 0.002
             mu1 = 0.2
             mu2 = 0.3
-
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
         heart_model_parameter = {
             'tau_in_voxel': np.ones(n_voxel) * tau_in, # determines the shape of action potential

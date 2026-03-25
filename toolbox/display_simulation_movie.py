@@ -27,12 +27,14 @@ def execute(input_arguments):
     # load data
     geometry_data = input_arguments['geometry_data']
 
-    voxel_for_each_vertex = geometry_data['voxel_for_each_vertex']
-
     if geometry_flag == 2:
+        voxel_for_each_vertex = geometry_data['voxel_for_each_vertex']
+
         node = geometry_data['voxel'][voxel_for_each_vertex,:]
     elif geometry_flag in [0, 1, 3, 4]:
-        node = geometry_data['voxel']
+        voxel_for_each_vertex_3mm = geometry_data['voxel_for_each_vertex_3mm']
+
+        node = geometry_data['voxel'][voxel_for_each_vertex_3mm,:]
 
     # simulation data
     action_potential = simulation_results['action_potential']
@@ -50,7 +52,7 @@ def execute(input_arguments):
     if geometry_flag == 2:
         movie_data = action_potential[:, voxel_for_each_vertex] # display on vertices
     elif geometry_flag in [0, 1, 3, 4]:
-        movie_data = action_potential
+        movie_data = action_potential[:, voxel_for_each_vertex_3mm] # display on 3mm vertices
 
     v_gate = 0.13
 
@@ -70,7 +72,7 @@ def execute(input_arguments):
     
     if geometry_flag != 0: # 3D
         ax = plt.axes(projection='3d')
-        plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0)
+        plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
         plt.axis('off')
         ax.view_init(elev=70, azim=-70)
         common.set_axes_equal.execute(ax)
