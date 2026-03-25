@@ -15,6 +15,8 @@ from matplotlib.animation import PillowWriter
 import matplotlib.pyplot as plt # pip install matplotlib
 import matplotlib.animation as animation
 
+from matplotlib.tri import Triangulation
+
 #%%
 def execute(input_arguments):
     save_movie_flag = input_arguments['save_movie_flag']
@@ -36,6 +38,9 @@ def execute(input_arguments):
 
         node = geometry_data['voxel'][voxel_for_each_vertex_3mm,:]
 
+        vertex = geometry_data['vertex_3mm']
+        face = geometry_data['face_3mm']
+
     # simulation data
     action_potential = simulation_results['action_potential']
     t = simulation_results['physical_time']
@@ -52,7 +57,7 @@ def execute(input_arguments):
     if geometry_flag == 2:
         movie_data = action_potential[:, voxel_for_each_vertex] # display on vertices
     elif geometry_flag in [0, 1, 3, 4]:
-        movie_data = action_potential[:, voxel_for_each_vertex_3mm] # display on 3mm vertices
+        movie_data = action_potential # display on 3mm vertices
 
     v_gate = 0.13
 
@@ -71,11 +76,22 @@ def execute(input_arguments):
     fig = plt.figure(figsize=(10, 8))
     
     if geometry_flag != 0: # 3D
-        ax = plt.axes(projection='3d')
-        plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
-        plt.axis('off')
-        ax.view_init(elev=70, azim=-70)
-        common.set_axes_equal.execute(ax)
+        plot_type = 'trisurf' # 'scatter' or 'trisurf'
+        if plot_type == 'scatter':
+            ax = plt.axes(projection='3d')
+            plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
+            plt.axis('off')
+            ax.view_init(elev=70, azim=-70)
+            common.set_axes_equal.execute(ax)
+        elif plot_type == 'trisurf':
+            triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
+            ax = plt.axes(projection='3d')
+            face_color = map_color[0][face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
+            surf = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0.1, antialiased=False, shade=False)
+            surf.set_facecolor(face_color)
+            plt.axis('off')
+            ax.view_init(elev=70, azim=-70)
+            common.set_axes_equal.execute(ax)
     elif geometry_flag == 0: # 2D sheet
         nx = int(np.max(node[:,0]) - np.min(node[:,0])) + 1
         ny = int(np.max(node[:,1]) - np.min(node[:,1])) + 1

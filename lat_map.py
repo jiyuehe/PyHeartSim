@@ -15,7 +15,7 @@ if str(workspace_root) not in sys.path:
     sys.path.insert(0, str(workspace_root))
 import common
 
-def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
+def execute(geometry, result_folder, focal_1, focal_2, plot_lat_map_flag):
     # load simulation results
     if str(focal_2) == '[]':
         simulation_results = dict(np.load(result_folder / f'simulation_results_{focal_1}.npz', allow_pickle=False))
@@ -33,7 +33,7 @@ def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
 
     data_flag = 1 # 0: action potential, 1: electrogram
     geometry_flag = 2 # 2: 3D atrium
-    lat = toolbox.lat_map_on_node.execute(node, electrogram_unipolar, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
+    lat = toolbox.lat_map_on_node.execute(geometry, electrogram_unipolar, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
 
     # save local activation time
     if str(focal_2) == '[]':

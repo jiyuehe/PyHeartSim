@@ -80,9 +80,11 @@ def execute(input_arguments):
 
     # save simulation results
     if save_result_flag == 1:
+        voxel_for_each_vertex_3mm = geometry_data['voxel_for_each_vertex_3mm']
+
         simulation_results = {}
-        # simulation_results['action_potential'] = action_potential
-        # simulation_results['h'] = h
+        simulation_results['action_potential'] = action_potential[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex)
+        simulation_results['h'] = h[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
@@ -209,9 +211,13 @@ if __name__ == "__main__":
     focal_1 = s1
     focal_2 = s2
     plot_lat_map_flag = 1
+    
+    geometry = {}
+    geometry['vertex'] = input_arguments['geometry_data']['vertex_3mm']
+    geometry['face'] = input_arguments['geometry_data']['face_3mm']
     voxel_for_each_vertex_3mm = input_arguments['geometry_data']['voxel_for_each_vertex_3mm']
-    node = input_arguments['geometry_data']['voxel'][voxel_for_each_vertex_3mm, :]
-    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+    geometry['node'] = input_arguments['geometry_data']['voxel'][voxel_for_each_vertex_3mm, :]
+    lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # plot some action potentials and electrograms
     do_flag = 1
