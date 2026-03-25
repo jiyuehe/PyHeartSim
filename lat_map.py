@@ -37,8 +37,8 @@ def execute(node, result_folder, focal_1, focal_2, plot_lat_map_flag):
 
     # save local activation time
     if str(focal_2) == '[]':
-        np.savez(result_folder / f'lat_{focal_1}.npz', lat)
+        np.savez(result_folder / f'lat_{focal_1}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
     else:
-        np.savez(result_folder / f'lat_{focal_1}_{focal_2}.npz', lat)
+        np.savez(result_folder / f'lat_{focal_1}_{focal_2}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
 
     common.crop_image.execute(fig_name)
