@@ -37,7 +37,7 @@ def execute(node, signal, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
         elif geometry_flag in [1, 2]: # 3D slab or patient atrium          
             plt.figure()
             ax = plt.axes(projection='3d')
-            ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=color, edgecolor='none', linewidth=0, s=50, marker='s')
+            ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=color, edgecolor='none', linewidth=0, s=60, marker='s')
             plt.axis('off')
             ax.view_init(elev=70, azim=-70)
             common.set_axes_equal.execute(ax)

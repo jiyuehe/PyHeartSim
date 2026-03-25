@@ -81,8 +81,8 @@ def execute(input_arguments):
     # save simulation results
     if save_result_flag == 1:
         simulation_results = {}
-        simulation_results['action_potential'] = action_potential
-        simulation_results['h'] = h
+        # simulation_results['action_potential'] = action_potential
+        # simulation_results['h'] = h
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:

@@ -26,20 +26,24 @@ import lat_map
 directory = {}
 directory['home'] = script_dir
 directory['data'] = script_dir.parent / '0_data'
-directory['result'] = Path('/home/j/Desktop/hdd/103_1-lagood')
+directory['result'] = Path('/home/j/Desktop/hdd/103_1-lagood_3mm')
 
 geometry_name = '103_1-lagood_geometry.npz'
 input_arguments = heart_sim_setting.execute(directory, geometry_name, directory['result'])
 
 # save s1 and s2 to text file
-n_simulations = 1000
+n_simulations = 3000
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 
 #%%
 plot_lat_map_flag = 1
-node = input_arguments['geometry_data']['voxel']
+
+voxel = input_arguments['geometry_data']['voxel']
+voxel_id_for_each_vertex_3mm = input_arguments['geometry_data']['voxel_for_each_vertex_3mm']
+node = voxel[voxel_id_for_each_vertex_3mm,:]
+
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
 
