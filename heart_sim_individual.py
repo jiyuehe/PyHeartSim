@@ -83,8 +83,8 @@ def execute(input_arguments):
         voxel_for_each_vertex_3mm = geometry_data['voxel_for_each_vertex_3mm']
 
         simulation_results = {}
-        simulation_results['action_potential'] = action_potential[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex)
-        simulation_results['h'] = h[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex)
+        simulation_results['action_potential'] = action_potential[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex_3mm)
+        simulation_results['h'] = h[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex_3mm)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
