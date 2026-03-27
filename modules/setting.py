@@ -1,5 +1,57 @@
 import numpy as np
 
+import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
+import plotly.io as pio
+pio.renderers.default = "browser" # simulation result mesh display in internet browser
+
+def simulation_parameters(geometry_data):
+    voxel_id_for_electrode = geometry_data['voxel_id_for_each_vertex_3mm'] # assign electrode locations
+
+    debug_plot = 0
+    if debug_plot == 1: # show geometry voxel
+        voxel = geometry_data['voxel']
+        n_node = voxel.shape[0]
+
+        # Create color array: red for all nodes, blue for electrode nodes
+        colors = np.array(['black'] * n_node)
+        colors[voxel_id_for_electrode] = 'blue'
+        # Create size array: size 1 for all nodes, size 10 for electrode nodes
+        sizes = np.ones(n_node) * 3
+        sizes[voxel_id_for_electrode] = 5
+        fig = go.Figure(data=[go.Scatter3d(
+                x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
+                mode='markers',
+                marker=dict(size=sizes, color=colors),
+                showlegend=False)])
+        fig.update_layout(scene=dict(aspectmode='data')) # set aspect ratio to be equal
+        fig.show()
+
+    simulation_parameters = {
+        'geometry_flag': 1, 
+        # 0: 2D
+        # 1: 3D
+        # 2: long slab for computing conduction velocity
+        'heart_model_flag': 0, 
+        # 0: Mitchell-Schaeffer model
+        # 1: Aliev-Panfilov model
+        'arrhythmia_flag': 6, 
+        # 0: focal
+        # 1: rotor
+        # 2: fibrillation
+        # 3: for debugging, manually assign s1 and s2 region 
+        # 4: 2 focal 2 locations both at 0ms
+        # 5: 2 focal 2 locations 300ms apart
+        # 6: 2 focal 2 locations 50ms apart
+        'compute_electrogram_flag': 1, 
+        # 1: compute electrogram 
+        # 0: do not compute electrogram
+        'voxel_id_for_electrode': voxel_id_for_electrode, # electrode locations for computing electrograms
+        't_final': 300, # ms
+        'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
+    }
+
+    return simulation_parameters
+
 def arrhythmia_parameters(simulation_parameters, s1, s2, script_dir):
     # NOTE: changes of heart_model_parameter or pacing magnitude/duration will change the ap/h_min/max thresholds
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
@@ -147,3 +199,19 @@ def heart_model_parameters(simulation_parameters, n_voxel):
         }
 
     return heart_model_parameter
+
+def scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameter):
+    if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer
+        simulation_parameters['time_scale'] = 1
+    elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov
+        simulation_parameters['time_scale'] = 6
+        
+    simulation_parameters['t_final'] = simulation_parameters['t_final'] / simulation_parameters['time_scale']
+    simulation_parameters['dt'] = simulation_parameters['dt'] / simulation_parameters['time_scale']
+    arrhythmia_parameters['pacing_start_time'] = arrhythmia_parameters['pacing_start_time'] / simulation_parameters['time_scale']
+    arrhythmia_parameters['pacing_cycle_length'] = arrhythmia_parameters['pacing_cycle_length'] / simulation_parameters['time_scale']
+    arrhythmia_parameters['s1_t'] = arrhythmia_parameters['s1_t'] / simulation_parameters['time_scale']
+    arrhythmia_parameters['s1_s2_delta_t'] = arrhythmia_parameters['s1_s2_delta_t'] / simulation_parameters['time_scale']
+    heart_model_parameter['c_voxel'] = heart_model_parameter['c_voxel'] * simulation_parameters['time_scale']
+
+    return simulation_parameters, arrhythmia_parameters, heart_model_parameter
