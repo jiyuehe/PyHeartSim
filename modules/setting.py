@@ -4,20 +4,19 @@ import plotly.graph_objects as go # pip install plotly, pip install --upgrade nb
 import plotly.io as pio
 pio.renderers.default = "browser" # simulation result mesh display in internet browser
 
-def simulation_parameters(geometry_data):
-    voxel_id_for_electrode = geometry_data['voxel_id_for_each_vertex_3mm'] # assign electrode locations
+def assign_simulation_parameters(geometry_data):
+    voxel_id_of_electrode = geometry_data['voxel_id_of_vertex3mm'] # assign electrode locations
 
     debug_plot = 0
     if debug_plot == 1: # show geometry voxel
         voxel = geometry_data['voxel']
         n_node = voxel.shape[0]
 
-        # Create color array: red for all nodes, blue for electrode nodes
         colors = np.array(['black'] * n_node)
-        colors[voxel_id_for_electrode] = 'blue'
-        # Create size array: size 1 for all nodes, size 10 for electrode nodes
+        colors[voxel_id_of_electrode] = 'blue'
+        
         sizes = np.ones(n_node) * 3
-        sizes[voxel_id_for_electrode] = 5
+        sizes[voxel_id_of_electrode] = 5
         fig = go.Figure(data=[go.Scatter3d(
                 x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
                 mode='markers',
@@ -45,15 +44,15 @@ def simulation_parameters(geometry_data):
         'compute_electrogram_flag': 1, 
         # 1: compute electrogram 
         # 0: do not compute electrogram
-        'voxel_id_for_electrode': voxel_id_for_electrode, # electrode locations for computing electrograms
+        'voxel_id_of_electrode': voxel_id_of_electrode, # electrode for computing electrograms
         't_final': 300, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
     }
 
     return simulation_parameters
 
-def arrhythmia_parameters(simulation_parameters, s1, s2, script_dir):
-    # NOTE: changes of heart_model_parameter or pacing magnitude/duration will change the ap/h_min/max thresholds
+def assign_arrhythmia_parameters(simulation_parameters, s1, s2, script_dir):
+    # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
         arrhythmia_parameters = {
             'pacing_start_time': 10, # ms
@@ -126,7 +125,7 @@ def arrhythmia_parameters(simulation_parameters, s1, s2, script_dir):
 
     return arrhythmia_parameters
 
-def heart_model_parameters(simulation_parameters, n_voxel):
+def assign_heart_model_parameters(simulation_parameters, n_voxel):
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
         if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
             tau_in = 0.3
@@ -180,7 +179,7 @@ def heart_model_parameters(simulation_parameters, n_voxel):
             mu1 = 0.2
             mu2 = 0.3
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
-        heart_model_parameter = {
+        heart_model_parameters = {
             'tau_in_voxel': np.ones(n_voxel) * tau_in, # determines the shape of action potential
             'tau_out_voxel': np.ones(n_voxel) * tau_out, # determines the shape of action potential
             'tau_open_voxel': np.ones(n_voxel) * tau_open, # determines the shape of action potential
@@ -189,7 +188,7 @@ def heart_model_parameters(simulation_parameters, n_voxel):
             'c_voxel': np.ones(n_voxel) * 0.4, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
-        heart_model_parameter = {
+        heart_model_parameters = {
             'k_voxel': np.ones(n_voxel) * k,
             'a_voxel': np.ones(n_voxel) * a,
             'epsilon_0_voxel': np.ones(n_voxel) * epsilon_0,
@@ -198,9 +197,9 @@ def heart_model_parameters(simulation_parameters, n_voxel):
             'c_voxel': np.ones(n_voxel) * 1.6, # diffusion coefficient
         }
 
-    return heart_model_parameter
+    return heart_model_parameters
 
-def scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameter):
+def scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters):
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer
         simulation_parameters['time_scale'] = 1
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov
@@ -212,6 +211,6 @@ def scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_m
     arrhythmia_parameters['pacing_cycle_length'] = arrhythmia_parameters['pacing_cycle_length'] / simulation_parameters['time_scale']
     arrhythmia_parameters['s1_t'] = arrhythmia_parameters['s1_t'] / simulation_parameters['time_scale']
     arrhythmia_parameters['s1_s2_delta_t'] = arrhythmia_parameters['s1_s2_delta_t'] / simulation_parameters['time_scale']
-    heart_model_parameter['c_voxel'] = heart_model_parameter['c_voxel'] * simulation_parameters['time_scale']
+    heart_model_parameters['c_voxel'] = heart_model_parameters['c_voxel'] * simulation_parameters['time_scale']
 
-    return simulation_parameters, arrhythmia_parameters, heart_model_parameter
+    return simulation_parameters, arrhythmia_parameters, heart_model_parameters

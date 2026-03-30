@@ -23,7 +23,6 @@ import lat_map
 
 #%%
 def run_simulation(input_arguments):
-    simulation_parameters = input_arguments['simulation_parameters']
     s1 = input_arguments['s1']
     s2 = input_arguments['s2']
     save_result_flag = input_arguments['save_result_flag']
@@ -32,14 +31,11 @@ def run_simulation(input_arguments):
 
     n_voxel = geometry_data['voxel'].shape[0]
 
-    # arrhythmia parameters
-    arrhythmia_parameters = modules.setting.arrhythmia_parameters(simulation_parameters, s1, s2, script_dir)
-
-    # heart model parameters
-    heart_model_parameter = modules.setting.heart_model_parameters(simulation_parameters, n_voxel)
-
-    # scale the time
-    simulation_parameters, arrhythmia_parameters, heart_model_parameter = modules.setting.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameter)
+    # parameters
+    simulation_parameters = input_arguments['simulation_parameters']
+    arrhythmia_parameters = modules.setting.assign_arrhythmia_parameters(simulation_parameters, s1, s2, script_dir)
+    heart_model_parameters = modules.setting.assign_heart_model_parameters(simulation_parameters, n_voxel)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = modules.setting.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
 
     if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
         x_coordinates = geometry_data['voxel'][:, 0]
@@ -47,17 +43,17 @@ def run_simulation(input_arguments):
         # voxels_2 = np.where(x_coordinates == np.max(x_coordinates))[0]
         arrhythmia_parameters['s1_pacing_voxel_id'] = voxels_1
 
-    # fiber orientations. will be used in computing heart simulation and unipolar electrogram
-    D0 = modules.load_fiber.execute(n_voxel)
+    # fiber orientations
+    D0 = modules.equation_parts.load_fiber(n_voxel)
 
-    # compute heart model equation parts
-    P_2d = modules.heart_model_equation_parts.execute(simulation_parameters, n_voxel, D0, geometry_data['neighbor_id_2d'], heart_model_parameter)
+    # heart model equation parts
+    P_2d = modules.equation_parts.heart_model_equation_parts(simulation_parameters, n_voxel, D0, geometry_data['neighbor_id_2d'], heart_model_parameters)
 
     # solve differential equations
     start = time.time()
     if cuda.is_available(): # GPU parallel
         print("GPU parallel computing for simulation")
-        action_potential, h, physical_time = modules.compute_simulation_gpu.execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters)
+        action_potential, h, physical_time = modules.simulation_gpu.compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters)
     end = time.time()
     print(f'simulation completed in {end - start:.1f} seconds')
 
@@ -65,29 +61,29 @@ def run_simulation(input_arguments):
     start = time.time()
     if simulation_parameters['compute_electrogram_flag'] == 1:
         voxel = geometry_data['voxel']
-        electrode_id = simulation_parameters['electrode_id']
-        electrode_xyz = voxel[electrode_id, :]
+        voxel_id_of_electrode = simulation_parameters['voxel_id_of_electrode']
+        electrode_xyz = voxel[voxel_id_of_electrode, :]
         Delta = geometry_data['Delta']
         neighbor_id_2d = geometry_data['neighbor_id_2d']
         
         # Check GPU availability and choose appropriate module
         if cuda.is_available():
             print("GPU parallel computing for electrogram")
-            electrogram_unipolar = modules.compute_unipolar_electrogram_gpu.execute(electrode_xyz, voxel, D0, heart_model_parameter['c_voxel'], action_potential, Delta, neighbor_id_2d)
+            electrogram_unipolar = modules.unipolar_electrogram_gpu.compute(electrode_xyz, voxel, D0, heart_model_parameters['c_voxel'], action_potential, Delta, neighbor_id_2d)
     end = time.time()
     print(f'electrogram computation completed in {end - start:.1f} seconds')
 
     # save simulation results
     if save_result_flag == 1:
-        voxel_for_each_vertex_3mm = geometry_data['voxel_for_each_vertex_3mm']
+        voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
 
         simulation_results = {}
-        simulation_results['action_potential'] = action_potential[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex_3mm)
-        simulation_results['h'] = h[:, voxel_for_each_vertex_3mm] # shape: (time, n_vertex_3mm)
+        simulation_results['action_potential_vertex3mm'] = action_potential[:, voxel_id_of_vertex3mm] # shape: (time, n_vertex3mm)
+        simulation_results['h_vertex3mm'] = h[:, voxel_id_of_vertex3mm] # shape: (time, n_vertex3mm)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
-            simulation_results['electrode_id'] = simulation_parameters['electrode_id']
+            simulation_results['voxel_id_of_electrode'] = simulation_parameters['voxel_id_of_electrode']
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
 
         # save simulation results
@@ -107,15 +103,14 @@ if __name__ == "__main__":
     directory['home'] = script_dir
     directory['data'] = script_dir.parent / '0_data'
     directory['result'] = directory['home'] / 'result'
-    
     geometry_name = '103_1-lagood_geometry.npz'
+    save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
+    plot_lat_map_flag = 1
 
     # load geometry data
     file_path = directory['data'] / geometry_name
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
-
-    save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 
     input_arguments = {}
     input_arguments['geometry_data'] = geometry_data
@@ -127,32 +122,32 @@ if __name__ == "__main__":
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
 
+    simulation_parameters = modules.setting.assign_simulation_parameters(geometry_data)
+    input_arguments['simulation_parameters'] = simulation_parameters
+
     # run simulation
     run_simulation(input_arguments)
 
     focal_1 = s1
     focal_2 = s2
-    plot_lat_map_flag = 1
     
     geometry = {}
-    geometry['vertex'] = input_arguments['geometry_data']['vertex_3mm']
-    geometry['face'] = input_arguments['geometry_data']['face_3mm']
-    voxel_for_each_vertex_3mm = input_arguments['geometry_data']['voxel_for_each_vertex_3mm']
-    geometry['node'] = input_arguments['geometry_data']['voxel'][voxel_for_each_vertex_3mm, :]
+    geometry['vertex'] = geometry_data['vertex3mm']
+    geometry['face'] = geometry_data['face3mm']
+    voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
+    geometry['node'] = geometry_data['voxel'][voxel_id_of_vertex3mm, :]
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # plot some action potentials and electrograms
     do_flag = 1
     if do_flag == 1: 
-        simulation_parameters = input_arguments['simulation_parameters']
-
         # load simulation results
         if str(s2) == '[]':
             sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}.npz', allow_pickle=False))
         else:
             sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
 
-        action_potential = sim_data['action_potential']
+        action_potential = sim_data['action_potential_vertex3mm']
         physical_time = sim_data['physical_time']
         if simulation_parameters['compute_electrogram_flag'] == 1:
             electrogram_unipolar = sim_data['electrogram_unipolar']
@@ -164,7 +159,7 @@ if __name__ == "__main__":
             nrows=3, ncols=2, figsize=(12, 8), sharex='col', sharey=False
         )
 
-        for i, eid in enumerate([simulation_parameters['electrode_id'][0], simulation_parameters['electrode_id'][1], simulation_parameters['electrode_id'][2]]):
+        for i, eid in enumerate([simulation_parameters['voxel_id_of_electrode'][0], simulation_parameters['voxel_id_of_electrode'][1], simulation_parameters['voxel_id_of_electrode'][2]]):
             # left column: action potentials
             axes[i, 0].plot(physical_time, action_potential[:, eid])
             axes[i, 0].set_title(f'Action Potential at Location {eid}')
@@ -174,12 +169,12 @@ if __name__ == "__main__":
             # right column: unipolar electrograms
             if simulation_parameters['compute_electrogram_flag'] == 1:
                 axes[i, 1].plot(physical_time, electrogram_unipolar[:, i])
-                axes[i, 1].set_title(f'Unipolar Electrogram at Location {simulation_parameters['electrode_id'][i]}')
+                axes[i, 1].set_title(f'Unipolar Electrogram at Location {simulation_parameters['voxel_id_of_electrode'][i]}')
                 axes[i, 1].set_ylabel('Voltage (scaled)')
                 axes[i, 1].set_xlabel('Time (ms)')
 
         plt.tight_layout()
-        plt.savefig(directory['result'] / f'ap_egm_{simulation_parameters["heart_model_flag"]}_{simulation_parameters["arrhythmia_flag"]}_{s1}_{s2}.png', dpi=300)
+        plt.savefig(directory['result'] / f'ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2}.png', dpi=300)
         plt.close()
 
     # display simulation movie
@@ -199,7 +194,7 @@ if __name__ == "__main__":
         in_arg['simulation_results_file_name'] = simulation_results_file_name
         in_arg['movie_save_dir'] = movie_save_dir
         in_arg['simulation_results'] = simulation_results
-        in_arg['geometry_data'] = input_arguments['geometry_data']
+        in_arg['geometry_data'] = geometry_data
         toolbox.display_simulation_movie.execute(in_arg)
 
 #%%

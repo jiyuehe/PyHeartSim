@@ -18,31 +18,31 @@ import matplotlib.animation as animation
 from matplotlib.tri import Triangulation
 
 #%%
-def execute(input_arguments):
-    save_movie_flag = input_arguments['save_movie_flag']
-    starting_time = input_arguments['starting_time']
-    ending_time = input_arguments['ending_time']
-    movie_save_dir = input_arguments['movie_save_dir']
-    simulation_results = input_arguments['simulation_results']
+def execute(in_arg):
+    save_movie_flag = in_arg['save_movie_flag']
+    starting_time = in_arg['starting_time']
+    ending_time = in_arg['ending_time']
+    movie_save_dir = in_arg['movie_save_dir']
+    simulation_results = in_arg['simulation_results']
     geometry_flag = simulation_results['geometry_flag']
 
     # load data
-    geometry_data = input_arguments['geometry_data']
+    geometry_data = in_arg['geometry_data']
 
     if geometry_flag == 2:
         voxel_for_each_vertex = geometry_data['voxel_for_each_vertex']
 
         node = geometry_data['voxel'][voxel_for_each_vertex,:]
     elif geometry_flag in [0, 1, 3, 4]:
-        voxel_for_each_vertex_3mm = geometry_data['voxel_for_each_vertex_3mm']
+        voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
 
-        node = geometry_data['voxel'][voxel_for_each_vertex_3mm,:]
+        node = geometry_data['voxel'][voxel_id_of_vertex3mm,:]
 
-        vertex = geometry_data['vertex_3mm']
-        face = geometry_data['face_3mm']
+        vertex = geometry_data['vertex3mm']
+        face = geometry_data['face3mm']
 
     # simulation data
-    action_potential = simulation_results['action_potential']
+    action_potential = simulation_results['action_potential_vertex3mm']
     t = simulation_results['physical_time']
 
     if ending_time == []:

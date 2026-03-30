@@ -54,7 +54,7 @@ def compute_egm_kernel_batched(n_voxel, n_electrode, n_time, D11, D12, D13, D21,
             # Atomic add to output
             cuda.atomic.add(egm_out, (t, electrode_idx), egm_contribution)
 
-def execute(electrode_xyz, voxel, D0, c_voxel, action_potential, Delta, neighbor_id_2d, batch_size=50):
+def compute(electrode_xyz, voxel, D0, c_voxel, action_potential, Delta, neighbor_id_2d, batch_size=50):
     """
     Optimized GPU execution with batched processing and reduced memory transfers
     

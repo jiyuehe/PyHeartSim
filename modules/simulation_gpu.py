@@ -245,7 +245,7 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
     
     return u_next
 
-def execute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
+def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
     # geometry data
     neighbor_id_2d = geometry_data['neighbor_id_2d']
     Delta = geometry_data['Delta']
