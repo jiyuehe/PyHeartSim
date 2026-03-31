@@ -20,7 +20,7 @@ os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
 import numpy as np
-import modules
+import geometry_processing
 
 directory = {}
 directory['home'] = script_dir
@@ -33,7 +33,7 @@ name_prefix = '103_1-lagood' # nice sinus rhythm
 # the original mesh
 # ==============================
 # original .obj mesh
-vertex_original, face_original = modules.load_obj.execute(directory, name_prefix)
+vertex_original, face_original = geometry_processing.load_obj.execute(directory, name_prefix)
 
 # manually clean the mesh in software MeshLab
 # ==============================
@@ -50,10 +50,10 @@ vertex_original, face_original = modules.load_obj.execute(directory, name_prefix
 #       do another remesh to have edge length of 3mm, for saving simulation data
 
 # load the refined .obj mesh (0.5 mm resolution)
-vertex, face = modules.load_obj.execute(directory, name_prefix + '_refined')
+vertex, face = geometry_processing.load_obj.execute(directory, name_prefix + '_refined')
 
 # load the 3 mm resolution .obj mesh
-vertex3mm, face3mm = modules.load_obj.execute(directory, name_prefix + '_refined_3mm')
+vertex3mm, face3mm = geometry_processing.load_obj.execute(directory, name_prefix + '_refined_3mm')
 
 #%%
 # convert triangular mesh to cartesian nodes
@@ -63,13 +63,13 @@ Delta = 1 # voxel spacing, unit: mm.
 # Delta = 1 is the most convenient, or grid will not be at integer values. 
 # integer values make it easy for 3D convolution that is common in neural networks
 thickness = 2 # how many voxels across endocardium to epicardium
-voxel = modules.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
+voxel = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
 
 # for each voxel, find its neighbor voxels
-neighbor_id_2d = modules.find_neighbor_voxel_ids.execute(voxel)
+neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel)
 
 # id mapping between voxel and vertex3mm
-voxel_id_of_vertex3mm, vertex3mm_id_of_voxel = modules.id_mapping_between_voxel_and_vertex.execute(voxel, vertex3mm)
+voxel_id_of_vertex3mm, vertex3mm_id_of_voxel = geometry_processing.id_mapping_between_voxel_and_vertex.execute(voxel, vertex3mm)
 
 # save geometry data
 # ==============================
@@ -89,7 +89,7 @@ geometry['vertex3mm_id_of_voxel'] = vertex3mm_id_of_voxel # these are vertex3mm 
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    modules.debug_plot.plot_mesh(geometry)
+    geometry_processing.debug_plot.plot_mesh(geometry)
 
 #%%
 # save
