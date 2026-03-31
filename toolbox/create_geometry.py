@@ -14,12 +14,14 @@
 
 #%%
 import os
+import sys
 from pathlib import Path
 script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
+sys.path.insert(0, str(script_dir.parent)) 
 
-import modules
+import geometry_processing
 import numpy as np # pip install numpy
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat.
 import plotly.io as pio
@@ -27,7 +29,7 @@ pio.renderers.default = "browser" # mesh display in internet browser
 
 directory = {}
 directory['home'] = script_dir
-directory['result'] = script_dir / 'result'
+directory['result'] = script_dir.parent / 'result'
 
 # create the folder if it does not exist
 directory['result'].mkdir(exist_ok=True)
@@ -41,13 +43,13 @@ geometry_flag = 2
 
 voxel = []
 neighbor_id_2d = []
-voxel_for_each_vertex = []
-vertex_for_each_voxel = []
+voxel_id_of_vertex = []
+vertex_id_of_voxel = []
 vertex = []
 face = []
 match geometry_flag:
     case 0: # 2D sheet
-        file_name = 'sheet'
+        name_prefix = 'sheet'
 
         lx = 128/2 # half length, unit: mm
         ly = 128/2 # half length, unit: mm
@@ -67,21 +69,21 @@ match geometry_flag:
                 id += 1
     case 1 | 2 | 3: # 3D slab
         if geometry_flag == 1: # regular slab
-            file_name = 'regular_slab'
+            name_prefix = 'regular_slab'
 
             # half lengths, unit: mm
             lx = 40/2
             ly = 50/2
             lz = 20/2
         elif geometry_flag == 2: # long slab
-            file_name = 'long_slab'
+            name_prefix = 'long_slab'
 
             # half lengths, unit: mm
             lx = 50/2
             ly = 10/2
             lz = 10/2
         elif geometry_flag == 3: # hollow cube
-            file_name = 'hollow_slab'
+            name_prefix = 'hollow_slab'
 
             # half lengths, unit: mm
             lx = 64/2
@@ -113,7 +115,7 @@ match geometry_flag:
             voxel = np.array(voxel_filtered)
 
 # for each voxel, find its neighbor voxels
-neighbor_id_2d = modules.find_neighbor_voxel_ids.execute(voxel)
+neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel)
 
 debug_plot = 1
 if debug_plot == 1: # show geometry voxel
@@ -134,14 +136,14 @@ geometry = {
     'Delta': 1, # voxel spacing
     'voxel': voxel, 
     'neighbor_id_2d': neighbor_id_2d,
-    'voxel_for_each_vertex': voxel_for_each_vertex,
-    'vertex_for_each_voxel': vertex_for_each_voxel,
+    'voxel_id_of_vertex': voxel_id_of_vertex,
+    'vertex_id_of_voxel': vertex_id_of_voxel,
     'vertex': vertex, # triangular mesh vertex
     'face': face, # triangular mesh face
 }
 
-file_path = directory['data'] / file_name
-np.save(file_path, geometry)
+file_path = directory['result'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
+np.savez(file_path, **geometry)
 
 print('done')
 #%%
