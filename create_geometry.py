@@ -21,18 +21,21 @@ script_dir = Path(script_dir)
 
 import modules
 import numpy as np # pip install numpy
-import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
+import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat.
 import plotly.io as pio
-pio.renderers.default = "browser" # simulation result mesh display in internet browser
+pio.renderers.default = "browser" # mesh display in internet browser
 
 directory = {}
 directory['home'] = script_dir
-directory['result'] = script_dir.parent / 'result'
+directory['result'] = script_dir / 'result'
+
+# create the folder if it does not exist
+directory['result'].mkdir(exist_ok=True)
 
 #%%
 geometry_flag = 2
 # 0: 2D sheet
-# 1: 3D slab, regular
+# 1: 3D slab, typical shape
 # 2: 3D slab, long, for computing conduction velocity
 # 3: 3D hollow cube
 

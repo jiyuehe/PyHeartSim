@@ -11,6 +11,7 @@
 - Jan Christoph -- Financial support. As of 2026, Christoph is an Assistant Professor at the University of California, San Francisco, and head of the Cardiac Vision Laboratory. He is a faculty member of the Cardiovascular Research Institute, with appointments in the Division of Cardiology, School of Medicine, and the Department of Bioengineering and Therapeutic Sciences. His research interests include cardiac electrophysiology and biomechanics, cardiac arrhythmia mechanisms, the physics of complex biological systems, artificial intelligence, numerical modeling and imaging.
 
 # Instruction
+- Best to use Visual Studio Code. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
 - Run heart_sim_individual.py to compute one heart simulation. 
 - Run heart_sim_batch.py to compute multiple heart simulations.  
 
