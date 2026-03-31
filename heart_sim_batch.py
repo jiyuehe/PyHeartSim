@@ -19,7 +19,6 @@ import numpy as np # pip install numpy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt # pip install matplotlib
 
-import heart_sim_setting
 import lat_map
 
 #%% 
@@ -29,10 +28,22 @@ directory['data'] = script_dir.parent / '0_data'
 directory['result'] = Path('/home/j/Desktop/hdd/103_1-lagood_3mm')
 
 geometry_name = '103_1-lagood_geometry.npz'
-input_arguments = heart_sim_setting.execute(directory, geometry_name, directory['result'])
+
+# load geometry data
+file_path = directory['data'] / geometry_name
+data = np.load(file_path, allow_pickle=False)
+geometry_data = {k: data[k] for k in data.files}
+
+simulation_parameters = modules.setting.assign_simulation_parameters(geometry_data)
+
+input_arguments = {}
+input_arguments['geometry_data'] = geometry_data
+input_arguments['save_result_flag'] = 1
+input_arguments['result_folder'] = directory['result']
+input_arguments['simulation_parameters'] = simulation_parameters
 
 # save s1 and s2 to text file
-n_simulations = 3000
+n_simulations = 1
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
@@ -40,9 +51,11 @@ s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0
 #%%
 plot_lat_map_flag = 1
 
-voxel = input_arguments['geometry_data']['voxel']
-voxel_id_for_each_vertex_3mm = input_arguments['geometry_data']['voxel_for_each_vertex_3mm']
-node = voxel[voxel_id_for_each_vertex_3mm,:]
+geometry = {}
+geometry['vertex'] = geometry_data['vertex3mm']
+geometry['face'] = geometry_data['face3mm']
+voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
+geometry['node'] = geometry_data['voxel'][voxel_id_of_vertex3mm, :]
 
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
@@ -53,8 +66,8 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.execute(input_arguments)
-    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+        heart_sim_individual.run_simulation(input_arguments)
+    lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # focal 2
     focal_1 = s2[loop_id]
@@ -62,8 +75,8 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.execute(input_arguments)
-    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+        heart_sim_individual.run_simulation(input_arguments)
+    lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # dual focals
     focal_1 = s1[loop_id]
@@ -71,8 +84,8 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.execute(input_arguments)
-    lat_map.execute(node, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+        heart_sim_individual.run_simulation(input_arguments)
+    lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
 #%%
 # ensures the kernel dies. 

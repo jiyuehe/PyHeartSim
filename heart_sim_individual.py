@@ -117,8 +117,8 @@ if __name__ == "__main__":
     input_arguments['save_result_flag'] = save_result_flag
     input_arguments['result_folder'] = directory['result']
 
-    s1 = 1000
-    s2 = 1000
+    s1 = 5125
+    s2 = 5125
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
 
