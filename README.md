@@ -2,7 +2,7 @@
 - This is an electrophysiological heart simulator written in Python.  
 - It can simulate patient-specific focal and rotor arrhythmias. And simulate fibrillations.  
 - It computes action potentials and electrograms.  
-- For the heart model, User can choose to run Mitchell-Schaeffer or Aliev-Panfilov.  
+- For the heart model, user can choose Mitchell-Schaeffer or Aliev-Panfilov.  
 - The code runs on Nvidia GPU for fast parallel computing.  
 - For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part. 
 
