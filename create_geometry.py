@@ -27,8 +27,7 @@ pio.renderers.default = "browser" # simulation result mesh display in internet b
 
 directory = {}
 directory['home'] = script_dir
-directory['data'] = script_dir.parent / '0_data'
-directory['result'] = script_dir.parent / '0_result' / 'process_geometry'
+directory['result'] = script_dir.parent / 'result'
 
 #%%
 geometry_flag = 2
