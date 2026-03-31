@@ -1,8 +1,9 @@
 # Introduction
+- This is an electrophysiological heart simulator written in Python.  
 - Patient atria: A 3D triangular mesh database of the left and/or right atria from more than 100 patients are provided.  
 - Capability: It can simulate patient-specific focal and rotor arrhythmias, as well as fibrillation. It computes action potentials and electrograms.  
 - Heart model: Can choose Mitchell-Schaeffer or Aliev-Panfilov.  
-- Programming: This is an electrophysiological heart simulator written in Python. It is deliberately written in a procedural programming style, using simple function calls rather than object oriented constructs like classes and inheritance, to maintain simplicity and ease of debugging. The code runs on Nvidia GPU for fast parallel computing. For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part.  
+- Programming: It is deliberately written in a procedural programming style, using simple function calls rather than object oriented constructs like classes and inheritance, to maintain simplicity and ease of debugging. The code runs on Nvidia GPU for fast parallel computing. For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part.  
 
 # Contributors
 - Jiyue He -- Owner and the main contributor. Jiyue He (Jay) received his PhD from the University of Pennsylvania, where he was honored with the student recognition award. As of 2026, He is a Postdoctoral Scholar at the University of California, San Francisco. His research includes artificial intelligence, numerical modeling, algorithm development, signal processing and data analysis.
