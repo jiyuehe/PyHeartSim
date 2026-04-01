@@ -115,14 +115,16 @@ def run_simulation(input_arguments):
 if __name__ == "__main__":
     directory = {}
     directory['home'] = script_dir
-    directory['data'] = script_dir.parent / '0_data'
-    directory['result'] = directory['home'] / 'result'
+    directory['result'] = script_dir / 'result'
     geometry_name = '103_1-lagood_geometry.npz'
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1
 
+    # create the folder if it does not exist
+    directory['result'].mkdir(exist_ok=True)
+
     # load geometry data
-    file_path = directory['data'] / geometry_name
+    file_path = directory['result'] / geometry_name
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 

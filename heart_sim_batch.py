@@ -26,7 +26,7 @@ if str(workspace_root) not in sys.path:
     sys.path.insert(0, str(workspace_root))
 import common
 
-import modules
+import simulation
 import toolbox.codes
 import heart_sim_individual
 import numpy as np # pip install numpy
@@ -38,17 +38,19 @@ import lat_map
 #%% 
 directory = {}
 directory['home'] = script_dir
-directory['data'] = script_dir.parent / '0_data'
-directory['result'] = Path('/home/j/Desktop/hdd/103_1-lagood_3mm')
+directory['result'] = script_dir / 'result'
+
+# create the folder if it does not exist
+directory['result'].mkdir(exist_ok=True)
 
 geometry_name = '103_1-lagood_geometry.npz'
 
 # load geometry data
-file_path = directory['data'] / geometry_name
+file_path = directory['result'] / geometry_name
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 
-simulation_parameters = modules.setting.assign_simulation_parameters(geometry_data)
+simulation_parameters = simulation.setting.assign_simulation_parameters(geometry_data)
 
 input_arguments = {}
 input_arguments['geometry_data'] = geometry_data
@@ -57,7 +59,7 @@ input_arguments['result_folder'] = directory['result']
 input_arguments['simulation_parameters'] = simulation_parameters
 
 # save s1 and s2 to text file
-n_simulations = 3000
+n_simulations = 2
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1

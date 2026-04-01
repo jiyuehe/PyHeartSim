@@ -38,7 +38,8 @@ def execute(geometry, result_folder, focal_1, focal_2, plot_lat_map_flag):
     electrogram_unipolar = simulation_results['electrogram_unipolar']
 
     # compute and plot local activation time map
-    (result_folder / 'lat_map').mkdir(parents=True, exist_ok=True)
+    (result_folder / 'lat_map').mkdir(parents=True, exist_ok=True) # create the folder if it does not exist
+
     if str(focal_2) == '[]':
         fig_name = result_folder / 'lat_map' / f'lat_{str(focal_1)}.png'
     else:
