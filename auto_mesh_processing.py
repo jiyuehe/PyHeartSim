@@ -478,6 +478,6 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
-    raise SystemExit(main()) # If this file is run directly, execute main() and exit the program using its return value as the exit code.
+    raise SystemExit(main()) # if this file is run directly, execute main() and exit the program using its return value as the exit code.
 
 #%%
