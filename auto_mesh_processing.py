@@ -1,3 +1,4 @@
+#%%
 import argparse
 import inspect
 import math
@@ -437,8 +438,24 @@ def config_from_args(args: argparse.Namespace) -> TSDFConfig:
         visualize=args.visualize,
     )
 
-
+#%%
 def main() -> int:
+    import os
+    from pathlib import Path
+    script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
+    os.chdir(script_dir) # change the working directory
+    script_dir = Path(script_dir)
+
+    directory = {}
+    directory['home'] = script_dir
+    directory['data'] = script_dir / 'patient_atrium_mesh_database'
+    directory['result'] = script_dir / 'result'
+
+    name_prefix = '105_6-LA'
+    input_mesh_path = directory['data'] / f'{name_prefix}.obj'
+    output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
+    output_mesh_path_3mm = directory['result'] / f'{name_prefix}_refined_3mm.obj'
+
     args = build_parser().parse_args()
     cfg = config_from_args(args)
     report = TSDFRebuilder(cfg).run(args.input, args.output)
@@ -446,16 +463,21 @@ def main() -> int:
     for key, value in report.items():
         print(f"{key}: {value}")
     
-    # mesh_name = 105_6-LA.obj
-    # mesh folder is 'patient_atrium_mesh_database'
-    # output folder is 'result'
-    # make all the parameter settings right here, explicitly
+    # mesh folder is directory['data']
+    # output folder is directory['result']
+    # make all the parameter settings right here, explicitly: delete build_parser() and config_from_args(), and put their contents here directly
     # then do the processing
-    # then save the processed mesh (edge length of 0.5 mm) to folder 'result' and save it as 105_6-LA_refined.obj
-    # then save another mesh (edge length of 3 mm) to folder 'result' and save it as 105_6-LA_refined_3mm.obj
+    # then save the processed mesh (edge length of 0.5 mm) to folder directory['result'] and save it as 105_6-LA_refined.obj
+    # then save another mesh (edge length of 3 mm) to folder directory['result'] and save it as 105_6-LA_refined_3mm.obj
+
+    # clean up the code a bit: 
+    # remove all the unnecessary protection codes: those 'try-except', and the many 'if', some of them looks like not necessary
+    # we will not use command line arguments, so remove all the argparse related code, and just set the parameters directly in the code
 
     print('done')
     return 0
 
 if __name__ == "__main__":
     raise SystemExit(main()) # If this file is run directly, execute main() and exit the program using its return value as the exit code.
+
+#%%
