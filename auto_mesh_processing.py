@@ -227,10 +227,10 @@ class TSDFRebuilder:
                     f"New filled: {np.count_nonzero(occ)}"
                 )
 
-        if cfg.debug_mode:
-            points_grid = np.argwhere(occ) * pitch + (bbox[0] - (pitch / 2.0))
-            trimesh.points.PointCloud(points_grid).export("debug_voxel_cloud.ply")
-            print("[DEBUG] Exported intermediate occupied voxel centers to 'debug_voxel_cloud.ply'")
+        # if cfg.debug_mode:
+        #     points_grid = np.argwhere(occ) * pitch + (bbox[0] - (pitch / 2.0))
+        #     trimesh.points.PointCloud(points_grid).export("debug_voxel_cloud.ply")
+        #     print("[DEBUG] Exported intermediate occupied voxel centers to 'debug_voxel_cloud.ply'")
 
         if cfg.fill_internal_volume:
             occ = ndimage.binary_fill_holes(occ)
@@ -390,8 +390,8 @@ class TSDFRebuilder:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TSDF-style mesh rebuild pipeline.")
-    parser.add_argument("--input", default="raw_mesh/105_6-LA.obj", help="Input mesh path")
-    parser.add_argument("--output", default="./tsdf_test.obj", help="Output mesh path")
+    parser.add_argument("--input", default="patient_atrium_mesh_database/105_6-LA.obj", help="Input mesh path")
+    parser.add_argument("--output", default="./result/tsdf_test.obj", help="Output mesh path")
     parser.add_argument("--visualize", action="store_true", help="Show 3-panel visualization")
     parser.add_argument("--debug-mode", action="store_true", default=True, help="Enable debug logs")
     parser.add_argument("--no-debug-mode", action="store_false", dest="debug_mode")
