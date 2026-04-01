@@ -14,8 +14,8 @@
 
 import numpy as np
 
-def execute(directory, mesh_name):
-    file_path = directory['data'] / f"{mesh_name}.obj"
+def execute(file_directory, mesh_name):
+    file_path = file_directory / f"{mesh_name}.obj"
 
     vertex = []
     face = []

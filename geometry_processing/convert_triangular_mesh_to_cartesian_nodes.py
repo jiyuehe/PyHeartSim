@@ -16,7 +16,7 @@ import numpy as np
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
 import plotly.io as pio
 pio.renderers.default = "browser" # simulation result mesh display in internet browser
-import modules
+import geometry_processing
 
 def execute(vertex, face, Delta, thickness):
     # NOTE: Delta = 1 is the most convenient. Or grid will not be at integer values. Integer values make it easy for 3D convolution that is common in neural networks
@@ -96,6 +96,6 @@ def execute(vertex, face, Delta, thickness):
         geometry['vertex'] = vertex
         geometry['face'] = face
         geometry['voxel'] = voxel
-        modules.debug_plot.plot_mesh(geometry)
+        geometry_processing.debug_plot.plot_mesh(geometry)
 
     return voxel

@@ -24,8 +24,11 @@ import geometry_processing
 
 directory = {}
 directory['home'] = script_dir
-directory['data'] = script_dir.parent / '0_data'
-directory['result'] = script_dir.parent / '0_result'
+directory['data'] = script_dir / 'patient_atrium_mesh_database'
+directory['result'] = script_dir / 'result'
+
+# create the folder if it does not exist
+directory['result'].mkdir(exist_ok=True)
 
 name_prefix = '103_1-lagood' # nice sinus rhythm
 
@@ -33,7 +36,7 @@ name_prefix = '103_1-lagood' # nice sinus rhythm
 # the original mesh
 # ==============================
 # original .obj mesh
-vertex_original, face_original = geometry_processing.load_obj.execute(directory, name_prefix)
+vertex_original, face_original = geometry_processing.load_obj.execute(directory['data'], name_prefix)
 
 # manually clean the mesh in software MeshLab
 # ==============================
@@ -50,10 +53,10 @@ vertex_original, face_original = geometry_processing.load_obj.execute(directory,
 #       do another remesh to have edge length of 3mm, for saving simulation data
 
 # load the refined .obj mesh (0.5 mm resolution)
-vertex, face = geometry_processing.load_obj.execute(directory, name_prefix + '_refined')
+vertex, face = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined')
 
 # load the 3 mm resolution .obj mesh
-vertex3mm, face3mm = geometry_processing.load_obj.execute(directory, name_prefix + '_refined_3mm')
+vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined_3mm')
 
 #%%
 # convert triangular mesh to cartesian nodes
@@ -94,7 +97,7 @@ if debug_plot == 1:
 #%%
 # save
 # ==============================
-file_path = directory['data'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
+file_path = directory['result'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
 np.savez(file_path, **geometry)
 
 print('done')
