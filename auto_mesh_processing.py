@@ -449,7 +449,7 @@ def main() -> int:
     # mesh_name = 105_6-LA.obj
     # mesh folder is 'patient_atrium_mesh_database'
     # output folder is 'result'
-    # make all the parameter settings right here
+    # make all the parameter settings right here, explicitly
     # then do the processing
     # then save the processed mesh (edge length of 0.5 mm) to folder 'result' and save it as 105_6-LA_refined.obj
     # then save another mesh (edge length of 3 mm) to folder 'result' and save it as 105_6-LA_refined_3mm.obj
