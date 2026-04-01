@@ -14,7 +14,7 @@
 
 import numpy as np
 from numba import cuda
-from modules.pacing import assign_pacing_parameters, apply_pacing
+from simulation.pacing import assign_pacing_parameters, apply_pacing
 
 # CuPy for GPU sparse operations
 try: # need this try-except for MacOS compatibility

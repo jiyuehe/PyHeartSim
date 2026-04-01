@@ -26,7 +26,7 @@ if str(workspace_root) not in sys.path:
     sys.path.insert(0, str(workspace_root))
 import common
 
-import modules
+import simulation
 import toolbox
 import numpy as np # pip install numpy
 from numba import cuda # pip install numba
@@ -47,9 +47,9 @@ def run_simulation(input_arguments):
 
     # parameters
     simulation_parameters = input_arguments['simulation_parameters']
-    arrhythmia_parameters = modules.setting.assign_arrhythmia_parameters(simulation_parameters, s1, s2, script_dir)
-    heart_model_parameters = modules.setting.assign_heart_model_parameters(simulation_parameters, n_voxel)
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = modules.setting.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
+    arrhythmia_parameters = simulation.setting.assign_arrhythmia_parameters(simulation_parameters, s1, s2, script_dir)
+    heart_model_parameters = simulation.setting.assign_heart_model_parameters(simulation_parameters, n_voxel)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = simulation.setting.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
 
     if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
         x_coordinates = geometry_data['voxel'][:, 0]
@@ -58,16 +58,16 @@ def run_simulation(input_arguments):
         arrhythmia_parameters['s1_pacing_voxel_id'] = voxels_1
 
     # fiber orientations
-    D0 = modules.equation_parts.load_fiber(n_voxel)
+    D0 = simulation.equation_parts.load_fiber(n_voxel)
 
     # heart model equation parts
-    P_2d = modules.equation_parts.heart_model_equation_parts(simulation_parameters, n_voxel, D0, geometry_data['neighbor_id_2d'], heart_model_parameters)
+    P_2d = simulation.equation_parts.heart_model_equation_parts(simulation_parameters, n_voxel, D0, geometry_data['neighbor_id_2d'], heart_model_parameters)
 
     # solve differential equations
     start = time.time()
     if cuda.is_available(): # GPU parallel
         print("GPU parallel computing for simulation")
-        action_potential, h, physical_time = modules.simulation_gpu.compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters)
+        action_potential, h, physical_time = simulation.simulation_gpu.compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters)
     end = time.time()
     print(f'simulation completed in {end - start:.1f} seconds')
 
@@ -83,7 +83,7 @@ def run_simulation(input_arguments):
         # Check GPU availability and choose appropriate module
         if cuda.is_available():
             print("GPU parallel computing for electrogram")
-            electrogram_unipolar = modules.unipolar_electrogram_gpu.compute(electrode_xyz, voxel, D0, heart_model_parameters['c_voxel'], action_potential, Delta, neighbor_id_2d)
+            electrogram_unipolar = simulation.unipolar_electrogram_gpu.compute(electrode_xyz, voxel, D0, heart_model_parameters['c_voxel'], action_potential, Delta, neighbor_id_2d)
     end = time.time()
     print(f'electrogram computation completed in {end - start:.1f} seconds')
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
 
-    simulation_parameters = modules.setting.assign_simulation_parameters(geometry_data)
+    simulation_parameters = simulation.setting.assign_simulation_parameters(geometry_data)
     input_arguments['simulation_parameters'] = simulation_parameters
 
     # run simulation
