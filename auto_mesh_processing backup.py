@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import inspect
 import math
@@ -6,11 +8,11 @@ from dataclasses import asdict, dataclass
 from typing import Optional
 
 import numpy as np
-import pymeshlab as pml # pip install pymeshlab
-import pyvista as pv # pip install pyvista
-import trimesh # pip install trimesh
+import pymeshlab as pml
+import pyvista as pv
+import trimesh
 from scipy import ndimage
-from skimage import measure # pip install scikit-image
+from skimage import measure
 
 
 @dataclass
