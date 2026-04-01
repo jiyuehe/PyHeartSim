@@ -391,7 +391,7 @@ class TSDFRebuilder:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TSDF-style mesh rebuild pipeline.")
     parser.add_argument("--input", default="patient_atrium_mesh_database/105_6-LA.obj", help="Input mesh path")
-    parser.add_argument("--output", default="./result/tsdf_test.obj", help="Output mesh path")
+    parser.add_argument("--output", default="./result/105_6-LA_refined.obj", help="Output mesh path")
     parser.add_argument("--visualize", action="store_true", help="Show 3-panel visualization")
     parser.add_argument("--debug-mode", action="store_true", default=True, help="Enable debug logs")
     parser.add_argument("--no-debug-mode", action="store_false", dest="debug_mode")
@@ -445,8 +445,17 @@ def main() -> int:
     print("TSDF-style rebuild finished. Report:")
     for key, value in report.items():
         print(f"{key}: {value}")
+    
+    # mesh_name = 105_6-LA.obj
+    # mesh folder is 'patient_atrium_mesh_database'
+    # output folder is 'result'
+    # make all the parameter settings right here
+    # then do the processing
+    # then save the processed mesh (edge length of 0.5 mm) to folder 'result' and save it as 105_6-LA_refined.obj
+    # then save another mesh (edge length of 3 mm) to folder 'result' and save it as 105_6-LA_refined_3mm.obj
+
+    print('done')
     return 0
 
-
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main()) # If this file is run directly, execute main() and exit the program using its return value as the exit code.
