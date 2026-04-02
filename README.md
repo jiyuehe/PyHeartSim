@@ -1,7 +1,7 @@
 # Introduction
 - This is an electrophysiological heart simulator written in **Python**.  
 - Patient atria: A 3D triangular mesh database of the left and/or right atria from **more than 100 patients** are provided.  
-- Capability: It can simulate patient-specific focal and rotor **arrhythmias**, as well as fibrillation. It computes **action potentials** and **electrograms**.  
+- Capability: It can simulate patient-specific focal and rotor **arrhythmias**, as well as fibrillation. It computes **action potentials** and **electrograms**. Besides 3D, it can also run 2D simulation. 
 - Heart model: Can choose **Mitchell-Schaeffer** or **Aliev-Panfilov**.  
 - Programming: It is deliberately written in a procedural programming style, using **simple** function calls rather than object oriented constructs like classes and inheritance, to maintain simplicity and ease of debugging. The code runs on Nvidia **GPU** for fast parallel computing. For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part.  
 
