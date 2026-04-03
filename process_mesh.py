@@ -24,8 +24,10 @@ import geometry_processing
 
 directory = {}
 directory['home'] = script_dir
-directory['data'] = script_dir / 'patient_atrium_mesh_database'
-directory['result'] = script_dir / 'result'
+# directory['data'] = script_dir / 'patient_atrium_mesh_database'
+# directory['result'] = script_dir / 'result'
+directory['data'] = script_dir.parent / '0_data'
+directory['result'] = script_dir.parent / '0_data'
 
 # create the folder if it does not exist
 directory['result'].mkdir(exist_ok=True)
