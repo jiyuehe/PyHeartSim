@@ -22,14 +22,12 @@ def execute(vertex, face, Delta, thickness):
     # NOTE: Delta = 1 is the most convenient. Or grid will not be at integer values. Integer values make it easy for 3D convolution that is common in neural networks
 
     # create a grid, so that will know what x, y, z values to take
-    mean_edge_length = 0.5 # it is preferred to set it to 0.5 in the previous mesh processing step. np.mean(np.sqrt(np.sum((vertex[face[:, 0], :] - vertex[face[:, 1], :])**2, axis=1)))
-    d_threshold = (thickness / 2) * np.sqrt(2) * mean_edge_length; # need to be at least greater than atrium inter-vertex distance (mean triangle edge length)
     grid = []
     for i in range(3):
         # make the grid at integer values
-        # +2*d_threshold is to make the grid larger, so it won't lost voxels due to discrete of Delta
-        start = int(np.round(np.min(vertex[:, i]) - 2 * d_threshold))
-        end = int(np.round(np.max(vertex[:, i]) + 2 * d_threshold + Delta))
+        # +2*Delta is to make the grid larger, so it won't lost voxels due to discrete of Delta
+        start = int(np.round(np.min(vertex[:, i]) - 2 * Delta))
+        end = int(np.round(np.max(vertex[:, i]) + 2 * Delta + Delta))
     
         grid.append(np.arange(start, end, Delta))
 
@@ -64,6 +62,7 @@ def execute(vertex, face, Delta, thickness):
         fig.show()
 
     # for each vertex, create voxels within the sphere of radius d_threshold
+    d_threshold = (thickness / 2) * Delta
     voxel_temp = []
     for n in range(vertex.shape[0]):
         if (n+1) % (vertex.shape[0] // 5) == 0:
@@ -92,10 +91,7 @@ def execute(vertex, face, Delta, thickness):
 
     debug_plot = 0
     if debug_plot == 1:
-        geometry = {}
-        geometry['vertex'] = vertex
-        geometry['face'] = face
-        geometry['voxel'] = voxel
-        geometry_processing.debug_plot.plot_mesh(geometry)
+        # plot mesh and voxel
+        geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
 
     return voxel

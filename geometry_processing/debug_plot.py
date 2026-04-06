@@ -19,7 +19,7 @@ pio.renderers.default = 'browser'
 import numpy as np
 
 def add_voxel_cubes(fig, voxel_arr):
-    # Each voxel is a center, create a cube of 1mm (0.5mm offset each direction)
+    # each voxel is a center, create a cube of 1mm (0.5mm offset each direction)
     cube_vertices = np.array([
         [-0.5, -0.5, -0.5],
         [ 0.5, -0.5, -0.5],
@@ -30,16 +30,16 @@ def add_voxel_cubes(fig, voxel_arr):
         [ 0.5,  0.5,  0.5],
         [-0.5,  0.5,  0.5]
     ])
-    # Faces of the cube (each face is two triangles)
+    # faces of the cube (each face is two triangles)
     faces = np.array([
-        [0, 1, 2], [0, 2, 3],  # bottom
-        [4, 5, 6], [4, 6, 7],  # top
-        [0, 1, 5], [0, 5, 4],  # front
-        [2, 3, 7], [2, 7, 6],  # back
-        [1, 2, 6], [1, 6, 5],  # right
-        [3, 0, 4], [3, 4, 7]   # left
+        [0, 1, 2], [0, 2, 3], # bottom
+        [4, 5, 6], [4, 6, 7], # top
+        [0, 1, 5], [0, 5, 4], # front
+        [2, 3, 7], [2, 7, 6], # back
+        [1, 2, 6], [1, 6, 5], # right
+        [3, 0, 4], [3, 4, 7] # left
     ])
-    # For performance, combine all cubes into one Mesh3d
+    # for performance, combine all cubes into one Mesh3d
     all_vertices = []
     all_i, all_j, all_k = [], [], []
     for idx, center in enumerate(voxel_arr):

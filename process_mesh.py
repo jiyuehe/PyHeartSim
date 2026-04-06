@@ -21,6 +21,7 @@ script_dir = Path(script_dir)
 
 import numpy as np
 import geometry_processing
+from scipy.spatial import cKDTree
 
 directory = {}
 directory['home'] = script_dir
@@ -61,7 +62,7 @@ vertex, face = geometry_processing.load_obj.execute(directory['result'], name_pr
 vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined_3mm')
 
 #%%
-# convert triangular mesh to cartesian nodes
+# convert triangular mesh to cartesian nodes for heart simulation
 # ==============================
 Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
 # NOTE: 
@@ -71,11 +72,50 @@ thickness = 2 # how many voxels across endocardium to epicardium
 voxel = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
 neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel) # for each voxel, find its neighbor voxels
 
+debug_plot = 0
+if debug_plot == 1:
+    # plot mesh and voxel
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
 
+#%%
+# create voxels for the 3mm resolution mesh, for saving simulation data
+# ==============================
+Delta = 3 # voxel spacing, unit: mm
+thickness = 2 # how many voxels across endocardium to epicardium
+voxel2 = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
 
-# id mapping between voxel and vertex3mm
-voxel_id_of_vertex3mm, vertex3mm_id_of_voxel = geometry_processing.id_mapping_between_voxel_and_vertex.execute(voxel, vertex3mm)
+debug_plot = 0
+if debug_plot == 1:
+    # plot mesh and voxel
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel2)
 
+# for each vertex, find its nearest voxel2 id
+voxel2_id_of_vertex, vertex_id_of_voxel2 = geometry_processing.id_mapping_between_voxel_and_vertex.execute(voxel2, vertex)
+
+# remove duplicates
+voxel2_id_of_vertex = np.unique(voxel2_id_of_vertex)
+voxel3mm = voxel2[voxel2_id_of_vertex, :]
+
+# for each voxel3mm, find the voxel's (1mm spacing) id of the nearest voxel (1mm spacing)
+tree = cKDTree(voxel)
+_, voxel_id_of_voxel3mm = tree.query(voxel3mm, k=1)
+
+debug_plot = 0
+if debug_plot == 1:
+    # plot mesh and voxel
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel3mm)
+
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel[voxel_id_of_voxel3mm,:])
+
+# rescale coordinates: 3mm spacing -> 1mm spacing (divide by Delta=3), so neighboring voxels are 1 unit apart, ready for use as indices
+voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int)
+
+debug_plot = 0
+if debug_plot == 1:
+    # plot mesh and voxel
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel3mm_1mm_spacing)
+
+#%%
 # save geometry data
 # ==============================
 geometry = {}
@@ -88,8 +128,9 @@ geometry['face3mm'] = face3mm # low resolution mesh
 geometry['Delta'] = Delta # voxel spacing, unit: mm
 geometry['voxel'] = voxel
 geometry['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
-geometry['voxel_id_of_vertex3mm'] = voxel_id_of_vertex3mm # these are voxel ids: the nearest voxel id of each vertex3mm
-geometry['vertex3mm_id_of_voxel'] = vertex3mm_id_of_voxel # these are vertex3mm ids:: the nearest vertex3mm id of each voxel
+geometry['voxel3mm'] = voxel3mm # these are voxels of 3mm spacing
+geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
+geometry['voxel_id_of_voxel3mm'] = voxel_id_of_voxel3mm # for each voxel3mm, the id of the nearest voxel (1mm spacing)
 
 debug_plot = 0
 if debug_plot == 1:
