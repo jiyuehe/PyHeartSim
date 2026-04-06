@@ -52,29 +52,29 @@ def execute(geometry, signal, data_flag, geometry_flag, plot_lat_map_flag, fig_n
             plt.tight_layout()
         elif geometry_flag in [1, 2]: # 3D slab or patient atrium          
             node = geometry['node']
-            face = geometry['face']
-            vertex = geometry['vertex']
+            # face = geometry['face']
+            # vertex = geometry['vertex']
 
-            plot_type = 'trisurf' # 'scatter' or 'trisurf'
-            if plot_type == 'scatter':
-                plt.figure()
-                ax = plt.axes(projection='3d')
-                ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=color, edgecolor='none', linewidth=0, s=60, marker='s')
-                plt.axis('off')
-                ax.view_init(elev=70, azim=-70)
-                common.set_axes_equal.execute(ax)
-                plt.tight_layout()
-            elif plot_type == 'trisurf':                
-                triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
-                plt.figure()
-                ax = plt.axes(projection='3d')
-                face_color = color[face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
-                surf = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
-                surf.set_facecolor(face_color)
-                plt.axis('off')
-                ax.view_init(elev=70, azim=-70)
-                common.set_axes_equal.execute(ax)
-                plt.tight_layout()
+            # plot_type = 'scatter' # 'scatter' or 'trisurf'
+            # if plot_type == 'scatter':
+            plt.figure()
+            ax = plt.axes(projection='3d')
+            ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=color, edgecolor='none', linewidth=0, s=60, marker='s')
+            plt.axis('off')
+            ax.view_init(elev=70, azim=-70)
+            common.set_axes_equal.execute(ax)
+            plt.tight_layout()
+            # elif plot_type == 'trisurf':                
+            #     triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
+            #     plt.figure()
+            #     ax = plt.axes(projection='3d')
+            #     face_color = color[face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
+            #     surf = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
+            #     surf.set_facecolor(face_color)
+            #     plt.axis('off')
+            #     ax.view_init(elev=70, azim=-70)
+            #     common.set_axes_equal.execute(ax)
+            #     plt.tight_layout()
 
         plt.savefig(fig_name, dpi=100, bbox_inches="tight", pad_inches=0)
         plt.close()

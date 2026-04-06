@@ -80,7 +80,7 @@ def run_simulation(input_arguments):
         Delta = geometry_data['Delta']
         neighbor_id_2d = geometry_data['neighbor_id_2d']
         
-        # Check GPU availability and choose appropriate module
+        # check GPU availability and choose appropriate module
         if cuda.is_available():
             print("GPU parallel computing for electrogram")
             electrogram_unipolar = simulation.unipolar_electrogram_gpu.compute(electrode_xyz, voxel, D0, heart_model_parameters['c_voxel'], action_potential, Delta, neighbor_id_2d)
@@ -89,11 +89,11 @@ def run_simulation(input_arguments):
 
     # save simulation results
     if save_result_flag == 1:
-        voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
+        voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
 
         simulation_results = {}
-        simulation_results['action_potential_vertex3mm'] = action_potential[:, voxel_id_of_vertex3mm] # shape: (time, n_vertex3mm)
-        simulation_results['h_vertex3mm'] = h[:, voxel_id_of_vertex3mm] # shape: (time, n_vertex3mm)
+        simulation_results['action_potential_voxel3mm'] = action_potential[:, voxel_id_of_voxel3mm] # shape: (time, n_voxel3mm)
+        simulation_results['h_voxel3mm'] = h[:, voxel_id_of_voxel3mm] # shape: (time, n_voxel3mm)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
@@ -115,7 +115,8 @@ def run_simulation(input_arguments):
 if __name__ == "__main__":
     directory = {}
     directory['home'] = script_dir
-    directory['result'] = script_dir / 'result'
+    directory['result'] = script_dir.parent / '0_result'
+    directory['data'] = script_dir.parent / '0_data'
     geometry_name = '103_1-lagood_geometry.npz'
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     directory['result'].mkdir(exist_ok=True)
 
     # load geometry data
-    file_path = directory['result'] / geometry_name
+    file_path = directory['data'] / geometry_name
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
@@ -133,8 +134,8 @@ if __name__ == "__main__":
     input_arguments['save_result_flag'] = save_result_flag
     input_arguments['result_folder'] = directory['result']
 
-    s1 = 5125
-    s2 = 5125
+    s1 = 1000
+    s2 = 1000
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
 
@@ -148,10 +149,10 @@ if __name__ == "__main__":
     focal_2 = s2
     
     geometry = {}
-    geometry['vertex'] = geometry_data['vertex3mm']
-    geometry['face'] = geometry_data['face3mm']
-    voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
-    geometry['node'] = geometry_data['voxel'][voxel_id_of_vertex3mm, :]
+    # geometry['vertex'] = geometry_data['vertex3mm']
+    # geometry['face'] = geometry_data['face3mm']
+    voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
+    geometry['node'] = geometry_data['voxel'][voxel_id_of_voxel3mm, :]
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # plot some action potentials and electrograms
@@ -163,7 +164,7 @@ if __name__ == "__main__":
         else:
             sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
 
-        action_potential = sim_data['action_potential_vertex3mm']
+        action_potential = sim_data['action_potential_voxel3mm']
         physical_time = sim_data['physical_time']
         if simulation_parameters['compute_electrogram_flag'] == 1:
             electrogram_unipolar = sim_data['electrogram_unipolar']

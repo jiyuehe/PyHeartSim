@@ -62,6 +62,7 @@ def execute(vertex, face, Delta, thickness):
         fig.show()
 
     # for each vertex, create voxels within the sphere of radius d_threshold
+    # d_threshold = (thickness / 2) * np.sqrt(2) * Delta
     d_threshold = (thickness / 2) * Delta
     voxel_temp = []
     for n in range(vertex.shape[0]):

@@ -48,15 +48,15 @@ def execute(in_arg):
 
         node = geometry_data['voxel'][voxel_for_each_vertex,:]
     elif geometry_flag in [0, 1, 3, 4]:
-        voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
+        voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
 
-        node = geometry_data['voxel'][voxel_id_of_vertex3mm,:]
+        node = geometry_data['voxel'][voxel_id_of_voxel3mm,:]
 
-        vertex = geometry_data['vertex3mm']
-        face = geometry_data['face3mm']
+        # vertex = geometry_data['vertex3mm']
+        # face = geometry_data['face3mm']
 
     # simulation data
-    action_potential = simulation_results['action_potential_vertex3mm']
+    action_potential = simulation_results['action_potential_voxel3mm']
     t = simulation_results['physical_time']
 
     if ending_time == []:
@@ -90,22 +90,22 @@ def execute(in_arg):
     fig = plt.figure(figsize=(10, 8))
     
     if geometry_flag != 0: # 3D
-        plot_type = 'trisurf' # 'scatter' or 'trisurf'
-        if plot_type == 'scatter':
-            ax = plt.axes(projection='3d')
-            plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
-            plt.axis('off')
-            ax.view_init(elev=70, azim=-70)
-            common.set_axes_equal.execute(ax)
-        elif plot_type == 'trisurf': # this is slow
-            triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
-            ax = plt.axes(projection='3d')
-            face_color = map_color[0][face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
-            plot_handle = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
-            plot_handle.set_facecolor(face_color)
-            plt.axis('off')
-            ax.view_init(elev=70, azim=-70)
-            common.set_axes_equal.execute(ax)
+        # plot_type = 'trisurf' # 'scatter' or 'trisurf'
+        # if plot_type == 'scatter':
+        ax = plt.axes(projection='3d')
+        plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
+        plt.axis('off')
+        ax.view_init(elev=70, azim=-70)
+        common.set_axes_equal.execute(ax)
+        # elif plot_type == 'trisurf': # this is slow
+        #     triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
+        #     ax = plt.axes(projection='3d')
+        #     face_color = map_color[0][face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
+        #     plot_handle = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
+        #     plot_handle.set_facecolor(face_color)
+        #     plt.axis('off')
+        #     ax.view_init(elev=70, azim=-70)
+        #     common.set_axes_equal.execute(ax)
     elif geometry_flag == 0: # 2D sheet
         nx = int(np.max(node[:,0]) - np.min(node[:,0])) + 1
         ny = int(np.max(node[:,1]) - np.min(node[:,1])) + 1
@@ -128,11 +128,11 @@ def execute(in_arg):
             color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
             plot_handle.set_data(color_image)
         elif geometry_flag != 0: # 3D
-            if plot_type == 'scatter':
-                plot_handle.set_color(map_color[n])
-            elif plot_type == 'trisurf':
-                face_color = map_color[n][face].mean(axis=1)
-                plot_handle.set_facecolor(face_color)
+            # if plot_type == 'scatter':
+            plot_handle.set_color(map_color[n])
+            # elif plot_type == 'trisurf':
+            #     face_color = map_color[n][face].mean(axis=1)
+            #     plot_handle.set_facecolor(face_color)
         
         ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
@@ -153,11 +153,11 @@ def execute(in_arg):
                 color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
                 plot_handle.set_data(color_image)
             elif geometry_flag != 0: # 3D
-                if plot_type == 'scatter':
-                    plot_handle.set_color(map_color[n])
-                elif plot_type == 'trisurf':
-                    face_color = map_color[n][face].mean(axis=1)
-                    plot_handle.set_facecolor(face_color)
+                # if plot_type == 'scatter':
+                plot_handle.set_color(map_color[n])
+                # elif plot_type == 'trisurf':
+                #     face_color = map_color[n][face].mean(axis=1)
+                #     plot_handle.set_facecolor(face_color)
 
             ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 

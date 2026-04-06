@@ -38,7 +38,7 @@ import lat_map
 #%% 
 directory = {}
 directory['home'] = script_dir
-directory['result'] = script_dir / 'result'
+directory['result'] = script_dir.parent / '0_result'
 
 # create the folder if it does not exist
 directory['result'].mkdir(exist_ok=True)

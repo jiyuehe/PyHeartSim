@@ -19,7 +19,7 @@ import plotly.io as pio
 pio.renderers.default = "browser" # simulation result mesh display in internet browser
 
 def assign_simulation_parameters(geometry_data):
-    voxel_id_of_electrode = geometry_data['voxel_id_of_vertex3mm'] # assign electrode locations
+    voxel_id_of_electrode = geometry_data['voxel_id_of_voxel3mm'] # assign electrode locations
 
     debug_plot = 0
     if debug_plot == 1: # show geometry voxel
@@ -199,7 +199,7 @@ def assign_heart_model_parameters(simulation_parameters, n_voxel):
             'tau_open_voxel': np.ones(n_voxel) * tau_open, # determines the shape of action potential
             'tau_close_voxel': np.ones(n_voxel) * tau_close, # determines the shape of action potential
             'v_gate_voxel': np.ones(n_voxel) * v_gate, # gating variable threshold
-            'c_voxel': np.ones(n_voxel) * 0.4, # diffusion coefficient
+            'c_voxel': np.ones(n_voxel) * 1.5, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {

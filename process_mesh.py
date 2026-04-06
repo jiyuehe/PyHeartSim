@@ -58,8 +58,8 @@ vertex_original, face_original = geometry_processing.load_obj.execute(directory[
 # load the refined .obj mesh (0.5 mm resolution)
 vertex, face = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined')
 
-# load the 3 mm resolution .obj mesh
-vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined_3mm')
+# # load the 3 mm resolution .obj mesh
+# vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined_3mm')
 
 #%%
 # convert triangular mesh to cartesian nodes for heart simulation
@@ -123,14 +123,14 @@ geometry['vertex_original'] = vertex_original
 geometry['face_original'] = face_original
 geometry['vertex'] = vertex # high resolution mesh
 geometry['face'] = face # high resolution mesh
-geometry['vertex3mm'] = vertex3mm # low resolution mesh
-geometry['face3mm'] = face3mm # low resolution mesh
+# geometry['vertex3mm'] = vertex3mm # low resolution mesh
+# geometry['face3mm'] = face3mm # low resolution mesh
 geometry['Delta'] = Delta # voxel spacing, unit: mm
 geometry['voxel'] = voxel
 geometry['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
-geometry['voxel3mm'] = voxel3mm # these are voxels of 3mm spacing
-geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
-geometry['voxel_id_of_voxel3mm'] = voxel_id_of_voxel3mm # for each voxel3mm, the id of the nearest voxel (1mm spacing)
+geometry['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
+geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
+geometry['voxel_id_of_voxel3mm'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
 
 debug_plot = 0
 if debug_plot == 1:
