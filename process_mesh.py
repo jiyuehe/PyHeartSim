@@ -63,15 +63,15 @@ vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], n
 #%%
 # convert triangular mesh to cartesian nodes
 # ==============================
-Delta = 1 # voxel spacing, unit: mm. 
+Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
 # NOTE: 
-# Delta = 1 is the most convenient, or grid will not be at integer values. 
+# Delta = 1 is the most convenient, or grid will not be at integer values
 # integer values make it easy for 3D convolution that is common in neural networks
 thickness = 2 # how many voxels across endocardium to epicardium
 voxel = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
+neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel) # for each voxel, find its neighbor voxels
 
-# for each voxel, find its neighbor voxels
-neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel)
+
 
 # id mapping between voxel and vertex3mm
 voxel_id_of_vertex3mm, vertex3mm_id_of_voxel = geometry_processing.id_mapping_between_voxel_and_vertex.execute(voxel, vertex3mm)
@@ -94,7 +94,7 @@ geometry['vertex3mm_id_of_voxel'] = vertex3mm_id_of_voxel # these are vertex3mm 
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(geometry)
+    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
 
 #%%
 # save

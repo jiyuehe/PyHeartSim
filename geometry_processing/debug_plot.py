@@ -64,15 +64,7 @@ def add_voxel_cubes(fig, voxel_arr):
         showlegend=True
     ))
 
-def plot_mesh(geometry):
-    vertex = geometry['vertex']
-    face = geometry['face']
-
-    if 'voxel' in geometry:
-        voxel = geometry['voxel']
-    else:
-        voxel = []
-
+def plot_mesh(vertex, face, voxel):
     fig = go.Figure()
     # add mesh faces
     fig.add_trace(go.Mesh3d(
