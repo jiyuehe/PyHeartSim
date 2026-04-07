@@ -38,7 +38,8 @@ import lat_map
 #%% 
 directory = {}
 directory['home'] = script_dir
-directory['result'] = script_dir.parent / '0_result'
+directory['result'] = Path('/home/j/Desktop/hdd/103_1-lagood_3mm')
+directory['data'] = script_dir.parent / '0_data'
 
 # create the folder if it does not exist
 directory['result'].mkdir(exist_ok=True)
@@ -46,7 +47,7 @@ directory['result'].mkdir(exist_ok=True)
 geometry_name = '103_1-lagood_geometry.npz'
 
 # load geometry data
-file_path = directory['result'] / geometry_name
+file_path = directory['data'] / geometry_name
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 
@@ -59,7 +60,7 @@ input_arguments['result_folder'] = directory['result']
 input_arguments['simulation_parameters'] = simulation_parameters
 
 # save s1 and s2 to text file
-n_simulations = 2
+n_simulations = 100
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
@@ -68,10 +69,10 @@ s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0
 plot_lat_map_flag = 1
 
 geometry = {}
-geometry['vertex'] = geometry_data['vertex3mm']
-geometry['face'] = geometry_data['face3mm']
-voxel_id_of_vertex3mm = geometry_data['voxel_id_of_vertex3mm']
-geometry['node'] = geometry_data['voxel'][voxel_id_of_vertex3mm, :]
+# geometry['vertex'] = geometry_data['vertex3mm']
+# geometry['face'] = geometry_data['face3mm']
+voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
+geometry['node'] = geometry_data['voxel'][voxel_id_of_voxel3mm, :]
 
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
