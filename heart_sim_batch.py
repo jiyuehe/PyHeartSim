@@ -105,6 +105,8 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
 #%%
+print('done')
+
 # ensures the kernel dies. 
 # because even after the visual studio code is closed, 
 # there will still be heavy python process in CPU cause computer to heat up and slow down.
