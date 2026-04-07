@@ -60,7 +60,7 @@ input_arguments['result_folder'] = directory['result']
 input_arguments['simulation_parameters'] = simulation_parameters
 
 # save s1 and s2 to text file
-n_simulations = 100
+n_simulations = 3000
 n_nodes = input_arguments['geometry_data']['voxel'].shape[0]
 s1 = np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
 s2 = s1 # np.random.choice(n_nodes, size=n_simulations) # random integers from 0 to n_nodes-1
