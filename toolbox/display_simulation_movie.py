@@ -44,9 +44,9 @@ def execute(in_arg):
     geometry_data = in_arg['geometry_data']
 
     if geometry_flag == 2:
-        voxel_for_each_vertex = geometry_data['voxel_for_each_vertex']
+        voxel_id_of_vertex = geometry_data['voxel_id_of_vertex']
 
-        node = geometry_data['voxel'][voxel_for_each_vertex,:]
+        node = geometry_data['voxel'][voxel_id_of_vertex,:]
     elif geometry_flag in [0, 1, 3, 4]:
         voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
 
@@ -69,7 +69,7 @@ def execute(in_arg):
 
     # activation phase movie using matplotlib, with option to save as gif
     if geometry_flag == 2:
-        movie_data = action_potential[:, voxel_for_each_vertex] # display on vertices
+        movie_data = action_potential[:, voxel_id_of_vertex] # display on vertices
     elif geometry_flag in [0, 1, 3, 4]:
         movie_data = action_potential # display on 3mm vertices
 

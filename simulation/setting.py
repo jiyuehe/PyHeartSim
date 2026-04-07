@@ -59,7 +59,7 @@ def assign_simulation_parameters(geometry_data):
         # 1: compute electrogram 
         # 0: do not compute electrogram
         'voxel_id_of_electrode': voxel_id_of_electrode, # electrode for computing electrograms
-        't_final': 300, # ms
+        't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
     }
 
@@ -199,7 +199,7 @@ def assign_heart_model_parameters(simulation_parameters, n_voxel):
             'tau_open_voxel': np.ones(n_voxel) * tau_open, # determines the shape of action potential
             'tau_close_voxel': np.ones(n_voxel) * tau_close, # determines the shape of action potential
             'v_gate_voxel': np.ones(n_voxel) * v_gate, # gating variable threshold
-            'c_voxel': np.ones(n_voxel) * 1.5, # diffusion coefficient
+            'c_voxel': np.ones(n_voxel) * 0.5, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {

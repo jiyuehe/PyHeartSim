@@ -29,7 +29,7 @@ pio.renderers.default = "browser" # mesh display in internet browser
 
 directory = {}
 directory['home'] = script_dir
-directory['result'] = script_dir.parent / 'result'
+directory['result'] = script_dir / 'result'
 
 # create the folder if it does not exist
 directory['result'].mkdir(exist_ok=True)
@@ -117,7 +117,7 @@ match geometry_flag:
 # for each voxel, find its neighbor voxels
 neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel)
 
-debug_plot = 1
+debug_plot = 0
 if debug_plot == 1: # show geometry voxel
     n_voxel = len(voxel)
     colors = np.array(['gray'] * n_voxel)
@@ -140,6 +140,7 @@ geometry = {
     'vertex_id_of_voxel': vertex_id_of_voxel,
     'vertex': vertex, # triangular mesh vertex
     'face': face, # triangular mesh face
+    'voxel_id_of_voxel3mm': np.arange(len(voxel)), # for code compatibility
 }
 
 file_path = directory['result'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
