@@ -9,7 +9,7 @@ import pyvista as pv # pip install pyvista
 import trimesh # pip install trimesh
 from scipy import ndimage
 from skimage import measure # pip install scikit-image
-
+# pip install fast-simplification
 
 def clean_mesh(
     input_path: str,
@@ -339,7 +339,6 @@ def main() -> int:
     name_prefix = '105_6-LA'
     input_mesh_path = directory['data'] / f'{name_prefix}.obj'
     output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
-    output_mesh_path_3mm = directory['result'] / f'{name_prefix}_refined_3mm.obj'
 
     # Direct parameter setup (no command-line arguments).
     debug_mode = True
@@ -382,32 +381,6 @@ def main() -> int:
     )
     print("TSDF-style rebuild finished (0.5 mm). Report:")
     for key, value in report_05mm.items():
-        print(f"{key}: {value}")
-    print()
-
-    report_3mm = clean_mesh(
-        str(input_mesh_path),
-        str(output_mesh_path_3mm),
-        debug_mode=debug_mode,
-        tsdf_target_res=tsdf_target_res,
-        tsdf_truncation_dist=tsdf_truncation_dist,
-        morph_closing_iters=morph_closing_iters,
-        morph_dilation_iters=morph_dilation_iters,
-        pad_voxels=pad_voxels,
-        fill_internal_volume=fill_internal_volume,
-        sdf_smoothing_sigma=sdf_smoothing_sigma,
-        mc_level=mc_level,
-        simplify_faces_ratio=simplify_faces_ratio,
-        enable_decimation=enable_decimation,
-        smooth_iterations=smooth_iterations,
-        smooth_lambda=smooth_lambda,
-        enable_remesh=enable_remesh,
-        target_edge_length=3.0,
-        post_remesh_smooth_iterations=post_remesh_smooth_iterations,
-        visualize=visualize,
-    )
-    print("TSDF-style rebuild finished (3.0 mm). Report:")
-    for key, value in report_3mm.items():
         print(f"{key}: {value}")
     print()
 
