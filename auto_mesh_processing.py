@@ -451,6 +451,9 @@ def main() -> int:
     directory['data'] = script_dir / 'patient_atrium_mesh_database'
     directory['result'] = script_dir / 'result'
 
+    # create the result directory if it doesn't exist
+    directory['result'].mkdir(exist_ok=True)
+
     name_prefix = '105_6-LA'
     input_mesh_path = directory['data'] / f'{name_prefix}.obj'
     output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
