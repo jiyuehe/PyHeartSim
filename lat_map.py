@@ -31,9 +31,11 @@ import common
 def execute(geometry, result_folder, focal_1, focal_2, plot_lat_map_flag):
     # load simulation results
     if str(focal_2) == '[]':
-        simulation_results = dict(np.load(result_folder / f'simulation_results_{focal_1}.npz', allow_pickle=False))
+        file_name = f'simulation_results_{focal_1}.npz'
     else: 
-        simulation_results = dict(np.load(result_folder / f'simulation_results_{focal_1}_{focal_2}.npz', allow_pickle=False))
+        file_name = f'simulation_results_{focal_1}_{focal_2}.npz'
+    
+    simulation_results = dict(np.load(result_folder / file_name, allow_pickle=False))
     
     electrogram_unipolar = simulation_results['electrogram_unipolar']
 
@@ -48,11 +50,16 @@ def execute(geometry, result_folder, focal_1, focal_2, plot_lat_map_flag):
     data_flag = 1 # 0: action potential, 1: electrogram
     geometry_flag = 2 # 2: 3D atrium
     lat = toolbox.lat_map_on_node.execute(geometry, electrogram_unipolar, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
-
-    # save local activation time
-    if str(focal_2) == '[]':
-        np.savez(result_folder / f'lat_{focal_1}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
-    else:
-        np.savez(result_folder / f'lat_{focal_1}_{focal_2}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
-
     common.crop_image.execute(fig_name)
+
+    # save lat to simulation_results
+    simulation_results['lat'] = lat
+    np.savez(result_folder / file_name, **simulation_results)
+
+    # # save local activation time
+    # if str(focal_2) == '[]':
+    #     np.savez(result_folder / f'lat_{focal_1}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
+    # else:
+    #     np.savez(result_folder / f'lat_{focal_1}_{focal_2}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
+
+    
