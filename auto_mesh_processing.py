@@ -11,6 +11,19 @@ from scipy import ndimage
 from skimage import measure # pip install scikit-image
 # pip install fast-simplification
 
+import os
+from pathlib import Path
+
+# add the workspace root to Python path
+import sys
+workspace_root = Path().resolve().parent # Path().resolve() returns an absolute path, the full path
+if str(workspace_root) not in sys.path:
+    sys.path.insert(0, str(workspace_root))
+import common
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 def clean_mesh(
     input_path: str,
     output_path: str,
@@ -322,7 +335,7 @@ def crinkliness_metric_np(vertices: np.ndarray, faces: np.ndarray):
 
 
 #%%
-def main() -> int:
+def main():
     from pathlib import Path
     script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
     os.chdir(script_dir) # change the working directory
@@ -336,11 +349,11 @@ def main() -> int:
     # create the result directory if it doesn't exist
     directory['result'].mkdir(exist_ok=True)
 
-    name_prefix = '105_6-LA'
+    name_prefix = '103_1-lagood'
     input_mesh_path = directory['data'] / f'{name_prefix}.obj'
     output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
 
-    # Direct parameter setup (no command-line arguments).
+    # parameter setup
     debug_mode = True
     tsdf_target_res = 120
     tsdf_truncation_dist = None
@@ -352,7 +365,7 @@ def main() -> int:
     mc_level = 0.0
     simplify_faces_ratio = 0.9
     enable_decimation = True
-    smooth_iterations = 10
+    smooth_iterations = 1
     smooth_lambda = 0.6
     enable_remesh = True
     post_remesh_smooth_iterations = 5
@@ -383,6 +396,36 @@ def main() -> int:
     for key, value in report_05mm.items():
         print(f"{key}: {value}")
     print()
+
+    debug_plot = 1
+    if debug_plot == 1:
+        original_mesh = trimesh.load(str(input_mesh_path), force="mesh")
+        processed_mesh = trimesh.load(str(output_mesh_path), force="mesh")
+
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6), subplot_kw={'projection': '3d'})
+
+        for ax, mesh, title in zip(
+            axes,
+            [original_mesh, processed_mesh],
+            ["Original Mesh", "Processed Mesh"],
+        ):
+            verts = mesh.vertices
+            faces = mesh.faces
+            poly = Poly3DCollection(
+                verts[faces], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+            )
+            ax.add_collection3d(poly)
+            ax.set_title(title, fontsize=10)
+            ax.view_init(elev=70, azim=-70)
+            common.set_axes_equal.execute(ax)
+
+        # plt.tight_layout()
+        
+        png_path = str(directory['result'] / f'{name_prefix}_mesh_comparison.png')
+        plt.savefig(png_path, dpi=300)
+        plt.close(fig)
+
+        common.crop_image.execute(png_path)
 
     print('done')
     return 0
