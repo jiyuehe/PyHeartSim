@@ -20,7 +20,7 @@ os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
 import simulation
-import heart_sim_individual
+import simulation_individual
 import numpy as np # pip install numpy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -69,7 +69,7 @@ simulation_parameters = simulation.setting.assign_simulation_parameters(geometry
 input_arguments['simulation_parameters'] = simulation_parameters
 
 # run simulation
-heart_sim_individual.run_simulation(input_arguments)
+simulation_individual.run_simulation(input_arguments)
 
 # # display simulation movie
 # do_flag = 0

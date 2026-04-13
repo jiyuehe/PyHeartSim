@@ -13,16 +13,13 @@
 # limitations under the License.
 
 #%%
-import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
 import matplotlib.pyplot as plt
 import numpy as np
+import configuration
 
 #%%
+directory = configuration.directory_setup()
+
 heart_model_flag = 2 # 1: Mitchell-Schaeffer. 2: Aliev-Panfilov
 
 # simulation parameters
@@ -148,7 +145,7 @@ axes[2].set_xlabel(f"Time (ms), # steps: {time.shape[0]}")
 axes[2].grid(True)
 
 plt.tight_layout()
-plt.savefig(script_dir.parent / f'result/single_cell_simulation_{model_name.replace("-", "_")}.png', dpi=300)
+plt.savefig(directory['result'] / f'single_cell_simulation_{model_name.replace("-", "_")}.png', dpi=300)
 plt.close()
 
 print('done')

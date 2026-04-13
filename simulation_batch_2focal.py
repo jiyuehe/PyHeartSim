@@ -28,7 +28,7 @@ import common
 
 import simulation
 import toolbox.codes
-import heart_sim_individual
+import simulation_individual
 import numpy as np # pip install numpy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt # pip install matplotlib
@@ -83,7 +83,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.run_simulation(input_arguments)
+        simulation_individual.run_simulation(input_arguments)
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # focal 2
@@ -92,7 +92,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'lat_{str(focal_1)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.run_simulation(input_arguments)
+        simulation_individual.run_simulation(input_arguments)
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
     # dual focals
@@ -101,7 +101,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
     if not os.path.exists(directory['result'] / f'simulation_results_{str(focal_1)}_{str(focal_2)}.npz'):
         input_arguments['s1'] = focal_1
         input_arguments['s2'] = focal_2
-        heart_sim_individual.run_simulation(input_arguments)
+        simulation_individual.run_simulation(input_arguments)
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
 
 #%%
