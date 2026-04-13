@@ -1,3 +1,5 @@
+<img src="demonstration/2_23403.gif" alt="Demo" width="400" />  
+
 # Introduction
 - This is an electrophysiological heart simulator written in **Python**.  
 - Patient atria: A 3D triangular mesh database of the left and/or right atria from **more than 100 patients** are provided.  
