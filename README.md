@@ -1,4 +1,7 @@
+# Demonstration
+Atrial fibrillation of a patient's left atrium:  
 <img src="demonstration/2_23403.gif" alt="Demo" width="400" />  
+<img src="demonstration/2_23403_AP_and_EGM.png" alt="Demo" width="400" />  
 
 # Introduction
 - This is an electrophysiological heart simulator written in **Python**.  
@@ -31,11 +34,7 @@
 - **John Bullinga** -- Provided the de-identified patient atria 3D triangular meshes. As of 2026, Bullinga serves as the Director of Electrophysiology Laboratories at Penn Presbyterian Medical Center of the University of Pennsylvania Health System.  
 - **Jan Christoph** -- Financial support. As of 2026, Christoph is an Assistant Professor at the University of California, San Francisco, and head of the Cardiac Vision Laboratory. He is a faculty member of the Cardiovascular Research Institute, with appointments in the Division of Cardiology, School of Medicine, and the Department of Bioengineering and Therapeutic Sciences. His research interests include cardiac electrophysiology and biomechanics, cardiac arrhythmia mechanisms, the physics of complex biological systems, artificial intelligence, numerical modeling and imaging.
 
-# Examples of simulations
-Atrial fibrillation of a patient's left atrium:  
-<img src="demonstration/2_23403.gif" alt="Demo" width="400" />  
-<img src="demonstration/2_23403_AP_and_EGM.png" alt="Demo" width="400" />  
-
+# More demonstrations
 Rotor arrhythmia of a patient's left atrium:  
 <img src="demonstration/1_35000.gif" alt="Demo" width="400" />  
 <img src="demonstration/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
