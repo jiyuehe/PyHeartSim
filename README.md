@@ -18,8 +18,7 @@ Atrial fibrillation of a patient's left atrium:
 
 # Instruction
 - Best to use Visual Studio Code on the Ubuntu Linux operating system. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
-- Run **heart_sim_individual.py** to compute one heart simulation. 
-- Run heart_sim_batch.py to compute multiple heart simulations.  
+- Run **heart_sim_individual.py** to compute a heart simulation. 
 - Folder structure:  
   ├─ demonstration/, examples of simulations.  
   ├─ geometry_processing/, functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  

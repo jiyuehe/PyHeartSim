@@ -13,18 +13,13 @@
 # limitations under the License.
 
 #%%
-import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
 import time
 import numpy as np # pip install numpy
 from numba import cuda # pip install numba
 import matplotlib.pyplot as plt # pip install matplotlib
 import simulation
 import utility
+import configuration
 
 #%%
 def run_simulation(input_arguments):
@@ -102,18 +97,13 @@ def run_simulation(input_arguments):
 #%%
 # NOTE: 
 # If running this script directly, the following code block will be executed. 
-# If calling the execute() function from another script, the following code block will be ignored.
+# If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
-    directory = {}
-    directory['home'] = script_dir
-    directory['result'] = script_dir.parent / '0_result'
-    directory['data'] = script_dir.parent / '0_data'
+    directory = configuration.directory_setup() # set up directories
+
     geometry_name = '103_1-lagood_geometry.npz'
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1
-
-    # create the folder if it does not exist
-    directory['result'].mkdir(exist_ok=True)
 
     # load geometry data
     file_path = directory['data'] / geometry_name
