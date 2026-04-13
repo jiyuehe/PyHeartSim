@@ -18,12 +18,12 @@
 - Run **heart_sim_individual.py** to compute one heart simulation. 
 - Run heart_sim_batch.py to compute multiple heart simulations.  
 - Folder structure:  
-  ├── demonstration, examples of simulations.  
-  ├── geometry_processing, functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
-  ├── legacy, old functions that no longer in use, keeping them because they may be useful in the future.  
-  ├── patient_atrium_mesh_database, 3D triangular mesh database of the left and/or right atria from more than 100 patients.  
-  ├── simulation, functions for running heart simulations.  
-  └── utility, functions for display, analysis, debug, etc.  
+  ├─ demonstration, examples of simulations.  
+  ├─ geometry_processing, functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
+  ├─ legacy, old functions that no longer in use, keeping them because they may be useful in the future.  
+  ├─ patient_atrium_mesh_database, 3D triangular mesh database of the left and/or right atria from more than 100 patients.  
+  ├─ simulation, functions for running heart simulations.  
+  └─ utility, functions for display, analysis, debug, etc.  
 
 # Contributors
 - **Jiyue He** -- Owner and the main contributor. Jiyue He (Jay) received his PhD from the University of Pennsylvania, where he was honored with the student recognition award. As of 2026, He is a Postdoctoral Scholar at the University of California, San Francisco. His research includes artificial intelligence, numerical modeling, algorithm development, signal processing and data analysis.
