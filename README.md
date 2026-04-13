@@ -21,7 +21,7 @@
   ├─ demonstration/, examples of simulations.  
   ├─ geometry_processing/, functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
   ├─ legacy/, old functions that no longer in use, keeping them because they may be useful in the future.  
-  ├─ patient_atrium_mesh_database/, 3D triangular mesh database of the left and/or right atria from more than 100 patients.  
+  ├─ mesh_database/, 3D triangular mesh database of the left and/or right atria from more than 100 patients.  
   ├─ simulation/, functions for running heart simulations.  
   └─ utility/, functions for display, analysis, debug, etc.  
 
