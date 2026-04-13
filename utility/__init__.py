@@ -12,5 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import common
 from . import display_simulation_movie
 from . import lat_map_on_node
