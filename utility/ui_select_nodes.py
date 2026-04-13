@@ -19,7 +19,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the cu
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
-import codes
 import numpy as np # pip install numpy
 import matplotlib # pip install matplotlib
 import matplotlib.pyplot as plt

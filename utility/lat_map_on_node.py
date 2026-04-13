@@ -13,10 +13,9 @@
 # limitations under the License.
 
 import numpy as np # pip install numpy
-import toolbox.codes
 import matplotlib.pyplot as plt # pip install matplotlib
 from matplotlib.tri import Triangulation
-import common
+from . import common
 
 def execute(geometry, signal, data_flag, geometry_flag, plot_lat_map_flag, fig_name):
     # compute local activation time map

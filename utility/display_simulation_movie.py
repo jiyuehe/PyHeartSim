@@ -21,8 +21,6 @@ script_dir = Path(script_dir)
 
 import sys
 sys.path.insert(0, str(script_dir.parent))  # add PyHeartSim directory to path
-import common
-from toolbox import codes as toolbox_codes
 import numpy as np # pip install numpy
 
 from matplotlib.animation import PillowWriter
