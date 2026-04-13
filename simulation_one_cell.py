@@ -81,7 +81,7 @@ for model_name, model_data, column_id in models:
     axes[2, column_id].grid(True)
 
 plt.tight_layout()
-plt.savefig(directory['result'] / 'single_cell_simulation_comparison.png', dpi=300)
+plt.savefig(directory['result'] / 'heart_model_comparison.png', dpi=300)
 plt.close()
 
 print('done')
