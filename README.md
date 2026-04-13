@@ -9,6 +9,8 @@
 - Best to use Visual Studio Code on the Ubuntu Linux operating system. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
 - Run **heart_sim_individual.py** to compute one heart simulation. 
 - Run heart_sim_batch.py to compute multiple heart simulations.  
+- Folder structure:
+  |- demonstration, examples of simulations
 - The “geometry_processing” folder contains functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
 - The “simulation” folder contains functions for running heart simulations.  
 - The “utility” folder stores miscellaneous codes.  
@@ -21,13 +23,13 @@
 
 # Examples of simulations
 Atrial fibrillation of a patient's left atrium:  
-<img src="demo/2_23403.gif" alt="Demo" width="400" />  
-<img src="demo/2_23403_AP_and_EGM.png" alt="Demo" width="400" />  
+<img src="demonstration/2_23403.gif" alt="Demo" width="400" />  
+<img src="demonstration/2_23403_AP_and_EGM.png" alt="Demo" width="400" />  
 
 Rotor arrhythmia of a patient's left atrium:  
-<img src="demo/1_35000.gif" alt="Demo" width="400" />  
-<img src="demo/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
+<img src="demonstration/1_35000.gif" alt="Demo" width="400" />  
+<img src="demonstration/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
 
 Focal arrhythmia of a patient's left atrium:  
-<img src="demo/0_23403.gif" alt="Demo" width="400" />  
-<img src="demo/0_23403_AP_and_EGM.png" alt="Demo" width="400" />  
+<img src="demonstration/0_23403.gif" alt="Demo" width="400" />  
+<img src="demonstration/0_23403_AP_and_EGM.png" alt="Demo" width="400" />  
