@@ -17,7 +17,7 @@
 - Run heart_sim_batch.py to compute multiple heart simulations.  
 - The “geometry_processing” folder contains functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
 - The “simulation” folder contains functions for running heart simulations.  
-- The “toolbox” folder stores miscellaneous codes for the author’s personal use.  
+- The “utility” folder stores miscellaneous codes.  
 
 # Examples of simulations
 ## Atrial fibrillation of a patient's left atrium
