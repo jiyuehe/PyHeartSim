@@ -39,7 +39,3 @@ Atrial fibrillation of a patient's left atrium:
 Rotor arrhythmia of a patient's left atrium:  
 <img src="demonstration/1_35000.gif" alt="Demo" width="400" />  
 <img src="demonstration/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
-
-Focal arrhythmia of a patient's left atrium:  
-<img src="demonstration/0_23403.gif" alt="Demo" width="400" />  
-<img src="demonstration/0_23403_AP_and_EGM.png" alt="Demo" width="400" />  

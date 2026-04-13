@@ -19,21 +19,12 @@ script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the cu
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
-# add the workspace root to Python path
-import sys
-workspace_root = Path().resolve().parent # Path().resolve() returns an absolute path, the full path
-if str(workspace_root) not in sys.path:
-    sys.path.insert(0, str(workspace_root))
-import common
-
-import simulation
-import toolbox
+import time
 import numpy as np # pip install numpy
 from numba import cuda # pip install numba
-import time
 import matplotlib.pyplot as plt # pip install matplotlib
-
-import lat_map
+import simulation
+import utility
 
 #%%
 def run_simulation(input_arguments):
@@ -212,6 +203,6 @@ if __name__ == "__main__":
         in_arg['movie_save_dir'] = movie_save_dir
         in_arg['simulation_results'] = simulation_results
         in_arg['geometry_data'] = geometry_data
-        toolbox.display_simulation_movie.execute(in_arg)
+        utility.display_simulation_movie.execute(in_arg)
 
 #%%

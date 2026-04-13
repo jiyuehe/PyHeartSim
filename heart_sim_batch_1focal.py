@@ -33,7 +33,7 @@ import numpy as np # pip install numpy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt # pip install matplotlib
 
-import lat_map
+import utility.lat_map as lat_map
 
 #%% 
 directory = {}
