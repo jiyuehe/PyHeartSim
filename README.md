@@ -11,7 +11,7 @@
 - Best to use Visual Studio Code on the Ubuntu Linux operating system. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
 - Run **heart_sim_individual.py** to compute one heart simulation. 
 - Run heart_sim_batch.py to compute multiple heart simulations.  
-- Folder structure:
+- Folder structure:  
   |- demonstration, examples of simulations
 - The “geometry_processing” folder contains functions for processing patient atrial meshes and converting them into Cartesian voxels for heart simulations.  
 - The “simulation” folder contains functions for running heart simulations.  
