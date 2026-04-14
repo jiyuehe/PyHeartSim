@@ -72,11 +72,11 @@ def run_simulation(input_arguments):
 
     # save simulation results
     if save_result_flag == 1:
-        voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
+        voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
 
         simulation_results = {}
-        simulation_results['action_potential_voxel3mm'] = action_potential[:, voxel_id_of_voxel3mm] # shape: (time, n_voxel3mm)
-        simulation_results['h_voxel3mm'] = h[:, voxel_id_of_voxel3mm] # shape: (time, n_voxel3mm)
+        simulation_results['action_potential_voxel3mm'] = action_potential[:, voxel_id_of_electrode] # shape: (time, n_voxel3mm)
+        simulation_results['h_voxel3mm'] = h[:, voxel_id_of_electrode] # shape: (time, n_voxel3mm)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
@@ -125,12 +125,36 @@ if __name__ == "__main__":
     # run simulation
     run_simulation(input_arguments)
 
+    # compute local activation time
+    if str(s2) == '[]':
+        file_name = f'simulation_results_{s1}.npz'
+    else: 
+        file_name = f'simulation_results_{s1}_{s2}.npz'
+    simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
+    electrogram_unipolar = simulation_results['electrogram_unipolar']
+    lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
 
-    
-    geometry = {}
-    voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
-    geometry['node'] = geometry_data['voxel'][voxel_id_of_voxel3mm, :]
-    lat_map.execute(geometry, directory['result'], s1, s2, plot_lat_map_flag)
+    # interpolate local activation time from electrode locations to all voxels
+    voxel = geometry_data['voxel']
+    electrode_voxel = geometry_data['voxel'][geometry_data['voxel_id_of_electrode'], :]
+    lat_voxel = utility.lat_map.interpolate_lat(voxel, electrode_voxel, lat_electrode)
+
+    # plot local activation time map
+    if plot_lat_map_flag == 1:
+        if str(s2) == '[]':
+            fig_name = directory['result'] / f'lat_{str(s1)}.png'
+        else:
+            fig_name = directory['result'] / f'lat_{str(s1)}_{str(s2)}.png'
+        
+        utility.lat_map.plot(voxel, lat_voxel, fig_name)
+        utility.common.crop_image(fig_name)
+
+    # save lat to simulation_results
+    simulation_results['lat_electrode'] = lat_electrode
+    np.savez(directory['result'] / file_name, **simulation_results)
+
+
+
 
     # plot some action potentials and electrograms
     do_flag = 1

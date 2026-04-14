@@ -13,52 +13,52 @@
 # limitations under the License.
 
 import numpy as np # pip install numpy
-
-import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
-# add the workspace root to Python path
-import sys
-workspace_root = Path().resolve().parent # Path().resolve() returns an absolute path, the full path
-if str(workspace_root) not in sys.path:
-    sys.path.insert(0, str(workspace_root))
+import matplotlib.pyplot as plt # pip install matplotlib
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator # pip install scipy
 import common
 
-def execute(geometry, result_folder, focal_1, focal_2, plot_lat_map_flag):
-    # load simulation results
-    if str(focal_2) == '[]':
-        file_name = f'simulation_results_{focal_1}.npz'
-    else: 
-        file_name = f'simulation_results_{focal_1}_{focal_2}.npz'
+def compute_electrode_lat(electrode_signal):
+    dvdt = np.diff(electrode_signal, axis=0)
+    max_dvdt = -dvdt  # negative derivative
+
+    max_dvdt_indices = np.argmax(max_dvdt, axis=0)  # shape: (electrodes,)
+    lat = max_dvdt_indices - np.min(max_dvdt_indices) # normalize to start from 0
+
+    return lat
+
+def interpolate_lat(voxel, electrode_voxel, lat_electrode):
+    # Remove constant dimensions to avoid QhullError when points are coplanar
+    col_range = np.ptp(electrode_voxel, axis=0)
+    active_dims = col_range > 0
+    electrode_voxel_reduced = electrode_voxel[:, active_dims]
+    voxel_reduced = voxel[:, active_dims]
+
+    # Linear interpolation using Delaunay triangulation of electrode locations
+    linear_interp = LinearNDInterpolator(electrode_voxel_reduced, lat_electrode)
+    lat_voxel = linear_interp(voxel_reduced)
+
+    # Fall back to nearest-neighbour for voxels outside the convex hull (NaN)
+    nan_mask = np.isnan(lat_voxel)
+    if np.any(nan_mask):
+        nearest_interp = NearestNDInterpolator(electrode_voxel_reduced, lat_electrode)
+        lat_voxel[nan_mask] = nearest_interp(voxel_reduced[nan_mask])
+
+    return lat_voxel
+
+def plot(voxel, lat_voxel, fig_name):
+    data = lat_voxel
+    data_min = np.nanmin(data)
+    data_max = np.nanmax(data)
+    data_threshold = data_min-0.1 # a little small than data_min, so that places with value of data_min will have color
+    color = common.convert_value_to_red_blue(data, data_min, data_max, data_threshold)
     
-    simulation_results = dict(np.load(result_folder / file_name, allow_pickle=False))
-    
-    electrogram_unipolar = simulation_results['electrogram_unipolar']
+    plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c=color, edgecolor='none', linewidth=0, s=10, marker='.')
+    plt.axis('off')
+    ax.view_init(elev=70, azim=-70)
+    common.set_axes_equal(ax)
+    plt.tight_layout()
 
-    # compute and plot local activation time map
-    (result_folder / 'lat_map').mkdir(parents=True, exist_ok=True) # create the folder if it does not exist
-
-    if str(focal_2) == '[]':
-        fig_name = result_folder / 'lat_map' / f'lat_{str(focal_1)}.png'
-    else:
-        fig_name = result_folder / 'lat_map' / f'lat_{str(focal_1)}_{str(focal_2)}.png'
-
-    data_flag = 1 # 0: action potential, 1: electrogram
-    geometry_flag = 2 # 2: 3D atrium
-    lat = toolbox.lat_map_on_node.execute(geometry, electrogram_unipolar, data_flag, geometry_flag, plot_lat_map_flag, fig_name)
-    common.crop_image.execute(fig_name)
-
-    # save lat to simulation_results
-    simulation_results['lat'] = lat
-    np.savez(result_folder / file_name, **simulation_results)
-
-    # # save local activation time
-    # if str(focal_2) == '[]':
-    #     np.savez(result_folder / f'lat_{focal_1}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
-    # else:
-    #     np.savez(result_folder / f'lat_{focal_1}_{focal_2}.npz', lat=lat) # need lat=lat, so that the key is 'lat'
-
-    
+    plt.savefig(fig_name, dpi=100, bbox_inches="tight", pad_inches=0)
+    plt.close()
