@@ -36,6 +36,7 @@ Atrial fibrillation of a patient's left atrium:
 - Jiyue He, Arkady Pertsov, John Bullinga, Rahul Mangharam. (2023). Individualization of atrial tachycardia models for clinical applications: Performance of fiber-independent model. IEEE Transactions on Biomedical Engineering, vol. 71, no. 1, pp. 258-269. doi: 10.1109/TBME.2023.3298003
 - Jiyue He, Arkady Pertsov, Elizabeth Cherry, Flavio Fenton, Caroline Roney, Steven Niederer, Zirui Zang, Rahul Mangharam. (2023). Fiber Organization Has Little Effect on Electrical Activation Patterns During Focal Arrhythmias in the Left Atrium. IEEE Transactions on Biomedical Engineering, vol. 70, no. 5, pp. 1611-1621. doi: 10.1109/TBME.2022.3223063
 - Jiyue He, Arkady Pertsov, Rahul Mangharam. (2023). Real-time atrial tachycardia ablation guidance with a left atrium model. Heart Rhythm Society Abstract, volume 20, issue 5. doi: 10.1016/j.hrthm.2023.03.343
+- Jiyue He, Arkady Pertsov, Sanjay Dixit, Katie Walsh, Eric Toolan, Rahul Mangharam. (2021). Patient-specific heart model towards atrial fibrillation. Proceedings of the ACM/IEEE 12th International Conference on Cyber-Physical Systems, New York, NY, USA, pp. 33-43. doi: 10.1145/3450267.3450532
 
 # More demonstrations
 Rotor arrhythmia of a patient's left atrium:  
