@@ -13,53 +13,120 @@
 # limitations under the License.
 
 #%%
-import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
 import numpy as np
-import geometry_processing
 from scipy.spatial import cKDTree
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import geometry_processing
+import utility
+import configuration
 
-directory = {}
-directory['home'] = script_dir
-# directory['data'] = script_dir / 'patient_atrium_mesh_database'
-# directory['result'] = script_dir / 'result'
-directory['data'] = script_dir.parent / '0_data'
-directory['result'] = script_dir.parent / '0_data'
-
-# create the folder if it does not exist
-directory['result'].mkdir(exist_ok=True)
-
-name_prefix = '103_1-lagood' # nice sinus rhythm
+directory = configuration.directory_setup()
+name_prefix = '102_1-LA FAM1' # '103_1-lagood' # atrial mesh .obj file name
 
 #%%
 # the original mesh
 # ==============================
 # original .obj mesh
-vertex_original, face_original = geometry_processing.load_obj.execute(directory['data'], name_prefix)
+vertex_original, face_original = utility.common.load_obj(directory['mesh_database'], name_prefix)
 
-# manually clean the mesh in software MeshLab
+# automatically refine the mesh
 # ==============================
+input_mesh_path = directory['mesh_database'] / f'{name_prefix}.obj'
+output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
+
+# parameter setup
+debug_mode = True
+tsdf_target_res = 120
+tsdf_truncation_dist = None
+morph_closing_iters = 3
+morph_dilation_iters = 1
+pad_voxels = 2
+fill_internal_volume = True
+sdf_smoothing_sigma = 2.0
+mc_level = 0.0
+simplify_faces_ratio = 0.9
+enable_decimation = True
+smooth_iterations = 1
+smooth_lambda = 0.6
+enable_remesh = True
+post_remesh_smooth_iterations = 5
+visualize = False
+
+report_05mm = clean_mesh(
+    str(input_mesh_path),
+    str(output_mesh_path),
+    debug_mode=debug_mode,
+    tsdf_target_res=tsdf_target_res,
+    tsdf_truncation_dist=tsdf_truncation_dist,
+    morph_closing_iters=morph_closing_iters,
+    morph_dilation_iters=morph_dilation_iters,
+    pad_voxels=pad_voxels,
+    fill_internal_volume=fill_internal_volume,
+    sdf_smoothing_sigma=sdf_smoothing_sigma,
+    mc_level=mc_level,
+    simplify_faces_ratio=simplify_faces_ratio,
+    enable_decimation=enable_decimation,
+    smooth_iterations=smooth_iterations,
+    smooth_lambda=smooth_lambda,
+    enable_remesh=enable_remesh,
+    target_edge_length=0.5,
+    post_remesh_smooth_iterations=post_remesh_smooth_iterations,
+    visualize=visualize,
+)
+print("TSDF-style rebuild finished (0.5 mm). Report:")
+for key, value in report_05mm.items():
+    print(f"{key}: {value}")
+print()
+
+debug_plot = 1
+if debug_plot == 1:
+    original_mesh = trimesh.load(str(input_mesh_path), force="mesh")
+    processed_mesh = trimesh.load(str(output_mesh_path), force="mesh")
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6), subplot_kw={'projection': '3d'})
+
+    for ax, mesh, title in zip(
+        axes,
+        [original_mesh, processed_mesh],
+        ["Original Mesh", "Processed Mesh"],
+    ):
+        verts = mesh.vertices
+        faces = mesh.faces
+        poly = Poly3DCollection(
+            verts[faces], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+        )
+        ax.add_collection3d(poly)
+        ax.set_title(title, fontsize=10)
+        ax.view_init(elev=70, azim=-70)
+        common.set_axes_equal.execute(ax)
+
+    # plt.tight_layout()
+    
+    png_path = str(directory['result'] / f'{name_prefix}_mesh_comparison.png')
+    plt.savefig(png_path, dpi=300)
+    plt.close(fig)
+
+    common.crop_image.execute(png_path)
+
+print('done')
+
+# NOTE: 
+# can also use software Meshlab to manually refine the mesh
 # some useful tools in MeshLab:
-# make the triangles uniform
+# - make the triangles uniform
 #   Filters -> 
 #       Remeshing, Simplification Reconstruction -> 
 #           Simplification: Quadric Edge Collapse Decimation (Target number of faces set to 1500)
 #           Close Holes
-#           Smoothing, Fairing and Deformation -> Laplacian Smooth (Smoothing steps set to 1)
-#           Remeshing: Isotropic Explicit Remeshing (set inter-vertex distance (Target Length) 0.5 mm)
-# cut holes
-# NOTE: remesh it to have edge length of 0.5mm, so that later when converting to 1mm spacing voxels, there will not have holes
-#       do another remesh to have edge length of 3mm, for saving simulation data
+#           Smoothing, Fairing and Deformation ->
+#               -> Laplacian Smooth (Smoothing steps set to 1)
+#           Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
+# - cut holes: cut the mitral valve, pulmonary veins, etc.
 
 # load the refined .obj mesh (0.5 mm resolution)
-vertex, face = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined')
+vertex, face = utility.common.load_obj(directory['result'], name_prefix + '_refined')
 
-# # load the 3 mm resolution .obj mesh
-# vertex3mm, face3mm = geometry_processing.load_obj.execute(directory['result'], name_prefix + '_refined_3mm')
 
 #%%
 # convert triangular mesh to cartesian nodes for heart simulation

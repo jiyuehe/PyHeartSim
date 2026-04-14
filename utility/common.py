@@ -82,3 +82,21 @@ def convert_value_to_purple_yellow(data, data_min, data_max, data_threshold):
     map_color[non_active_id, :] = 0.5
     
     return map_color
+
+def load_obj(file_directory, mesh_name):
+    file_path = file_directory / f'{mesh_name}.obj'
+
+    vertex = []
+    face = []
+    with open(file_path, 'r', encoding='utf-8') as fid:
+        for line in fid:
+            if line.startswith('v '):
+                vertex.append(np.fromstring(line[2:], sep=' '))
+            elif line.startswith('f '):
+                # subtract 1 to convert 1-based OBJ indices to 0-based python indices
+                face.append(np.fromstring(line[2:], sep=' ', dtype=int) - 1)
+
+    vertex =  np.asarray(vertex)
+    face = np.asarray(face, dtype=int)
+
+    return vertex, face

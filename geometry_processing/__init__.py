@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from . import debug_plot
-from . import load_obj
 from . import convert_triangular_mesh_to_cartesian_nodes
 from . import find_neighbor_voxel_ids
 from . import id_mapping_between_voxel_and_vertex
+from . import automatic_mesh_refinement
