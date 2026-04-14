@@ -95,7 +95,6 @@ def run_simulation(input_arguments):
             np.savez(result_folder / f'simulation_results_{str(s1)}_{str(s2)}', **simulation_results)
 
 #%%
-# NOTE: 
 # If running this script directly, the following code block will be executed. 
 # If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
