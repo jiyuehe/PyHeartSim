@@ -129,8 +129,6 @@ if __name__ == "__main__":
     focal_2 = s2
     
     geometry = {}
-    # geometry['vertex'] = geometry_data['vertex3mm']
-    # geometry['face'] = geometry_data['face3mm']
     voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
     geometry['node'] = geometry_data['voxel'][voxel_id_of_voxel3mm, :]
     lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
