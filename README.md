@@ -16,7 +16,7 @@ Atrial fibrillation of a patient's left atrium:
   - The code runs on Nvidia **GPU** for fast parallel computing.  
   - For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part.  
 
-# Instruction
+# Instructions
 - Best to use Visual Studio Code on the Ubuntu Linux operating system. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
 - Run **heart_sim_individual.py** to compute a heart simulation. 
 - Folder structure:  
