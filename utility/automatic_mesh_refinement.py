@@ -44,12 +44,7 @@ def clean_mesh(
     target_edge_length: Optional[float],
     post_remesh_smooth_iterations: int,
     visualize: bool,
-) -> dict:
-    """Run the full mesh-cleaning pipeline and export a processed mesh.
-
-    The function is intentionally linear: each numbered step performs one stage
-    of the TSDF-based reconstruction workflow and records key values in report.
-    """
+):
     report = {
         "status": "starting",
         "input_used": input_path,

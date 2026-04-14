@@ -17,7 +17,6 @@ import numpy as np
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import geometry_processing
 import utility
 import configuration
 
@@ -33,8 +32,8 @@ vertex_original, face_original = utility.common.load_obj(directory['mesh_databas
 # automatically refine the mesh
 # ==============================
 input_mesh_path = directory['mesh_database'] / f'{name_prefix}.obj'
-output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
-geometry_processing.automatic_mesh_refinement.clean_mesh(
+output_mesh_path = directory['data'] / f'{name_prefix}_refined.obj'
+utility.automatic_mesh_refinement.clean_mesh(
     str(input_mesh_path),
     str(output_mesh_path),
     debug_mode = False,
@@ -70,7 +69,7 @@ print('done automatic mesh refinement')
 #         Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
 
 # load the refined .obj mesh
-vertex_refined, face_refined = utility.common.load_obj(directory['result'], name_prefix + '_refined')
+vertex_refined, face_refined = utility.common.load_obj(directory['data'], name_prefix + '_refined')
 
 debug_plot = 0
 if debug_plot == 1:
@@ -102,38 +101,37 @@ if debug_plot == 1:
 # save the cut mesh as {name_prefix}_refined_cut.obj
 
 # load the refined and holes cut .obj mesh
-vertex, face = utility.common.load_obj(directory['result'], name_prefix + '_refined_cut')
+vertex, face = utility.common.load_obj(directory['data'], name_prefix + '_refined_cut')
 
 #%%
 # convert triangular mesh to cartesian nodes for heart simulation
 # ==============================
 Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
 # NOTE: 
-# Delta = 1 is the most convenient, or grid will not be at integer values
-# integer values make it easy for 3D convolution that is common in neural networks
+# Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
 thickness = 2 # how many voxels across endocardium to epicardium
-voxel = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
-neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel) # for each voxel, find its neighbor voxels
+voxel = utility.voxelization.convert(vertex, face, Delta, thickness)
+neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel) # for each voxel, find its neighbor voxels
 
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
+    utility.debug_plot.plot_mesh(vertex, face, voxel)
 
 #%%
 # create voxels for the 3mm resolution mesh, for saving simulation data
 # ==============================
 Delta = 3 # voxel spacing, unit: mm
 thickness = 2 # how many voxels across endocardium to epicardium
-voxel2 = geometry_processing.convert_triangular_mesh_to_cartesian_nodes.execute(vertex, face, Delta, thickness)
+voxel2 = utility.voxelization.convert(vertex, face, Delta, thickness)
 
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel2)
+    utility.debug_plot.plot_mesh(vertex, face, voxel2)
 
 # for each vertex, find its nearest voxel2 id
-voxel2_id_of_vertex, vertex_id_of_voxel2 = geometry_processing.id_mapping_between_voxel_and_vertex.execute(voxel2, vertex)
+voxel2_id_of_vertex, vertex_id_of_voxel2 = utility.voxelization.id_mapping_between_voxel_and_vertex(voxel2, vertex)
 
 # remove duplicates
 voxel2_id_of_vertex = np.unique(voxel2_id_of_vertex)
@@ -146,9 +144,9 @@ _, voxel_id_of_voxel3mm = tree.query(voxel3mm, k=1)
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel3mm)
+    utility.debug_plot.plot_mesh(vertex, face, voxel3mm)
 
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel[voxel_id_of_voxel3mm,:])
+    utility.debug_plot.plot_mesh(vertex, face, voxel[voxel_id_of_voxel3mm,:])
 
 # rescale coordinates: 3mm spacing -> 1mm spacing (divide by Delta=3), so neighboring voxels are 1 unit apart, ready for use as indices
 voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int)
@@ -156,7 +154,7 @@ voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int)
 debug_plot = 0
 if debug_plot == 1:
     # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel3mm_1mm_spacing)
+    utility.debug_plot.plot_mesh(vertex, face, voxel3mm_1mm_spacing)
 
 #%%
 # save geometry data
@@ -173,15 +171,10 @@ geometry['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
 geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
 geometry['voxel_id_of_voxel3mm'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
 
-debug_plot = 0
-if debug_plot == 1:
-    # plot mesh and voxel
-    geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
-
 #%%
 # save
 # ==============================
-file_path = directory['result'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
+file_path = directory['data'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
 np.savez(file_path, **geometry)
 
 print('done')
