@@ -13,29 +13,15 @@
 # limitations under the License.
 
 #%%
-import os
-import sys
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-sys.path.insert(0, str(script_dir.parent)) 
-
-import geometry_processing
+import matplotlib.pyplot as plt # for plotting
+import configuration
+import utility
 import numpy as np # pip install numpy
-import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat.
-import plotly.io as pio
-pio.renderers.default = "browser" # mesh display in internet browser
-
-directory = {}
-directory['home'] = script_dir
-directory['result'] = script_dir / 'result'
-
-# create the folder if it does not exist
-directory['result'].mkdir(exist_ok=True)
 
 #%%
-geometry_flag = 2
+directory = configuration.directory_setup()
+
+geometry_flag = 0
 # 0: 2D sheet
 # 1: 3D slab, typical shape
 # 2: 3D slab, long, for computing conduction velocity
@@ -79,11 +65,11 @@ match geometry_flag:
             name_prefix = 'long_slab'
 
             # half lengths, unit: mm
-            lx = 50/2
+            lx = 100/2
             ly = 10/2
             lz = 10/2
         elif geometry_flag == 3: # hollow cube
-            name_prefix = 'hollow_slab'
+            name_prefix = 'hollow_cube'
 
             # half lengths, unit: mm
             lx = 64/2
@@ -115,21 +101,23 @@ match geometry_flag:
             voxel = np.array(voxel_filtered)
 
 # for each voxel, find its neighbor voxels
-neighbor_id_2d = geometry_processing.find_neighbor_voxel_ids.execute(voxel)
+neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel)
 
-debug_plot = 0
-if debug_plot == 1: # show geometry voxel
+debug_plot = 1
+if debug_plot == 1: 
+    # show geometry voxels
     n_voxel = len(voxel)
     colors = np.array(['gray'] * n_voxel)
-    sizes = np.ones(n_voxel) * 3
-    fig = go.Figure(data=[go.Scatter3d(
-            x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
-            mode='markers',
-            marker=dict(size=sizes, color=colors),
-            showlegend=False)])
-    fig.update_layout(scene=dict(aspectmode='data')) # set aspect ratio to be equal
-    fig.show()
-
+    sizes = np.ones(n_voxel) * 0.5
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=sizes, c=colors, depthshade=False, alpha=1, edgecolors='none')
+    utility.common.set_axes_equal(ax)
+    file_path = directory['data'] / (name_prefix + '_geometry.png')
+    plt.savefig(file_path, dpi=300)
+    plt.close()
+    utility.common.crop_image(file_path)
+    
 # save geometry data
 geometry = {}
 geometry = {
@@ -140,10 +128,10 @@ geometry = {
     'vertex_id_of_voxel': vertex_id_of_voxel,
     'vertex': vertex, # triangular mesh vertex
     'face': face, # triangular mesh face
-    'voxel_id_of_voxel3mm': np.arange(len(voxel)), # for code compatibility
+    'voxel_id_of_voxel3mm': np.arange(len(voxel)), # these locations are used for computing unipolar electrograms. don't mind the name here, the name makes more sense for patient atrium geometry: where 'voxel' has 1 mm spacing and 'voxel_id_of_voxel3mm' are the subset of voxels with 3 mm spacing. for these simple geometries, we can just use all voxels for computing unipolar electrograms, so 'voxel_id_of_voxel3mm' is just all voxel ids.
 }
 
-file_path = directory['result'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
+file_path = directory['data'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
 np.savez(file_path, **geometry)
 
 print('done')

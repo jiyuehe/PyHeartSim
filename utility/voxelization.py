@@ -14,6 +14,7 @@
 
 import numpy as np
 from scipy.spatial import KDTree
+import utility
 
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
 import plotly.io as pio
@@ -94,7 +95,7 @@ def convert(vertex, face, Delta, thickness):
     debug_plot = 0
     if debug_plot == 1:
         # plot mesh and voxel
-        geometry_processing.debug_plot.plot_mesh(vertex, face, voxel)
+        utility.debug_plot.plot_mesh(vertex, face, voxel)
 
     return voxel
 
