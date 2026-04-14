@@ -33,9 +33,9 @@ def run_simulation(input_arguments):
 
     # parameters
     simulation_parameters = input_arguments['simulation_parameters']
-    arrhythmia_parameters = simulation.setting.assign_arrhythmia_parameters(simulation_parameters, s1, s2, script_dir)
-    heart_model_parameters = simulation.setting.assign_heart_model_parameters(simulation_parameters, n_voxel)
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = simulation.setting.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
+    arrhythmia_parameters = configuration.assign_arrhythmia_parameters(simulation_parameters, s1, s2)
+    heart_model_parameters = configuration.assign_heart_model_parameters(simulation_parameters, n_voxel)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
 
     if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
         x_coordinates = geometry_data['voxel'][:, 0]
@@ -109,17 +109,17 @@ if __name__ == "__main__":
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
+    s1 = 100 # s1 pacing voxel id
+    s2 = 1000 # s2 pacing voxel id
+
+    simulation_parameters = configuration.assign_simulation_parameters(geometry_data)
+
     input_arguments = {}
     input_arguments['geometry_data'] = geometry_data
     input_arguments['save_result_flag'] = save_result_flag
     input_arguments['result_folder'] = directory['result']
-
-    s1 = 100
-    s2 = 1000
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
-
-    simulation_parameters = simulation.setting.assign_simulation_parameters(geometry_data)
     input_arguments['simulation_parameters'] = simulation_parameters
 
     # run simulation
