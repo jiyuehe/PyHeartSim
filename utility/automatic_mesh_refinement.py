@@ -26,11 +26,11 @@ import os
 def clean_mesh(
     input_path: str,
     output_path: str,
-    *,
     debug_mode: bool,
     tsdf_target_res: int,
     tsdf_truncation_dist: Optional[float],
     morph_closing_iters: int,
+    morph_opening_iters: int,
     morph_dilation_iters: int,
     pad_voxels: int,
     fill_internal_volume: bool,
@@ -53,6 +53,7 @@ def clean_mesh(
             "tsdf_target_res": tsdf_target_res,
             "tsdf_truncation_dist": tsdf_truncation_dist,
             "morph_closing_iters": morph_closing_iters,
+            "morph_opening_iters": morph_opening_iters,
             "morph_dilation_iters": morph_dilation_iters,
             "pad_voxels": pad_voxels,
             "fill_internal_volume": fill_internal_volume,
@@ -131,6 +132,14 @@ def clean_mesh(
         if debug_mode:
             print(
                 f"[DEBUG] Morphological closing applied (iters={morph_closing_iters}). "
+                f"New filled: {np.count_nonzero(occ)}"
+            )
+
+    if morph_opening_iters > 0:
+        occ = ndimage.binary_opening(occ, iterations=morph_opening_iters)
+        if debug_mode:
+            print(
+                f"[DEBUG] Morphological opening applied (iters={morph_opening_iters}). "
                 f"New filled: {np.count_nonzero(occ)}"
             )
 
@@ -217,7 +226,8 @@ def clean_mesh(
 
         if not reconstructed.is_watertight:
             reconstructed.fill_holes()
-            reconstructed.remove_degenerate_faces()
+            mask = reconstructed.nondegenerate_faces()
+            reconstructed.update_faces(mask)
 
         report["remeshed_vertices"] = len(reconstructed.vertices)
 

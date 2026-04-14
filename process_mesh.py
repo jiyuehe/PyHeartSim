@@ -40,6 +40,7 @@ utility.automatic_mesh_refinement.clean_mesh(
     tsdf_target_res = 120,
     tsdf_truncation_dist = None,
     morph_closing_iters = 3,
+    morph_opening_iters = 0,
     morph_dilation_iters = 1,
     pad_voxels = 2,
     fill_internal_volume = True,
@@ -47,11 +48,11 @@ utility.automatic_mesh_refinement.clean_mesh(
     mc_level = 0.0,
     simplify_faces_ratio = 0.9,
     enable_decimation = True,
-    smooth_iterations = 1,
+    smooth_iterations = 3,
     smooth_lambda = 0.6,
     enable_remesh = True,
     target_edge_length = 0.5,
-    post_remesh_smooth_iterations = 5,
+    post_remesh_smooth_iterations = 2,
     visualize = False,
 )
 
