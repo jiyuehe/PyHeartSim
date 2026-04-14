@@ -99,13 +99,13 @@ def run_simulation(input_arguments):
 # If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
+    name_prefix = configuration.mesh_name() # get mesh name prefix
 
-    geometry_name = '103_1-lagood_geometry.npz'
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
-    plot_lat_map_flag = 1
+    plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
     # load geometry data
-    file_path = directory['data'] / geometry_name
+    file_path = directory['data'] / f'{name_prefix}_geometry.npz'
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     input_arguments['save_result_flag'] = save_result_flag
     input_arguments['result_folder'] = directory['result']
 
-    s1 = 1000
+    s1 = 100
     s2 = 1000
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2

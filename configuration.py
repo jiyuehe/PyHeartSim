@@ -32,3 +32,9 @@ def directory_setup():
 
     return directory
 
+def mesh_name():
+    # atrial mesh .obj file name
+    # name_prefix = '103_1-lagood'
+    name_prefix = '102_1-LA FAM1' 
+
+    return name_prefix

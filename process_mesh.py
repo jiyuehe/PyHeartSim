@@ -21,7 +21,7 @@ import utility
 import configuration
 
 directory = configuration.directory_setup()
-name_prefix = '102_1-LA FAM1' # '103_1-lagood' # atrial mesh .obj file name
+name_prefix = configuration.mesh_name()
 
 #%%
 # the original mesh
