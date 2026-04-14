@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import debug_plot
 from . import convert_triangular_mesh_to_cartesian_nodes
 from . import find_neighbor_voxel_ids
 from . import id_mapping_between_voxel_and_vertex

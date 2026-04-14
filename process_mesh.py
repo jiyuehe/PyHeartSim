@@ -34,99 +34,75 @@ vertex_original, face_original = utility.common.load_obj(directory['mesh_databas
 # ==============================
 input_mesh_path = directory['mesh_database'] / f'{name_prefix}.obj'
 output_mesh_path = directory['result'] / f'{name_prefix}_refined.obj'
-
-# parameter setup
-debug_mode = True
-tsdf_target_res = 120
-tsdf_truncation_dist = None
-morph_closing_iters = 3
-morph_dilation_iters = 1
-pad_voxels = 2
-fill_internal_volume = True
-sdf_smoothing_sigma = 2.0
-mc_level = 0.0
-simplify_faces_ratio = 0.9
-enable_decimation = True
-smooth_iterations = 1
-smooth_lambda = 0.6
-enable_remesh = True
-post_remesh_smooth_iterations = 5
-visualize = False
-
-report_05mm = clean_mesh(
+geometry_processing.automatic_mesh_refinement.clean_mesh(
     str(input_mesh_path),
     str(output_mesh_path),
-    debug_mode=debug_mode,
-    tsdf_target_res=tsdf_target_res,
-    tsdf_truncation_dist=tsdf_truncation_dist,
-    morph_closing_iters=morph_closing_iters,
-    morph_dilation_iters=morph_dilation_iters,
-    pad_voxels=pad_voxels,
-    fill_internal_volume=fill_internal_volume,
-    sdf_smoothing_sigma=sdf_smoothing_sigma,
-    mc_level=mc_level,
-    simplify_faces_ratio=simplify_faces_ratio,
-    enable_decimation=enable_decimation,
-    smooth_iterations=smooth_iterations,
-    smooth_lambda=smooth_lambda,
-    enable_remesh=enable_remesh,
-    target_edge_length=0.5,
-    post_remesh_smooth_iterations=post_remesh_smooth_iterations,
-    visualize=visualize,
+    debug_mode = False,
+    tsdf_target_res = 120,
+    tsdf_truncation_dist = None,
+    morph_closing_iters = 3,
+    morph_dilation_iters = 1,
+    pad_voxels = 2,
+    fill_internal_volume = True,
+    sdf_smoothing_sigma = 2.0,
+    mc_level = 0.0,
+    simplify_faces_ratio = 0.9,
+    enable_decimation = True,
+    smooth_iterations = 1,
+    smooth_lambda = 0.6,
+    enable_remesh = True,
+    target_edge_length = 0.5,
+    post_remesh_smooth_iterations = 5,
+    visualize = False,
 )
-print("TSDF-style rebuild finished (0.5 mm). Report:")
-for key, value in report_05mm.items():
-    print(f"{key}: {value}")
-print()
 
-debug_plot = 1
+print('done automatic mesh refinement')
+
+# NOTE: 
+# can also use software Meshlab to manually refine the mesh
+# some useful tools in MeshLab:
+# Filters -> 
+#     Remeshing, Simplification Reconstruction -> 
+#         Simplification: Quadric Edge Collapse Decimation (Target number of faces set to 1500)
+#         Close Holes
+#         Smoothing, Fairing and Deformation ->
+#             -> Laplacian Smooth (Smoothing steps set to 1)
+#         Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
+
+# load the refined .obj mesh
+vertex_refined, face_refined = utility.common.load_obj(directory['result'], name_prefix + '_refined')
+
+debug_plot = 0
 if debug_plot == 1:
-    original_mesh = trimesh.load(str(input_mesh_path), force="mesh")
-    processed_mesh = trimesh.load(str(output_mesh_path), force="mesh")
-
     fig, axes = plt.subplots(1, 2, figsize=(12, 6), subplot_kw={'projection': '3d'})
 
-    for ax, mesh, title in zip(
-        axes,
-        [original_mesh, processed_mesh],
-        ["Original Mesh", "Processed Mesh"],
-    ):
-        verts = mesh.vertices
-        faces = mesh.faces
+    for ax, verts, faces, title in [
+        (axes[0], vertex_original, face_original, "Original Mesh"),
+        (axes[1], vertex_refined, face_refined, "Processed Mesh"),
+    ]:
         poly = Poly3DCollection(
             verts[faces], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
         )
         ax.add_collection3d(poly)
         ax.set_title(title, fontsize=10)
         ax.view_init(elev=70, azim=-70)
-        common.set_axes_equal.execute(ax)
-
-    # plt.tight_layout()
+        utility.common.set_axes_equal(ax)
     
-    png_path = str(directory['result'] / f'{name_prefix}_mesh_comparison.png')
+    png_path = str(directory['result'] / f'{name_prefix}_mesh_before_after.png')
     plt.savefig(png_path, dpi=300)
     plt.close(fig)
 
-    common.crop_image.execute(png_path)
+    utility.common.crop_image(png_path)
 
-print('done')
+#%%
+# cut holes: cut the mitral valve, pulmonary veins, etc
+# ==============================
+# NOTE:
+# use software Meshlab to manually cut holes in the mesh {name_prefix}_refined.obj
+# save the cut mesh as {name_prefix}_refined_cut.obj
 
-# NOTE: 
-# can also use software Meshlab to manually refine the mesh
-# some useful tools in MeshLab:
-# - make the triangles uniform
-#   Filters -> 
-#       Remeshing, Simplification Reconstruction -> 
-#           Simplification: Quadric Edge Collapse Decimation (Target number of faces set to 1500)
-#           Close Holes
-#           Smoothing, Fairing and Deformation ->
-#               -> Laplacian Smooth (Smoothing steps set to 1)
-#           Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
-# - cut holes: cut the mitral valve, pulmonary veins, etc.
-
-# load the refined .obj mesh (0.5 mm resolution)
-vertex, face = utility.common.load_obj(directory['result'], name_prefix + '_refined')
-
+# load the refined and holes cut .obj mesh
+vertex, face = utility.common.load_obj(directory['result'], name_prefix + '_refined_cut')
 
 #%%
 # convert triangular mesh to cartesian nodes for heart simulation
@@ -190,8 +166,6 @@ geometry['vertex_original'] = vertex_original
 geometry['face_original'] = face_original
 geometry['vertex'] = vertex # high resolution mesh
 geometry['face'] = face # high resolution mesh
-# geometry['vertex3mm'] = vertex3mm # low resolution mesh
-# geometry['face3mm'] = face3mm # low resolution mesh
 geometry['Delta'] = Delta # voxel spacing, unit: mm
 geometry['voxel'] = voxel
 geometry['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
