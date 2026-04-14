@@ -31,10 +31,10 @@ def equation_h(heart_model_flag, u, h, tau_open, tau_close, u_gate, k, a, epsilo
 
 def solve_differential_equation(heart_model_flag, dt, t_final, pacing_start_time, pacing_cycle_length, pacing_duration, J_stim_value):
     # Mitchell-Schaeffer model parameters
-    tau_in = 0.08 # 0.3. 
-    tau_out = 6 # 6. 
-    tau_open = 80 # 120. 
-    tau_close = 30 # 80. 
+    tau_in = 0.08 # 0.3
+    tau_out = 6 # 6
+    tau_open = 80 # 120
+    tau_close = 30 # 80
     u_gate = 0.13
 
     # Aliev-Panfilov model parameters
