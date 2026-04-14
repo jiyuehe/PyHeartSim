@@ -28,14 +28,11 @@ def run_simulation(input_arguments):
     save_result_flag = input_arguments['save_result_flag']
     result_folder = input_arguments['result_folder']
     geometry_data = input_arguments['geometry_data']
+    simulation_parameters = input_arguments['simulation_parameters']
+    arrhythmia_parameters = input_arguments['arrhythmia_parameters']
+    heart_model_parameters = input_arguments['heart_model_parameters']
 
     n_voxel = geometry_data['voxel'].shape[0]
-
-    # parameters
-    simulation_parameters = input_arguments['simulation_parameters']
-    arrhythmia_parameters = configuration.assign_arrhythmia_parameters(simulation_parameters, s1, s2)
-    heart_model_parameters = configuration.assign_heart_model_parameters(simulation_parameters, n_voxel)
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters)
 
     if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
         x_coordinates = geometry_data['voxel'][:, 0]
@@ -108,11 +105,12 @@ if __name__ == "__main__":
     file_path = directory['data'] / f'{name_prefix}_geometry.npz'
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
+    n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 100 # s1 pacing voxel id
     s2 = 1000 # s2 pacing voxel id
 
-    simulation_parameters = configuration.assign_simulation_parameters(geometry_data)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
 
     input_arguments = {}
     input_arguments['geometry_data'] = geometry_data
@@ -121,17 +119,18 @@ if __name__ == "__main__":
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
     input_arguments['simulation_parameters'] = simulation_parameters
+    input_arguments['arrhythmia_parameters'] = arrhythmia_parameters
+    input_arguments['heart_model_parameters'] = heart_model_parameters
 
     # run simulation
     run_simulation(input_arguments)
 
-    focal_1 = s1
-    focal_2 = s2
+
     
     geometry = {}
     voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
     geometry['node'] = geometry_data['voxel'][voxel_id_of_voxel3mm, :]
-    lat_map.execute(geometry, directory['result'], focal_1, focal_2, plot_lat_map_flag)
+    lat_map.execute(geometry, directory['result'], s1, s2, plot_lat_map_flag)
 
     # plot some action potentials and electrograms
     do_flag = 1

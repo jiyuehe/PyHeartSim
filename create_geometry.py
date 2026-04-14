@@ -103,21 +103,25 @@ match geometry_flag:
 # for each voxel, find its neighbor voxels
 neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel)
 
+# voxel locations for computing unipolar electrograms
+N = 2000
+n_voxel = voxel.shape[0]
+voxel_id_of_electrode = np.sort(np.random.choice(n_voxel, size=min(N, n_voxel), replace=False)) 
+
+#%%
 debug_plot = 1
 if debug_plot == 1: 
-    # show geometry voxels
-    n_voxel = len(voxel)
-    colors = np.array(['gray'] * n_voxel)
-    sizes = np.ones(n_voxel) * 0.5
+    # show geometry voxels in gray, electrode voxels in blue
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=sizes, c=colors, depthshade=False, alpha=1, edgecolors='none')
+    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=0.5, c='gray', marker='.', depthshade=False, alpha=1, edgecolors='none')
+    ax.scatter(voxel[voxel_id_of_electrode, 0], voxel[voxel_id_of_electrode, 1], voxel[voxel_id_of_electrode, 2], s=2, c='blue', marker='.', depthshade=False, alpha=1, edgecolors='none')
     utility.common.set_axes_equal(ax)
     file_path = directory['data'] / (name_prefix + '_geometry.png')
     plt.savefig(file_path, dpi=300)
     plt.close()
     utility.common.crop_image(file_path)
-    
+
 # save geometry data
 geometry = {}
 geometry = {
@@ -128,7 +132,7 @@ geometry = {
     'vertex_id_of_voxel': vertex_id_of_voxel,
     'vertex': vertex, # triangular mesh vertex
     'face': face, # triangular mesh face
-    'voxel_id_of_voxel3mm': np.arange(len(voxel)), # these locations are used for computing unipolar electrograms. don't mind the name here, the name makes more sense for patient atrium geometry: where 'voxel' has 1 mm spacing and 'voxel_id_of_voxel3mm' are the subset of voxels with 3 mm spacing. for these simple geometries, we can just use all voxels for computing unipolar electrograms, so 'voxel_id_of_voxel3mm' is just all voxel ids.
+    'voxel_id_of_electrode': voxel_id_of_electrode, # these locations are used for computing unipolar electrograms
 }
 
 file_path = directory['data'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy

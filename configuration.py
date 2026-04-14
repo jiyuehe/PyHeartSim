@@ -41,20 +41,25 @@ def directory_setup():
 def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = '103_1-lagood'
-    name_prefix = '102_1-LA FAM1' 
+    # name_prefix = '102_1-LA FAM1'
+    name_prefix = 'sheet'
 
     return name_prefix
 
-def assign_simulation_parameters(geometry_data):
+def assign_simulation_parameters(geometry_data, s1, s2, n_voxel):
     simulation_parameters = {
         'geometry_flag': 1, 
         # 0: 2D
         # 1: 3D
         # 2: long slab for computing conduction velocity
-        'heart_model_flag': 0, 
-        # 0: Mitchell-Schaeffer model
-        # 1: Aliev-Panfilov model
-        'arrhythmia_flag': 6, 
+        'compute_electrogram_flag': 1, 
+        # 1: compute electrogram 
+        # 0: do not compute electrogram
+        'voxel_id_of_electrode': geometry_data['voxel_id_of_electrode'], # electrode locations for computing electrograms
+        't_final': 1000, # ms
+        'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
+        'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
+        'arrhythmia_flag': 6,
         # 0: focal
         # 1: rotor
         # 2: fibrillation
@@ -62,12 +67,6 @@ def assign_simulation_parameters(geometry_data):
         # 4: 2 focal 2 locations both at 0ms
         # 5: 2 focal 2 locations 300ms apart
         # 6: 2 focal 2 locations 50ms apart
-        'compute_electrogram_flag': 1, 
-        # 1: compute electrogram 
-        # 0: do not compute electrogram
-        'voxel_id_of_electrode': geometry_data['voxel_id_of_voxel3mm'], # electrode locations for computing electrograms
-        't_final': 1000, # ms
-        'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
     }
 
     debug_plot = 0
@@ -89,28 +88,23 @@ def assign_simulation_parameters(geometry_data):
         fig.update_layout(scene=dict(aspectmode='data')) # set aspect ratio to be equal
         fig.show()
 
-    return simulation_parameters
-
-def assign_arrhythmia_parameters(simulation_parameters, s1, s2):
     # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
-    arrhythmia_flag = simulation_parameters['arrhythmia_flag']
-
-    if arrhythmia_flag in (0, 4, 5, 6): # focal
+    if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
         params = dict(pacing_start_time=10,  pacing_cycle_length=300,
                       s1_t=0,   s1_s2_delta_t=0,
                       ap_min=0, ap_max=0, h_min=0, h_max=0, s2_region_size_factor=0)
-    elif arrhythmia_flag == 1: # simple rotor
+    elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=230,
                       ap_min=0.00038510505014280766, ap_max=0.07687293043769826,
                       h_min=0.1623103413330824,      h_max=0.39717038588499276,
                       s2_region_size_factor=0.7)
-    elif arrhythmia_flag == 2: # fibrillation
+    elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=130,
                       ap_min=0.05,  ap_max=0.25, h_min=0.025, h_max=0.120,
                       s2_region_size_factor=0.5)
-    elif arrhythmia_flag == 3: # for debugging, manually assign s1 and s2 region
+    elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging, manually assign s1 and s2 region
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=230,
                       ap_min=0, ap_max=0, h_min=0, h_max=0, s2_region_size_factor=0)
@@ -129,40 +123,20 @@ def assign_arrhythmia_parameters(simulation_parameters, s1, s2):
         's2_region_size_factor': params['s2_region_size_factor'], # a less than 1 multiplication factor to reduce s2 pacing region size
     }
 
-    # if arrhythmia_flag == 3: # for debugging, override s1/s2 pacing voxel ids
-    #     flag = 1 # 0: debug fibrillation. 1: debug simple rotor
-    #     if flag == 0:
-    #         node_flag = np.load(script_dir / 'data' / 'node_flag_afib.npy')
-    #     if flag == 1:
-    #         node_flag = np.load(script_dir / 'data' / 'node_flag.npy')
-    #     arrhythmia_parameters['s1_pacing_voxel_id'] = np.where(node_flag == 1)[0]
-
-    #     focal_or_rotor_flag = 1 # 0: s1 only focal. 1: s1 s2 rotor
-    #     if focal_or_rotor_flag == 0:
-    #         arrhythmia_parameters['s2_pacing_voxel_id'] = []
-    #     elif focal_or_rotor_flag == 1:
-    #         arrhythmia_parameters['s2_pacing_voxel_id'] = np.where(node_flag == 2)[0]
-
-    return arrhythmia_parameters
-
-def assign_heart_model_parameters(simulation_parameters, n_voxel):
-    arrhythmia_flag = simulation_parameters['arrhythmia_flag']
-    heart_model_flag = simulation_parameters['heart_model_flag']
-
-    if arrhythmia_flag in (0, 4, 5, 6): # focal
+    if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
-    elif arrhythmia_flag == 1: # simple rotor
+    elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
-    elif arrhythmia_flag == 2: # fibrillation
+    elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
         ms = dict(tau_in=0.08, tau_out=6, tau_open=80,  tau_close=30, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
-    elif arrhythmia_flag == 3: # for debugging
+    elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
 
-    if heart_model_flag == 0: # Mitchell-Schaeffer model
+    if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
         heart_model_parameters = {
             'tau_in_voxel':    np.ones(n_voxel) * ms['tau_in'],    # determines the shape of action potential
             'tau_out_voxel':   np.ones(n_voxel) * ms['tau_out'],   # determines the shape of action potential
@@ -171,7 +145,7 @@ def assign_heart_model_parameters(simulation_parameters, n_voxel):
             'v_gate_voxel':    np.ones(n_voxel) * ms['v_gate'],    # gating variable threshold
             'c_voxel':         np.ones(n_voxel) * 0.5,             # diffusion coefficient
         }
-    elif heart_model_flag == 1: # Aliev-Panfilov model
+    elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {
             'k_voxel':         np.ones(n_voxel) * ap['k'],
             'a_voxel':         np.ones(n_voxel) * ap['a'],
@@ -181,14 +155,12 @@ def assign_heart_model_parameters(simulation_parameters, n_voxel):
             'c_voxel':         np.ones(n_voxel) * 1.6,             # diffusion coefficient
         }
 
-    return heart_model_parameters
-
-def scale_heart_model_time(simulation_parameters, arrhythmia_parameters, heart_model_parameters):
+    # scale heart model time
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer
         simulation_parameters['time_scale'] = 1
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov
         simulation_parameters['time_scale'] = 6
-        
+    
     simulation_parameters['t_final'] = simulation_parameters['t_final'] / simulation_parameters['time_scale']
     simulation_parameters['dt'] = simulation_parameters['dt'] / simulation_parameters['time_scale']
     arrhythmia_parameters['pacing_start_time'] = arrhythmia_parameters['pacing_start_time'] / simulation_parameters['time_scale']
