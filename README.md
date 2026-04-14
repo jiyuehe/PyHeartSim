@@ -5,7 +5,7 @@ Atrial fibrillation of a patient's left atrium:
 
 # Introduction
 - This is an electrophysiological heart simulator written in **Python**.  
-- Patient atria: A 3D triangular mesh database of the left and/or right atria from **more than 100 patients** are provided.  
+- Patient atria: A 3D triangular mesh database of the left and/or right **atria** from **more than 100 patients** are provided.  
 - Heart model: Can choose **Mitchell-Schaeffer** or **Aliev-Panfilov**.  
 - Capability:  
   - It can simulate patient-specific focal and rotor **arrhythmias**, as well as fibrillation.  
