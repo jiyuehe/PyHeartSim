@@ -108,7 +108,24 @@ if __name__ == "__main__":
     n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 100 # s1 pacing voxel id
-    s2 = 1000 # s2 pacing voxel id
+    s2 = 5000 # s2 pacing voxel id
+
+    debug_plot = 1
+    if debug_plot == 1: 
+        # show pacing voxels
+        voxel = geometry_data['voxel']
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='lightgray', edgecolor='none', linewidth=0, s=10, marker='.')
+        ax.scatter(voxel[s1, 0], voxel[s1, 1], voxel[s1, 2], c='blue', edgecolor='none', linewidth=0, s=50, marker='o', label='s1')
+        ax.scatter(voxel[s2, 0], voxel[s2, 1], voxel[s2, 2], c='red', edgecolor='none', linewidth=0, s=50, marker='o', label='s2')
+        plt.legend()
+        plt.axis('off')
+        ax.view_init(elev=70, azim=-70)
+        utility.common.set_axes_equal(ax)
+        plt.tight_layout()
+        plt.savefig(directory['result'] / f'pacing_voxels_{s1}_{s2}.png', dpi=300)
+        plt.close()
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
 
@@ -146,7 +163,8 @@ if __name__ == "__main__":
         else:
             fig_name = directory['result'] / f'lat_{str(s1)}_{str(s2)}.png'
         
-        utility.lat_map.plot(voxel, lat_voxel, fig_name)
+        geometry_flag = simulation_parameters['geometry_flag']
+        utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
         utility.common.crop_image(fig_name)
 
     # save lat to simulation_results

@@ -45,7 +45,7 @@ def interpolate_lat(voxel, electrode_voxel, lat_electrode):
 
     return lat_voxel
 
-def plot(voxel, lat_voxel, fig_name):
+def plot(voxel, lat_voxel, geometry_flag, fig_name):
     data = lat_voxel
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
@@ -56,7 +56,12 @@ def plot(voxel, lat_voxel, fig_name):
     ax = plt.axes(projection='3d')
     ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c=color, edgecolor='none', linewidth=0, s=10, marker='.')
     plt.axis('off')
-    ax.view_init(elev=70, azim=-70)
+
+    if geometry_flag in [1, 2]: # 3D geometry and long slab
+        ax.view_init(elev=70, azim=-70)
+    elif geometry_flag == 0: # 2D geometry
+        ax.view_init(elev=90, azim=-90)
+    
     common.set_axes_equal(ax)
     plt.tight_layout()
 
