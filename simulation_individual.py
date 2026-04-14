@@ -75,8 +75,8 @@ def run_simulation(input_arguments):
         voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
 
         simulation_results = {}
-        simulation_results['action_potential_voxel3mm'] = action_potential[:, voxel_id_of_electrode] # shape: (time, n_voxel3mm)
-        simulation_results['h_voxel3mm'] = h[:, voxel_id_of_electrode] # shape: (time, n_voxel3mm)
+        simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_electrode] # shape: (time, n_electrode)
+        simulation_results['h_electrode'] = h[:, voxel_id_of_electrode] # shape: (time, n_electrode)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
         if simulation_parameters['compute_electrogram_flag'] == 1:
@@ -153,22 +153,19 @@ if __name__ == "__main__":
     simulation_results['lat_electrode'] = lat_electrode
     np.savez(directory['result'] / file_name, **simulation_results)
 
-
-
-
     # plot some action potentials and electrograms
     do_flag = 1
     if do_flag == 1: 
         # load simulation results
         if str(s2) == '[]':
-            sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}.npz', allow_pickle=False))
+            simulation_results = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}.npz', allow_pickle=False))
         else:
-            sim_data = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
+            simulation_results = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
 
-        action_potential = sim_data['action_potential_voxel3mm']
-        physical_time = sim_data['physical_time']
+        action_potential = simulation_results['action_potential_electrode']
+        physical_time = simulation_results['physical_time']
         if simulation_parameters['compute_electrogram_flag'] == 1:
-            electrogram_unipolar = sim_data['electrogram_unipolar']
+            electrogram_unipolar = simulation_results['electrogram_unipolar']
         else:
             electrogram_unipolar = None
 
@@ -194,7 +191,7 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.savefig(directory['result'] / f'ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2}.png', dpi=300)
         plt.close()
-
+#%%
     # display simulation movie
     do_flag = 1
     if do_flag == 1:

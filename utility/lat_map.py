@@ -60,5 +60,5 @@ def plot(voxel, lat_voxel, fig_name):
     common.set_axes_equal(ax)
     plt.tight_layout()
 
-    plt.savefig(fig_name, dpi=100, bbox_inches="tight", pad_inches=0)
+    plt.savefig(fig_name, dpi=300)
     plt.close()
