@@ -45,7 +45,7 @@ Rotor arrhythmia on a patient's left atrium:
 <img src="example/1_35000.gif" alt="Demo" width="400" />  
 <img src="example/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
 
-2 focal source simulation on a patient's left atrium:
+2 focal source simulation on a patient's left atrium:  
 <img src="example/left_atrium_2_focal.gif" alt="Demo" width="400" />  
 
 2D simulation that has 2 focal sources:  
