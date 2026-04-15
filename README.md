@@ -19,7 +19,7 @@ Atrial fibrillation of a patient's left atrium:
   - For solving the heart model equations, 4th-order Runge–Kutta is implemented for the reaction part, and Crank-Nicolson is implemented for the diffusion part.  
 
 # Instructions
-- Install dependencies: I have kept the list intentionally minimal. You can use an AI tool to identify and install all required dependencies automatically. Also, make sure to install the CUDA Toolkit version that matches your specific NVIDIA GPU.
+- Install dependencies: I have kept the dependencies intentionally minimal. You can use an AI tool to identify and install all required dependencies automatically. Also, make sure to install the CUDA Toolkit version that matches your specific NVIDIA GPU.
 - Best to use Visual Studio Code on the Ubuntu Linux operating system. Edit /.vscode/settings.json to set your "python.defaultInterpreterPath".
 - Run **heart_sim_individual.py** to compute a heart simulation. 
 - Folder structure:  
