@@ -17,17 +17,13 @@ import os
 from pathlib import Path
 script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
 os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
 
-import sys
-sys.path.insert(0, str(script_dir.parent))  # add PyHeartSim directory to path
 import numpy as np # pip install numpy
 
 from matplotlib.animation import PillowWriter
 import matplotlib.pyplot as plt # pip install matplotlib
 import matplotlib.animation as animation
-
-from matplotlib.tri import Triangulation
+from . import common
 
 #%%
 def execute(in_arg):
@@ -37,24 +33,12 @@ def execute(in_arg):
     movie_save_dir = in_arg['movie_save_dir']
     simulation_results = in_arg['simulation_results']
     geometry_flag = simulation_results['geometry_flag']
-
-    # load data
     geometry_data = in_arg['geometry_data']
 
-    if geometry_flag == 2:
-        voxel_id_of_vertex = geometry_data['voxel_id_of_vertex']
+    voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
+    voxel_electrode = geometry_data['voxel'][voxel_id_of_electrode,:]
 
-        node = geometry_data['voxel'][voxel_id_of_vertex,:]
-    elif geometry_flag in [0, 1, 3, 4]:
-        voxel_id_of_voxel3mm = geometry_data['voxel_id_of_voxel3mm']
-
-        node = geometry_data['voxel'][voxel_id_of_voxel3mm,:]
-
-        # vertex = geometry_data['vertex3mm']
-        # face = geometry_data['face3mm']
-
-    # simulation data
-    action_potential = simulation_results['action_potential_voxel3mm']
+    action_potential = simulation_results['action_potential_electrode']
     t = simulation_results['physical_time']
 
     if ending_time == []:
@@ -66,13 +50,8 @@ def execute(in_arg):
     action_potential = action_potential[start_id:end_id, :]
 
     # activation phase movie using matplotlib, with option to save as gif
-    if geometry_flag == 2:
-        movie_data = action_potential[:, voxel_id_of_vertex] # display on vertices
-    elif geometry_flag in [0, 1, 3, 4]:
-        movie_data = action_potential # display on 3mm vertices
-
+    movie_data = action_potential
     v_gate = 0.13
-
     data_min = 0 
     data_max = 1 # action potential value can be large at the pacing site, that's why cap it 1 here so that the colors are good
     data_threshold = v_gate
@@ -82,36 +61,21 @@ def execute(in_arg):
         if ((n+1) % (n_time//5)) == 0:
             print(f'compute color map {(n+1)/n_time*100:.0f}%')
         data = movie_data[n, :]
-        color = common.convert_data_to_color.purple_yellow(data, data_min, data_max, data_threshold)
+        color = common.convert_value_to_purple_yellow(data, data_min, data_max, data_threshold)
         map_color[n] = color
 
     fig = plt.figure(figsize=(10, 8))
     
-    if geometry_flag != 0: # 3D
-        # plot_type = 'trisurf' # 'scatter' or 'trisurf'
-        # if plot_type == 'scatter':
-        ax = plt.axes(projection='3d')
-        plot_handle = ax.scatter(node[:, 0], node[:, 1], node[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=140, marker='s')
-        plt.axis('off')
-        ax.view_init(elev=70, azim=-70)
-        common.set_axes_equal.execute(ax)
-        # elif plot_type == 'trisurf': # this is slow
-        #     triang = Triangulation(vertex[:, 0], vertex[:, 1], triangles=face)
-        #     ax = plt.axes(projection='3d')
-        #     face_color = map_color[0][face].mean(axis=1) # Convert per-vertex RGB colors to per-triangle colors for trisurf.
-        #     plot_handle = ax.plot_trisurf(triang, vertex[:, 2], edgecolor='gray', linewidth=0, antialiased=False, shade=False)
-        #     plot_handle.set_facecolor(face_color)
-        #     plt.axis('off')
-        #     ax.view_init(elev=70, azim=-70)
-        #     common.set_axes_equal.execute(ax)
-    elif geometry_flag == 0: # 2D sheet
-        nx = int(np.max(node[:,0]) - np.min(node[:,0])) + 1
-        ny = int(np.max(node[:,1]) - np.min(node[:,1])) + 1
-        color_image = map_color[0].reshape((nx, ny, 3))  # shape (30, 20, 3)
-        color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
+    ax = plt.axes(projection='3d')
+    plot_handle = ax.scatter(voxel_electrode[:, 0], voxel_electrode[:, 1], voxel_electrode[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=10, marker='s')
+    plt.axis('off')
 
-        ax = plt.axes()
-        plot_handle = ax.imshow(color_image, origin='lower', interpolation='nearest')
+    if geometry_flag in [1, 2]: # 3D geometry and long slab
+        ax.view_init(elev=70, azim=-70)
+    elif geometry_flag == 0: # 2D geometry
+        ax.view_init(elev=90, azim=-90)
+
+    common.set_axes_equal(ax)
     
     fig.tight_layout(rect=[0, 0, 1, 0.96])
 
@@ -121,22 +85,12 @@ def execute(in_arg):
         if ((n+1) % (n_time//5)) == 0:
             print(f'playing movie {(n+1)/n_time*100:.0f}%')
 
-        if geometry_flag == 0: # 2D sheet
-            color_image = map_color[n].reshape((nx, ny, 3))  # shape (30, 20, 3)
-            color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
-            plot_handle.set_data(color_image)
-        elif geometry_flag != 0: # 3D
-            # if plot_type == 'scatter':
-            plot_handle.set_color(map_color[n])
-            # elif plot_type == 'trisurf':
-            #     face_color = map_color[n][face].mean(axis=1)
-            #     plot_handle.set_facecolor(face_color)
+        plot_handle.set_color(map_color[n])
         
         ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
         # capture current view angles
-        if geometry_flag != 0: # 3D
-            view_matrices[n] = ax.get_proj().copy() # copy to avoid overwriting
+        view_matrices[n] = ax.get_proj().copy() # copy to avoid overwriting
 
         plt.pause(pause_interval)
 
@@ -146,23 +100,13 @@ def execute(in_arg):
             if ((n+1) % (n_time//10)) == 0:
                 print(f'saving movie {(n+1)/n_time*100:.0f}%')
 
-            if geometry_flag == 0: # 2D sheet
-                color_image = map_color[n].reshape((nx, ny, 3))  # shape (30, 20, 3)
-                color_image = np.swapaxes(color_image, 0, 1)  # swap to (ny, nx) -> (20,30) for imshow
-                plot_handle.set_data(color_image)
-            elif geometry_flag != 0: # 3D
-                # if plot_type == 'scatter':
-                plot_handle.set_color(map_color[n])
-                # elif plot_type == 'trisurf':
-                #     face_color = map_color[n][face].mean(axis=1)
-                #     plot_handle.set_facecolor(face_color)
+            plot_handle.set_color(map_color[n])
 
             ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
             # restore view angle
-            if geometry_flag != 0: # 3D
-                R = view_matrices[n]
-                ax.get_proj = lambda R=R: R # use default argument to capture current R
+            R = view_matrices[n]
+            ax.get_proj = lambda R=R: R # use default argument to capture current R
 
         frame_skip = 5
         anim = animation.FuncAnimation(fig, animate, frames=range(0, n_time, frame_skip), interval=1, blit=False, repeat=False)

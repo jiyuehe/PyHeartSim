@@ -13,6 +13,11 @@
 # limitations under the License.
 
 #%%
+# import os
+# from pathlib import Path
+# script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
+# os.chdir(script_dir) # change the working directory
+
 import time
 import numpy as np # pip install numpy
 from numba import cuda # pip install numba
@@ -163,7 +168,7 @@ if __name__ == "__main__":
         else:
             fig_name = directory['result'] / f'lat_{str(s1)}_{str(s2)}.png'
         
-        geometry_flag = simulation_parameters['geometry_flag']
+        geometry_flag = simulation_results['geometry_flag']
         utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
         utility.common.crop_image(fig_name)
 
@@ -209,17 +214,23 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.savefig(directory['result'] / f'ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2}.png', dpi=300)
         plt.close()
-#%%
+
     # display simulation movie
     do_flag = 1
     if do_flag == 1:
+        # load simulation results
+        if str(s2) == '[]':
+            simulation_results = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}.npz', allow_pickle=False))
+        else:
+            simulation_results = dict(np.load(directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
+
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
         ending_time = [] # ms. []: till the end. or specify a value
-        sim_file_name = f'simulation_results_{str(s1)}_{str(s2)}.npz'
-        simulation_results_file_name = directory['result'] / sim_file_name
-        movie_save_dir = directory['result'] / sim_file_name.replace('.npz', '.gif')
-        simulation_results = dict(np.load(directory['result'] / simulation_results_file_name, allow_pickle=False)) # load simulation results
+
+        simulation_results_file_name = directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.gif'
+        movie_save_dir = directory['result'] / simulation_results_file_name
+
         in_arg = {}
         in_arg['save_movie_flag'] = save_movie_flag
         in_arg['starting_time'] = starting_time
