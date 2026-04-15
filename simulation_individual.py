@@ -113,12 +113,13 @@ if __name__ == "__main__":
     n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 100 # s1 pacing voxel id
-    s2 = 5000 # s2 pacing voxel id
+    s2 = 15000 # s2 pacing voxel id
 
     debug_plot = 0
     if debug_plot == 1: 
         # show pacing voxels
         voxel = geometry_data['voxel']
+        plt.switch_backend('TkAgg')
         plt.figure()
         ax = plt.axes(projection='3d')
         ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='lightgray', edgecolor='none', linewidth=0, s=10, marker='.')
@@ -130,7 +131,6 @@ if __name__ == "__main__":
         utility.common.set_axes_equal(ax)
         plt.tight_layout()
         plt.savefig(directory['result'] / f'pacing_voxels_{s1}_{s2}.png', dpi=300)
-        plt.switch_backend('TkAgg')
         plt.show()
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
-        ending_time = 400 # ms. []: till the end. or specify a value
+        ending_time = 800 # ms. []: till the end. or specify a value
 
         simulation_results_file_name = directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.gif'
         movie_save_dir = directory['result'] / simulation_results_file_name

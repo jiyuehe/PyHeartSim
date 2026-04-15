@@ -170,7 +170,7 @@ geometry['voxel'] = voxel
 geometry['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
 geometry['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
 geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
-geometry['voxel_id_of_voxel3mm'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
+geometry['voxel_id_of_electrode'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
 
 #%%
 # save
