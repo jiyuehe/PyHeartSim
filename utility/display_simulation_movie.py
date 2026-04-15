@@ -25,8 +25,39 @@ import matplotlib.pyplot as plt # pip install matplotlib
 import matplotlib.animation as animation
 from . import common
 
+
+def _ensure_interactive_backend():
+    """Switch from Agg to an interactive backend when a display is available."""
+    backend = str(plt.get_backend()).lower()
+    is_noninteractive_agg = backend in ('agg', 'module://matplotlib.backends.backend_agg')
+    has_display = bool(os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
+
+    if not has_display:
+        return
+
+    if not is_noninteractive_agg:
+        plt.ion()
+        return
+
+    # Try common GUI backends in order; continue if one is unavailable.
+    for candidate in ('QtAgg', 'TkAgg', 'GTK3Agg'):
+        try:
+            plt.switch_backend(candidate)
+            plt.ion()
+            print(f"Matplotlib backend switched to {plt.get_backend()} for interactive display")
+            return
+        except Exception:
+            continue
+
+    print(
+        "Warning: interactive Matplotlib backend not available. "
+        "Install Qt or Tk support to enable interactive movie playback."
+    )
+
 #%%
 def execute(in_arg):
+    _ensure_interactive_backend()
+
     save_movie_flag = in_arg['save_movie_flag']
     starting_time = in_arg['starting_time']
     ending_time = in_arg['ending_time']

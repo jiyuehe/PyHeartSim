@@ -33,11 +33,15 @@ vertex_original, face_original = utility.common.load_obj(directory['mesh_databas
 # ==============================
 input_mesh_path = directory['mesh_database'] / f'{name_prefix}.obj'
 output_mesh_path = directory['data'] / f'{name_prefix}_refined.obj'
+# Key parameter for mesh refinement 
+# tsdf_target_rest determines the smoothing + hole filling 
+# larger value -> high resolution preserves more details but might not fill holes 
+# smaller value -> more smoothing and hole filling, but might lose details. 
 utility.automatic_mesh_refinement.clean_mesh(
     str(input_mesh_path),
     str(output_mesh_path),
     debug_mode = False,
-    tsdf_target_res = 120,
+    tsdf_target_res = 80,
     tsdf_truncation_dist = None,
     morph_closing_iters = 3,
     morph_opening_iters = 0,
