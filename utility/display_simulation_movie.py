@@ -58,9 +58,12 @@ def execute(in_arg):
     data_threshold = v_gate
     map_color = {}
     n_time = movie_data.shape[0]
-    for n in range(n_time):
-        if ((n+1) % (n_time//5)) == 0:
-            print(f'compute color map {(n+1)/n_time*100:.0f}%')
+    frame_skip = 10
+    frames = range(0, n_time, frame_skip)
+    n_frames = len(frames)
+    for i, n in enumerate(frames):
+        if (i+1) % max(1, n_frames//5) == 0:
+            print(f'compute color map {(i+1)/n_frames*100:.0f}%')
         data = movie_data[n, :]
         color = common.convert_value_to_purple_yellow(data, data_min, data_max, data_threshold)
         map_color[n] = color
@@ -83,9 +86,9 @@ def execute(in_arg):
 
     pause_interval = 0.001
     view_matrices = {} # dictionary to store projection matrices for each frame
-    for n in range(n_time):
-        if ((n+1) % (n_time//5)) == 0:
-            print(f'playing movie {(n+1)/n_time*100:.0f}%')
+    for i, n in enumerate(frames):
+        if (i+1) % max(1, n_frames//5) == 0:
+            print(f'playing movie {(i+1)/n_frames*100:.0f}%')
 
         plot_handle.set_color(map_color[n])
         
@@ -98,20 +101,28 @@ def execute(in_arg):
 
     # save simulation movie
     if save_movie_flag == 1:
+        # compute colors for save frames not already computed
+        for n in frames:
+            if n not in map_color:
+                data = movie_data[n, :]
+                map_color[n] = common.convert_value_to_purple_yellow(data, data_min, data_max, data_threshold)
+
+        save_counter = [0]
         def animate(n):
-            if ((n+1) % (n_time//10)) == 0:
-                print(f'saving movie {(n+1)/n_time*100:.0f}%')
+            save_counter[0] += 1
+            if save_counter[0] % max(1, n_frames//10) == 0:
+                print(f'saving movie {save_counter[0]/n_frames*100:.0f}%')
 
             plot_handle.set_color(map_color[n])
 
             ax.set_title(f'Time: {n}/{n_time} ms') # set title with current time step
 
             # restore view angle
-            R = view_matrices[n]
-            ax.get_proj = lambda R=R: R # use default argument to capture current R
+            if n in view_matrices:
+                R = view_matrices[n]
+                ax.get_proj = lambda R=R: R # use default argument to capture current R
 
-        frame_skip = 5
-        anim = animation.FuncAnimation(fig, animate, frames=range(0, n_time, frame_skip), interval=1, blit=False, repeat=False)
+        anim = animation.FuncAnimation(fig, animate, frames=frames, interval=1, blit=False, repeat=False)
         # the 'interval' parameter specifies the delay between frames in milliseconds
 
         # save
