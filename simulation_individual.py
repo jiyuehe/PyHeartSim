@@ -13,11 +13,6 @@
 # limitations under the License.
 
 #%%
-# import os
-# from pathlib import Path
-# script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-# os.chdir(script_dir) # change the working directory
-
 import time
 import numpy as np # pip install numpy
 from numba import cuda # pip install numba
@@ -120,7 +115,7 @@ if __name__ == "__main__":
     s1 = 100 # s1 pacing voxel id
     s2 = 5000 # s2 pacing voxel id
 
-    debug_plot = 1
+    debug_plot = 0
     if debug_plot == 1: 
         # show pacing voxels
         voxel = geometry_data['voxel']
@@ -135,7 +130,8 @@ if __name__ == "__main__":
         utility.common.set_axes_equal(ax)
         plt.tight_layout()
         plt.savefig(directory['result'] / f'pacing_voxels_{s1}_{s2}.png', dpi=300)
-        plt.close()
+        plt.switch_backend('TkAgg')
+        plt.show()
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
 

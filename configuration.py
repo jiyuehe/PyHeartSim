@@ -41,14 +41,14 @@ def directory_setup():
 def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = '103_1-lagood'
-    # name_prefix = '102_1-LA FAM1'
-    name_prefix = 'sheet'
+    name_prefix = '102_1-LA FAM1'
+    # name_prefix = 'sheet'
 
     return name_prefix
 
 def assign_simulation_parameters(geometry_data, s1, s2, n_voxel):
     simulation_parameters = {
-        'geometry_flag': 0, 
+        'geometry_flag': 1, 
         # 0: 2D
         # 1: 3D
         # 2: long slab for computing conduction velocity
