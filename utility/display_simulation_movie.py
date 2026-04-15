@@ -35,8 +35,9 @@ def execute(in_arg):
     geometry_flag = simulation_results['geometry_flag']
     geometry_data = in_arg['geometry_data']
 
+    voxel = geometry_data['voxel']
     voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
-    voxel_electrode = geometry_data['voxel'][voxel_id_of_electrode,:]
+    voxel_electrode = voxel[voxel_id_of_electrode, :]
 
     action_potential = simulation_results['action_potential_electrode']
     t = simulation_results['physical_time']
@@ -67,6 +68,7 @@ def execute(in_arg):
     fig = plt.figure(figsize=(10, 8))
     
     ax = plt.axes(projection='3d')
+    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='gray', edgecolor='none', linewidth=0, s=10, marker='s')
     plot_handle = ax.scatter(voxel_electrode[:, 0], voxel_electrode[:, 1], voxel_electrode[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=10, marker='s')
     plt.axis('off')
 
