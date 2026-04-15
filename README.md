@@ -1,7 +1,7 @@
 # Demonstration
 Atrial fibrillation of a patient's left atrium:  
-<img src="example/2_23403.gif" alt="Demo" width="400" />  
-<img src="example/2_23403_AP_and_EGM.png" alt="Demo" width="400" />  
+<img src="example/left_atrium_fibrillation.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_fibrillation.png" alt="Demo" width="400" />  
 
 # Introduction
 - This is an electrophysiological heart simulator written in **Python**.  
@@ -42,8 +42,8 @@ Atrial fibrillation of a patient's left atrium:
 
 # More demonstrations
 Rotor arrhythmia on a patient's left atrium:  
-<img src="example/1_35000.gif" alt="Demo" width="400" />  
-<img src="example/1_35000_AP_and_EGM.png" alt="Demo" width="400" />  
+<img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_rotor.png" alt="Demo" width="400" />  
 
 2 focal source simulation on a patient's left atrium:  
 <img src="example/left_atrium_2_focal.gif" alt="Demo" width="400" />  
