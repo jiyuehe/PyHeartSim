@@ -84,9 +84,14 @@ def run_simulation(input_arguments):
         simulation_results['h_electrode'] = h[:, voxel_id_of_electrode] # shape: (time, n_electrode)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
+
         if simulation_parameters['compute_electrogram_flag'] == 1:
             simulation_results['voxel_id_of_electrode'] = simulation_parameters['voxel_id_of_electrode']
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
+
+        if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
+            simulation_results['action_potential'] = action_potential # shape: (time, n_voxel)
+            simulation_results['h'] = h # shape: (time, n_voxel)
 
         # save simulation results
         if str(s1) != '[]' and str(s2) == '[]':
@@ -226,7 +231,7 @@ if __name__ == "__main__":
 
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
-        ending_time = [] # ms. []: till the end. or specify a value
+        ending_time = 400 # ms. []: till the end. or specify a value
 
         simulation_results_file_name = directory['result'] / f'simulation_results_{str(s1)}_{str(s2)}.gif'
         movie_save_dir = directory['result'] / simulation_results_file_name
@@ -239,6 +244,7 @@ if __name__ == "__main__":
         in_arg['movie_save_dir'] = movie_save_dir
         in_arg['simulation_results'] = simulation_results
         in_arg['geometry_data'] = geometry_data
+        in_arg['save_action_potential_of_all_voxel_flag'] = simulation_parameters['save_action_potential_of_all_voxel_flag']
         utility.display_simulation_movie.execute(in_arg)
 
 #%%

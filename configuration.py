@@ -55,6 +55,9 @@ def assign_simulation_parameters(geometry_data, s1, s2, n_voxel):
         'compute_electrogram_flag': 1, 
         # 1: compute electrogram 
         # 0: do not compute electrogram
+        'save_action_potential_of_all_voxel_flag': 1,
+        # 1: save action potential of all voxels
+        # 0: only save action potential of electrode voxels
         'voxel_id_of_electrode': geometry_data['voxel_id_of_electrode'], # electrode locations for computing electrograms
         't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
