@@ -76,7 +76,8 @@ def execute(in_arg):
     fig = plt.figure(figsize=(10, 8))
     
     ax = plt.axes(projection='3d')
-    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='gray', edgecolor='none', linewidth=0, s=10, marker='s')
+    if in_arg['save_action_potential_of_all_voxel_flag'] == 0:
+        ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='gray', edgecolor='none', linewidth=0, s=10, marker='s')
     plot_handle = ax.scatter(voxel_valid[:, 0], voxel_valid[:, 1], voxel_valid[:, 2], c=map_color[0], edgecolor='none', linewidth=0, s=10, marker='s')
     plt.axis('off')
 
