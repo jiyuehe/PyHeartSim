@@ -19,6 +19,7 @@ os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
 import numpy as np
+import simulation
 
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
 import plotly.io as pio
@@ -70,31 +71,16 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         'arrhythmia_flag': 1,
         # 0: focal
         # 1: rotor
-        # 2: fibrillation
+        # 2: fibrillation (starts with a rotor, then becomes fibrillation)
         # 3: for debugging, manually assign s1 and s2 region 
         # 4: 2 focal 2 locations both at 0ms
         # 5: 2 focal 2 locations 300ms apart
         # 6: 2 focal 2 locations 50ms apart
     }
 
-    debug_plot = 0
-    if debug_plot == 1: # show geometry voxel
-        voxel = geometry_data['voxel']
-        n_node = voxel.shape[0]
-        voxel_id_of_electrode = simulation_parameters['voxel_id_of_electrode']
-
-        colors = np.array(['black'] * n_node)
-        colors[voxel_id_of_electrode] = 'blue'
-        
-        sizes = np.ones(n_node) * 3
-        sizes[voxel_id_of_electrode] = 5
-        fig = go.Figure(data=[go.Scatter3d(
-                x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
-                mode='markers',
-                marker=dict(size=sizes, color=colors),
-                showlegend=False)])
-        fig.update_layout(scene=dict(aspectmode='data')) # set aspect ratio to be equal
-        fig.show()
+    # if simulate rotor or fibrillation, s2 will be automatically determined
+    if simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
+        s2 = simulation.pacing.find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data)
 
     # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
@@ -104,18 +90,16 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
     elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=220,
-                      ap_min=0.00038510505014280766, ap_max=0.07687293043769826,
-                      h_min=0.1623103413330824,      h_max=0.39717038588499276,
-                      s2_region_size_factor=0.7)
+                      ap_min=0.00039, ap_max=0.0769,
+                      h_min=0.1629,      h_max=0.397)
     elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=130,
-                      ap_min=0.05,  ap_max=0.25, h_min=0.025, h_max=0.120,
-                      s2_region_size_factor=0.5)
+                      ap_min=0.05,  ap_max=0.25, h_min=0.025, h_max=0.120)
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging, manually assign s1 and s2 region
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
                       s1_t=0,   s1_s2_delta_t=230,
-                      ap_min=0, ap_max=0, h_min=0, h_max=0, s2_region_size_factor=0)
+                      ap_min=0, ap_max=0, h_min=0, h_max=0)
 
     arrhythmia_parameters = {
         'pacing_start_time':   params['pacing_start_time'],  # ms
@@ -128,7 +112,6 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         'ap_max':              params['ap_max'],              # a threshold value of action potential
         'h_min':               params['h_min'],               # a threshold value of action potential
         'h_max':               params['h_max'],               # a threshold value of action potential
-        's2_region_size_factor': params['s2_region_size_factor'], # a less than 1 multiplication factor to reduce s2 pacing region size
     }
 
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal

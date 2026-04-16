@@ -14,6 +14,66 @@
 
 import numpy as np
 
+def find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data):
+    voxel = geometry_data['voxel']
+    n_voxel = voxel.shape[0]
+
+    # find a voxel that is at a certain distance from s1
+    d_threshold_1 = 15 # mm
+    d_threshold_2 = d_threshold_1 + 20 # mm
+    d = np.sqrt(np.sum((voxel - voxel[s1, :])**2, axis=1))
+    candidate_s2 = np.where((d >= d_threshold_1) & (d <= d_threshold_2))[0]
+
+    # cluster the candidate_s2 voxels into whatever number of cluster by connectivity
+    neighbor_id_2d = geometry_data['neighbor_id_2d']
+    visited = np.zeros(n_voxel, dtype=bool)
+    clusters = []
+    for voxel_id in candidate_s2:
+        if not visited[voxel_id]:
+            cluster = []
+            stack = [voxel_id]
+            visited[voxel_id] = True
+
+            while stack:
+                current_voxel_id = stack.pop()
+                cluster.append(current_voxel_id)
+
+                neighbors = neighbor_id_2d[current_voxel_id, :]
+                for neighbor in neighbors:
+                    if neighbor in candidate_s2 and not visited[neighbor]:
+                        visited[neighbor] = True
+                        stack.append(neighbor)
+
+            clusters.append(cluster)
+    
+    # find the largest cluster
+    largest_cluster = max(clusters, key=len)
+    candidate_s2 = largest_cluster[0] # s2 pacing voxel id
+
+    # if the amount of voxels in the largest cluster is larger than a threshold, select a subset of connected voxels: started from the first voxel, then add neighboring voxels until reaching the threshold, according to breadth first search
+    n_threshold = 200
+    if len(largest_cluster) > n_threshold:
+        visited = np.zeros(n_voxel, dtype=bool)
+        s2_pacing_voxel_id = []
+        queue = [candidate_s2]
+        visited[candidate_s2] = True
+
+        while queue and len(s2_pacing_voxel_id) < n_threshold:
+            current_voxel_id = queue.pop(0)
+            s2_pacing_voxel_id.append(current_voxel_id)
+
+            neighbors = neighbor_id_2d[current_voxel_id, :]
+            for neighbor in neighbors:
+                if neighbor in largest_cluster and not visited[neighbor]:
+                    visited[neighbor] = True
+                    queue.append(neighbor)
+        
+        s2 = s2_pacing_voxel_id # s2 pacing voxel id
+    else:
+        s2 = candidate_s2 # s2 pacing voxel id
+
+    return s2
+
 def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, neighbor_id_2d, simulation_parameters):
     s1_pacing_voxel_id = arrhythmia_parameters['s1_pacing_voxel_id'] 
     s1_t = arrhythmia_parameters['s1_t'] 
@@ -22,7 +82,6 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
     ap_max = arrhythmia_parameters['ap_max'] 
     h_min = arrhythmia_parameters['h_min'] 
     h_max = arrhythmia_parameters['h_max'] 
-    s2_region_size_factor = arrhythmia_parameters['s2_region_size_factor'] 
 
     s2_pacing_voxel_id = []
     if arrhythmia_flag in (1, 3, 4, 5, 6):
@@ -51,9 +110,9 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
         J_stim_magnitude = 1
         pacing_duration = 5 / simulation_parameters['time_scale']
 
-    return J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max, s2_region_size_factor
+    return J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max
 
-def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max, s2_region_size_factor, sim_u_voxel, sim_h_voxel, neighbor_id_2d):
+def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max, sim_u_voxel, sim_h_voxel, neighbor_id_2d):
     # s1 pacing
     if arrhythmia_flag in (0, 4): # focal arrhythmia, s1 pace according to cycle length setting
         t = model_time
@@ -89,30 +148,6 @@ def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, 
 
     # s2 pacing
     if arrhythmia_flag in (1, 2, 3) and model_time >= s2_t and model_time <= s2_t + pacing_duration:
-        # if arrhythmia_flag == 1 or arrhythmia_flag == 2:
-        #     action_potential_s2_t = sim_u_voxel[:,int(s2_t)-1] # -1: the current values are not saved yet, so check the previous physical time frame
-        #     h_s2_t = sim_h_voxel[:,int(s2_t)-1] # -1: the current values are not saved yet, so check the previous physical time frame
-
-        #     id1 = np.where((action_potential_s2_t >= ap_min) & (action_potential_s2_t <= ap_max))[0]
-        #     id2 = np.where((h_s2_t >= h_min) & (h_s2_t <= h_max))[0]
-        #     s2_pacing_voxel_id_auto = np.intersect1d(id1, id2) # these voxels could have a ring-like shape, which cannot generate rotor
-
-        #     # grab a portion of the shape, so it becomes like a curvy patch (instead of a ring), allow waves to rotate at the edges of the patch
-        #     id = s2_pacing_voxel_id_auto[0] # find one voxel to start, can be any random one
-        #     iter = 0
-        #     while (id.size < s2_pacing_voxel_id_auto.size * s2_region_size_factor or id.size < 1000) and iter <= 50: # repeat several times to include more neighbors
-        #         # NOTE: iter <= 10 is to prevent inifinte while loop that sometimes will happen
-        #         neighbor_id = neighbor_id_2d[id, :] # the neighbors
-        #         neighbor_id = neighbor_id[neighbor_id != -1] # remove the -1s, which means no neighbors
-        #         id = np.concatenate([np.atleast_1d(id), np.atleast_1d(neighbor_id)]) # add the neighbors
-        #         id = np.intersect1d(id, s2_pacing_voxel_id_auto) # make sure its within the original shape
-        #         iter = iter + 1
-        #     s2_pacing_voxel_id = id
-        #     # print(s2_pacing_voxel_id)
-        # elif arrhythmia_flag == 3:
-        #     s2_pacing_voxel_id = s2_pacing_voxel_id 
-
-        s2_pacing_voxel_id = s2_pacing_voxel_id 
         J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
     return J_stim

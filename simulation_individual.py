@@ -117,61 +117,11 @@ if __name__ == "__main__":
     n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 1676 # s1 pacing voxel id
+    s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
-    # find a voxel that is at a certain distance from s1
-    d_threshold_1 = 15 # mm
-    d_threshold_2 = d_threshold_1 + 20 # mm
-    voxel = geometry_data['voxel']
-    d = np.sqrt(np.sum((voxel - voxel[s1, :])**2, axis=1))
-    candidate_s2 = np.where((d >= d_threshold_1) & (d <= d_threshold_2))[0]
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
 
-    # cluster the candidate_s2 voxels into whatever number of cluster by connectivity
-    neighbor_id_2d = geometry_data['neighbor_id_2d']
-    visited = np.zeros(n_voxel, dtype=bool)
-    clusters = []
-    for voxel_id in candidate_s2:
-        if not visited[voxel_id]:
-            cluster = []
-            stack = [voxel_id]
-            visited[voxel_id] = True
-
-            while stack:
-                current_voxel_id = stack.pop()
-                cluster.append(current_voxel_id)
-
-                neighbors = neighbor_id_2d[current_voxel_id, :]
-                for neighbor in neighbors:
-                    if neighbor in candidate_s2 and not visited[neighbor]:
-                        visited[neighbor] = True
-                        stack.append(neighbor)
-
-            clusters.append(cluster)
-    
-    # find the largest cluster
-    largest_cluster = max(clusters, key=len)
-    candidate_s2 = largest_cluster[0] # s2 pacing voxel id
-
-    # if the amount of voxels in the largest cluster is larger than a threshold, select a subset of connected voxels: started from the first voxel, then add neighboring voxels until reaching the threshold, according to breadth first search
-    n_threshold = 200
-    if len(largest_cluster) > n_threshold:
-        visited = np.zeros(n_voxel, dtype=bool)
-        s2_pacing_voxel_id = []
-        queue = [candidate_s2]
-        visited[candidate_s2] = True
-
-        while queue and len(s2_pacing_voxel_id) < n_threshold:
-            current_voxel_id = queue.pop(0)
-            s2_pacing_voxel_id.append(current_voxel_id)
-
-            neighbors = neighbor_id_2d[current_voxel_id, :]
-            for neighbor in neighbors:
-                if neighbor in largest_cluster and not visited[neighbor]:
-                    visited[neighbor] = True
-                    queue.append(neighbor)
-        
-        s2 = s2_pacing_voxel_id # s2 pacing voxel id
-    else:
-        s2 = candidate_s2 # s2 pacing voxel id
+    s2 = arrhythmia_parameters['s2_pacing_voxel_id']
 
     debug_plot = 0
     if debug_plot == 1: 
@@ -200,13 +150,11 @@ if __name__ == "__main__":
             ))
         fig = go.Figure(data=traces)
         fig.update_layout(
-            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False),
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
             legend=dict(itemsizing='constant'),
             margin=dict(l=0, r=0, t=0, b=0)
         )
         fig.show()
-
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
 
     input_arguments = {}
     input_arguments['name_prefix'] = name_prefix
