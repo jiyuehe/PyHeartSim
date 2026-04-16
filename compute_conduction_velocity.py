@@ -52,7 +52,7 @@ if debug_plot == 1:
 s1 = []
 s2 = []
 
-simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
 
 input_arguments = {}
 input_arguments['name_prefix'] = name_prefix

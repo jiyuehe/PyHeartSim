@@ -40,19 +40,23 @@ def directory_setup():
 
 def mesh_name():
     # atrial mesh .obj file name
-    # name_prefix = '103_1-lagood'
-    # name_prefix = '102_1-LA FAM1'
     # name_prefix = 'sheet'
-    name_prefix = 'long_slab'
+    # name_prefix = 'long_slab'
+    # name_prefix = '103_1-lagood'
+    name_prefix = '102_1-LA FAM1'
 
     return name_prefix
 
-def assign_simulation_parameters(geometry_data, s1, s2, n_voxel):
+def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
+    if name_prefix == 'sheet':
+        geometry_flag = 0  # 2D
+    elif name_prefix == 'long_slab':
+        geometry_flag = 2  # long slab for computing conduction velocity
+    else:
+        geometry_flag = 1  # 3D
+
     simulation_parameters = {
-        'geometry_flag': 2, 
-        # 0: 2D
-        # 1: 3D
-        # 2: long slab for computing conduction velocity
+        'geometry_flag': geometry_flag,
         'compute_electrogram_flag': 1, 
         # 1: compute electrogram 
         # 0: do not compute electrogram

@@ -113,8 +113,8 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 10025 # s1 pacing voxel id
-    s2 = 26581 # s2 pacing voxel id
+    s1 = 1025 # s1 pacing voxel id
+    s2 = 16281 # s2 pacing voxel id
 
     debug_plot = 1
     if debug_plot == 1: 
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         plt.savefig(directory['result'] / f'{name_prefix}_pacing_voxels_{s1}_{s2}.png', dpi=300)
         plt.show()
 
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
 
     input_arguments = {}
     input_arguments['name_prefix'] = name_prefix
