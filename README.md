@@ -47,7 +47,8 @@ Patient left atrium rotor simulation:
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
 Patient left atrium 2 focal sources simulation:  
-<img src="example/left_atrium_2_focal.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_focal.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
 
 Slab fibrillation simulation:  
 <img src="example/slab_fibrillation.gif" alt="Demo" width="400" />  

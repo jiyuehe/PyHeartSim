@@ -93,12 +93,7 @@ def run_simulation(input_arguments):
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
-        if str(s1) != '[]' and str(s2) == '[]':
-            np.savez(result_folder / f'{name_prefix}_simulation_results_{str(s1)}', **simulation_results)
-        elif str(s1) == '[]' and str(s2) == '[]':
-            np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
-        elif str(s1) != '[]' and str(s2) != '[]':
-            np.savez(result_folder / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}', **simulation_results)
+        np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
 
 #%%
 # If running this script directly, the following code block will be executed. 
@@ -116,7 +111,7 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 18591 # s1 pacing voxel id
+    s1 = 10025 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
@@ -171,10 +166,7 @@ if __name__ == "__main__":
     run_simulation(input_arguments)
 
     # compute local activation time
-    if str(s2) == '[]':
-        file_name = f'{name_prefix}_simulation_results_{s1}.npz'
-    else: 
-        file_name = f'{name_prefix}_simulation_results_{s1}_{s2[0]}.npz'
+    file_name = f'{name_prefix}_simulation_results.npz'
     simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
     electrogram_unipolar = simulation_results['electrogram_unipolar']
     lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
@@ -186,10 +178,7 @@ if __name__ == "__main__":
 
     # plot local activation time map
     if plot_lat_map_flag == 1:
-        if str(s2) == '[]':
-            fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1)}.png'
-        else:
-            fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1)}_{str(s2[0])}.png'
+        fig_name = directory['result'] / f'{name_prefix}_lat.png'
         
         geometry_flag = simulation_results['geometry_flag']
         utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
@@ -203,10 +192,7 @@ if __name__ == "__main__":
     do_flag = 1
     if do_flag == 1: 
         # load simulation results
-        if str(s2) == '[]':
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}.npz', allow_pickle=False))
-        else:
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.npz', allow_pickle=False))
+        simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
 
         action_potential = simulation_results['action_potential_electrode']
         physical_time = simulation_results['physical_time']
@@ -235,23 +221,20 @@ if __name__ == "__main__":
                 axes[i, 1].set_xlabel('Time (ms)')
 
         plt.tight_layout()
-        plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2[0]}.png', dpi=300)
+        plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}.png', dpi=300)
         plt.close()
 
     # display simulation movie
     do_flag = 1
     if do_flag == 1:
         # load simulation results
-        if str(s2) == '[]':
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}.npz', allow_pickle=False))
-        else:
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.npz', allow_pickle=False))
+        simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
 
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
         ending_time = [] # ms. []: till the end. or specify a value
 
-        simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.gif'
+        simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results.gif'
         movie_save_dir = directory['result'] / simulation_results_file_name
 
         in_arg = {}

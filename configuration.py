@@ -65,10 +65,10 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
         'voxel_id_of_electrode': geometry_data['voxel_id_of_electrode'], # electrode locations for computing electrograms
-        't_final': 2000, # ms
+        't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 1,
+        'arrhythmia_flag': 0,
         # 0: focal
         # 1: rotor
         # 2: fibrillation (starts with a rotor, then becomes fibrillation)
