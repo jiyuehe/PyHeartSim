@@ -40,6 +40,8 @@ electrode_voxel = voxel[voxel_id_of_electrode, :]
 
 simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [], n_voxel)
 
+simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
+
 input_arguments = {}
 input_arguments['name_prefix'] = name_prefix
 input_arguments['geometry_data'] = geometry_data
