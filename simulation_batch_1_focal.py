@@ -23,7 +23,7 @@ import configuration
 directory = configuration.directory_setup() # set up directories
 name_prefix = configuration.mesh_name() # get mesh name prefix
 
-n_simulations = 2000
+n_simulations = 100
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
@@ -46,7 +46,8 @@ input_arguments = {}
 input_arguments['name_prefix'] = name_prefix
 input_arguments['geometry_data'] = geometry_data
 input_arguments['save_result_flag'] = save_result_flag
-input_arguments['result_folder'] = directory['result']
+input_arguments['result_folder'] = directory['result'] / 'simulation_results'
+input_arguments['result_folder'].mkdir(exist_ok=True) # create the folder if it does not exist
 input_arguments['simulation_parameters'] = simulation_parameters
 input_arguments['arrhythmia_parameters'] = arrhythmia_parameters
 input_arguments['heart_model_parameters'] = heart_model_parameters
@@ -60,7 +61,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
 
     file_name = f'{name_prefix}_simulation_results_{s1[loop_id]}.npz'
 
-    if not os.path.exists(directory['result'] / file_name):
+    if not os.path.exists(input_arguments['result_folder'] / file_name):
         input_arguments['s1'] = s1[loop_id]
         input_arguments['s2'] = []
         input_arguments['arrhythmia_parameters']['s1_pacing_voxel_id'] = s1[loop_id]
@@ -70,14 +71,14 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
         do_flag = 0
         if do_flag == 1:
             # load simulation results
-            simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False))
+            simulation_results = dict(np.load(input_arguments['result_folder'] / file_name, allow_pickle=False))
 
             save_movie_flag = 1 # 1: save movie. 0: do not save movie
             starting_time = 0 # 0 # ms
             ending_time = 1000 # ms. []: till the end. or specify a value
 
-            simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1[loop_id])}.gif'
-            movie_save_dir = directory['result'] / simulation_results_file_name
+            simulation_results_file_name = input_arguments['result_folder'] / f'{name_prefix}_simulation_results_{str(s1[loop_id])}.gif'
+            movie_save_dir = input_arguments['result_folder'] / simulation_results_file_name
 
             in_arg = {}
             in_arg['save_movie_flag'] = save_movie_flag
@@ -91,7 +92,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
             utility.display_simulation_movie.execute(in_arg)
 
         # compute local activation time
-        simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
+        simulation_results = dict(np.load(input_arguments['result_folder'] / file_name, allow_pickle=False)) # load simulation results
         electrogram_unipolar = simulation_results['electrogram_unipolar']
         
         lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
@@ -101,7 +102,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
 
         # plot local activation time map
         if plot_lat_map_flag == 1:
-            fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
+            fig_name = input_arguments['result_folder'] / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
             
             geometry_flag = simulation_results['geometry_flag']
             utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
@@ -109,7 +110,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
 
         # save lat to simulation_results
         simulation_results['lat_electrode'] = lat_electrode
-        np.savez(directory['result'] / file_name, **simulation_results)
+        np.savez(input_arguments['result_folder'] / file_name, **simulation_results)
 
 #%%
 print('done')
