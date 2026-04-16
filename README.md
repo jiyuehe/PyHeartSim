@@ -1,5 +1,5 @@
 # Demonstration
-Atrial fibrillation of a patient's left atrium:  
+Patient left atrium fibrillation simulation:  
 <img src="example/left_atrium_fibrillation.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_fibrillation.png" alt="Demo" width="500" />  
 
@@ -42,14 +42,14 @@ Atrial fibrillation of a patient's left atrium:
 - Jiyue He, Arkady Pertsov, Sanjay Dixit, Katie Walsh, Eric Toolan, Rahul Mangharam. (2021). Patient-specific heart model towards atrial fibrillation. Proceedings of the ACM/IEEE 12th International Conference on Cyber-Physical Systems, New York, NY, USA, pp. 33-43. doi: 10.1145/3450267.3450532
 
 # More demonstrations
-Rotor arrhythmia on a patient's left atrium:  
+Patient left atrium rotor simulation:  
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
-2 focal source simulation on a patient's left atrium:  
+Patient left atrium 2 focal sources simulation:  
 <img src="example/left_atrium_2_focal.gif" alt="Demo" width="400" />  
 
-Fibrillation on a slab:  
+Slab fibrillation simulation:  
 <img src="example/slab_fibrillation.gif" alt="Demo" width="400" />  
 
 2D rotor simulation:  
