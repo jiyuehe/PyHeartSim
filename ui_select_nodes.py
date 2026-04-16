@@ -14,56 +14,41 @@
 
 #%%
 import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
 import numpy as np # pip install numpy
 import matplotlib # pip install matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
+import configuration
 
 #%%
-data_flag = 1 # 1: from PyHeartSim. 2: from SPH-HeartSim
+directory = configuration.directory_setup() # set up directories
+name_prefix = configuration.mesh_name() # get mesh name prefix
 
-# load data
-if data_flag == 1:
-    data_dir = script_dir.parent / 'data'
-    node_flag_dir = script_dir.parent / 'data'
+# load geometry data
+file_path = directory['data'] / f'{name_prefix}_geometry.npz'
+data = np.load(file_path, allow_pickle=False)
+geometry_data = {k: data[k] for k in data.files}
 
-    # loaded = np.load(data_dir / 'sheet.npz')
-    # loaded = np.load(data_dir / 'slab.npz')
-    loaded = np.load(data_dir / '49_2-LA_edited.npz')
+node = geometry_data['voxel']
 
-    node = loaded['voxel']
-elif data_flag == 2:
-    data_dir = script_dir.parent / 'SPH-HeartSim' / 'build' / 'sim' / 'bin' / 'output'
-    node_flag_dir = script_dir.parent / 'SPH-HeartSim' / 'result'
-
-    t, voltage, gate_variable, stress, xyz = codes.load_SPH_simulation_result.execute(data_dir)
-    node = xyz[:,0,:]
-
-if os.path.exists(node_flag_dir / 'node_flag.npy'):
-    node_flag = np.load(node_flag_dir / 'node_flag.npy')
+if os.path.exists(directory['data'] / f'{name_prefix}_node_flag.npy'):
+    node_flag = np.load(directory['data'] / f'{name_prefix}_node_flag.npy')
 else:
     node_flag = np.zeros(len(node), dtype=int)
 
 debug_flag = 0
 if debug_flag == 1:
-    np.set_printoptions(threshold=np.inf)
-    print('s1 pacing nodes: ')
-    print(", ".join(map(str, np.where(node_flag==1)[0])))
-    print('s2 pacing nodes: ')
-    print(", ".join(map(str, np.where(node_flag==2)[0])))
+    np.set_printoptions(threshold=np.inf) # print the whole array without truncation
+    print('s1 pacing nodes:', np.where(node_flag==1)[0])
+    print('s2 pacing nodes:', np.where(node_flag==2)[0])
 
 #%%
 # user interface
 # ------------------------------
 # initialize variables
 selection_polygon = []
-is_selecting = [False]  # is selection mode or not
-selection_mode = [False]  # rotate/select mode
+is_selecting = False  # is selection mode or not
+selection_mode = False  # rotate/select mode
 
 # plot the nodes
 fig = plt.figure(figsize=(12, 8))
@@ -124,10 +109,11 @@ update_node_color()
 #%%
 # key press to change mode: selection or rotation
 def on_key(event):
+    global selection_mode
     if event.key.lower() == 'a':
-        selection_mode[0] = not selection_mode[0] # toggle true and false
+        selection_mode = not selection_mode # toggle true and false
 
-        if selection_mode[0]:
+        if selection_mode:
             mode_text.set_text('Mode: Select (press "a" change to Rotate)')
             mode_text.set_bbox(dict(facecolor='yellow'))
             ax.disable_mouse_rotation()
@@ -142,11 +128,12 @@ fig.canvas.mpl_connect('key_press_event', on_key) # fig.canvas.mpl_connect('even
 
 # at the time instance of a mouse click (either left or right click)
 def on_press(event):
+    global is_selecting
     if event.inaxes != ax: # if mouse outside of the user interface
         return
     
-    if event.button == 1 and selection_mode[0]: # mouse left click and in selection mode
-        is_selecting[0] = True
+    if event.button == 1 and selection_mode: # mouse left click and in selection mode
+        is_selecting = True
         selection_polygon.clear()
         selection_polygon.append((event.xdata, event.ydata))
     elif event.button == 3: # mouse right click
@@ -158,7 +145,7 @@ fig.canvas.mpl_connect('button_press_event', on_press) # fig.canvas.mpl_connect(
 
 # while the mouse is moving
 def on_motion(event):
-    if not is_selecting[0] or event.inaxes != ax: # if not pressing down mouse left key and in selection mode, or mouse outside of the user interface
+    if not is_selecting or event.inaxes != ax: # if not pressing down mouse left key and in selection mode, or mouse outside of the user interface
         return
     
     if event.xdata is not None and event.ydata is not None: 
@@ -175,10 +162,11 @@ fig.canvas.mpl_connect('motion_notify_event', on_motion) # fig.canvas.mpl_connec
 
 # at the time instance of mouse click release
 def on_release(event):
-    if not is_selecting[0] or event.button != 1:
+    global is_selecting
+    if not is_selecting or event.button != 1:
         return
     
-    is_selecting[0] = False
+    is_selecting = False
 
     if len(selection_polygon) < 3:
         print("Selection too small, need at least 3 points")
@@ -235,8 +223,8 @@ fig.canvas.mpl_connect('button_release_event', on_release) # fig.canvas.mpl_conn
 
 # the 'save' button
 def save_selection(event):
-    filename = 'node_flag.npy'
-    np.save(node_flag_dir / filename, node_flag)
+    filename = f'{name_prefix}_node_flag.npy'
+    np.save(directory['data'] / filename, node_flag)
     print(f"Saved node flags to '{filename}'")
 
     s1_pacing_node_id = np.where(node_flag == 1)[0]
