@@ -21,6 +21,10 @@ import simulation
 import utility
 import configuration
 
+import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
+import plotly.io as pio
+pio.renderers.default = "browser" # simulation result mesh display in internet browser
+
 #%%
 def run_simulation(input_arguments):
     s1 = input_arguments['s1']
@@ -116,24 +120,38 @@ if __name__ == "__main__":
     s1 = 1025 # s1 pacing voxel id
     s2 = [] # s2 pacing voxel id
 
-    debug_plot = 1
+    debug_plot = 0
     if debug_plot == 1: 
         # show pacing voxels
         voxel = geometry_data['voxel']
-        # plt.switch_backend('TkAgg')
-        plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='lightgray', edgecolor='none', linewidth=0, s=10, marker='.', alpha=0.3)
-        ax.scatter(voxel[s1, 0], voxel[s1, 1], voxel[s1, 2], c='blue', edgecolor='none', linewidth=0, s=50, marker='o', label='s1')
+        traces = [
+            go.Scatter3d(
+                x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
+                mode='markers',
+                marker=dict(size=2, color='lightgray', opacity=0.3),
+                name='voxels'
+            ),
+            go.Scatter3d(
+                x=[voxel[s1, 0]], y=[voxel[s1, 1]], z=[voxel[s1, 2]],
+                mode='markers',
+                marker=dict(size=6, color='blue'),
+                name='s1'
+            ),
+        ]
         if s2 != []:
-            ax.scatter(voxel[s2, 0], voxel[s2, 1], voxel[s2, 2], c='red', edgecolor='none', linewidth=0, s=50, marker='o', label='s2')
-        plt.legend()
-        plt.axis('off')
-        ax.view_init(elev=70, azim=-70)
-        utility.common.set_axes_equal(ax)
-        plt.tight_layout()
-        plt.savefig(directory['result'] / f'{name_prefix}_pacing_voxels_{s1}_{s2}.png', dpi=300)
-        plt.show()
+            traces.append(go.Scatter3d(
+                x=voxel[s2, 0], y=voxel[s2, 1], z=voxel[s2, 2],
+                mode='markers',
+                marker=dict(size=6, color='red'),
+                name='s2'
+            ))
+        fig = go.Figure(data=traces)
+        fig.update_layout(
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False),
+            legend=dict(itemsizing='constant'),
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+        fig.show()
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
 
