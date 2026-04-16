@@ -40,10 +40,10 @@ def directory_setup():
 
 def mesh_name():
     # atrial mesh .obj file name
-    # name_prefix = 'sheet'
+    name_prefix = 'sheet'
     # name_prefix = 'long_slab'
     # name_prefix = '103_1-lagood'
-    name_prefix = '102_1-LA FAM1'
+    # name_prefix = '102_1-LA FAM1'
 
     return name_prefix
 
@@ -67,7 +67,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 6,
+        'arrhythmia_flag': 1,
         # 0: focal
         # 1: rotor
         # 2: fibrillation
@@ -132,8 +132,8 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
     }
 
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
-        ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
-        ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
+        ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13) # ms: Mitchell-Schaeffer model parameters
+        ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3) # ap: Aliev-Panfilov model parameters
     elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)

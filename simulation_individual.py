@@ -41,7 +41,6 @@ def run_simulation(input_arguments):
     if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
         x_coordinates = geometry_data['voxel'][:, 0]
         voxels_1 = np.where(x_coordinates == np.min(x_coordinates))[0]
-        # voxels_2 = np.where(x_coordinates == np.max(x_coordinates))[0]
         arrhythmia_parameters['s1_pacing_voxel_id'] = voxels_1
 
     # fiber orientations
