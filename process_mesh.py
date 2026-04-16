@@ -24,6 +24,34 @@ directory = configuration.directory_setup()
 name_prefix = configuration.mesh_name()
 
 #%%
+do_flag = 0
+if do_flag == 1: # plot all original meshes and save as png figures
+    # grab all original meshes file names
+    mesh_files = [f for f in directory['mesh_database'].glob('*.obj')]
+    name_prefixes = [f.stem for f in mesh_files] # get the file name without the extension '.obj'
+
+    for name in name_prefixes:
+        print(f'plotting mesh: {name}')
+
+        vertex, face = utility.common.load_obj(directory['mesh_database'], name)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        poly = Poly3DCollection(
+            vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+        )
+        ax.add_collection3d(poly)
+        ax.view_init(elev=70, azim=-70)
+        utility.common.set_axes_equal(ax)
+
+        png_path = str(directory['mesh_database'] / f'{name}.png')
+        plt.savefig(png_path, dpi=300)
+        plt.close(fig)
+
+        utility.common.crop_image(png_path)
+        
+    print('done plotting all original meshes')
+
 # the original mesh
 # ==============================
 # original .obj mesh
