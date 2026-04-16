@@ -6,7 +6,7 @@
     <title>3D Node Selection Tool</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; font-family: Arial, sans-serif; background: #1a1a2e; }
+        body { overflow: hidden; font-family: Arial, sans-serif; background: #ffffff; }
 
         #canvas-container {
             width: 100vw; height: 100vh;
@@ -61,8 +61,39 @@
         }
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 30; color: white; font-size: 24px;
+            z-index: 30; color: #333; font-size: 24px;
         }
+
+        /* node index output panel */
+        #output-panel {
+            position: absolute; top: 60px; right: 10px; width: 280px;
+            max-height: calc(100vh - 120px); z-index: 20;
+            background: rgba(255,255,255,0.95); border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); overflow: hidden;
+            display: none; flex-direction: column;
+        }
+        #output-panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; background: #f5f5f5; border-bottom: 1px solid #ddd;
+            cursor: pointer; user-select: none;
+        }
+        #output-panel-header span { font-size: 13px; font-weight: bold; }
+        #output-panel-toggle { font-size: 16px; color: #666; }
+        #output-panel-body {
+            overflow-y: auto; padding: 8px 12px; max-height: calc(100vh - 170px);
+        }
+        .flag-section { margin-bottom: 10px; }
+        .flag-section-title {
+            font-size: 12px; font-weight: bold; margin-bottom: 4px;
+            padding: 2px 6px; border-radius: 3px; display: inline-block;
+        }
+        .flag-section-content {
+            font-family: monospace; font-size: 11px; color: #333;
+            word-break: break-all; line-height: 1.4;
+            background: #f9f9f9; padding: 4px 6px; border-radius: 4px;
+            max-height: 120px; overflow-y: auto;
+        }
+        .flag-section-content.empty { color: #999; font-style: italic; }
     </style>
 </head>
 <body>
@@ -71,7 +102,8 @@
     <div id="toolbar" style="display:none;">
         <label>Flag:</label>
         <select id="flag-value">
-            <option value="1">1 (S1)</option>
+            <option value="0">0 (None)</option>
+            <option value="1" selected>1 (S1)</option>
             <option value="2">2 (S2)</option>
             <option value="3">3</option>
             <option value="4">4</option>
@@ -94,6 +126,14 @@
 
     <div id="instructions" style="display:none;">
         Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Select: Shift + Left drag
+    </div>
+
+    <div id="output-panel" style="display:none;">
+        <div id="output-panel-header" onclick="toggleOutputPanel()">
+            <span>Node Indices by Flag</span>
+            <span id="output-panel-toggle">&#9660;</span>
+        </div>
+        <div id="output-panel-body"></div>
     </div>
 
     <div id="status"></div>
@@ -141,7 +181,7 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setClearColor(0x1a1a2e);
+        renderer.setClearColor(0xffffff);
         container.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
@@ -231,6 +271,7 @@
             document.getElementById('toolbar').style.display = 'flex';
             document.getElementById('mode-indicator').style.display = 'block';
             document.getElementById('instructions').style.display = 'block';
+            document.getElementById('output-panel').style.display = 'flex';
             updateNodeCount();
             animate();
         }
@@ -251,6 +292,62 @@
             for (let i = 0; i < nodeCount; i++) if (nodeFlags[i] > 0) flagged++;
             document.getElementById('node-count').textContent =
                 nodeCount + ' nodes | ' + flagged + ' flagged';
+            updateOutputPanel();
+        }
+
+        // ---- output panel ----
+        const FLAG_LABELS = { 1: 'Flag 1 (S1)', 2: 'Flag 2 (S2)', 3: 'Flag 3', 4: 'Flag 4' };
+        const FLAG_COLORS = { 1: '#1565C0', 2: '#c62828', 3: '#e65100', 4: '#9C27B0' };
+        let outputPanelCollapsed = false;
+
+        function toggleOutputPanel() {
+            outputPanelCollapsed = !outputPanelCollapsed;
+            document.getElementById('output-panel-body').style.display =
+                outputPanelCollapsed ? 'none' : 'block';
+            document.getElementById('output-panel-toggle').innerHTML =
+                outputPanelCollapsed ? '&#9654;' : '&#9660;';
+        }
+
+        function updateOutputPanel() {
+            const body = document.getElementById('output-panel-body');
+            const groups = {};
+            for (let i = 0; i < nodeCount; i++) {
+                const f = nodeFlags[i];
+                if (f > 0) {
+                    if (!groups[f]) groups[f] = [];
+                    groups[f].push(i);
+                }
+            }
+
+            let html = '';
+            const keys = Object.keys(FLAG_LABELS).map(Number);
+            for (const k of keys) {
+                const label = FLAG_LABELS[k] || ('Flag ' + k);
+                const color = FLAG_COLORS[k] || '#555';
+                const indices = groups[k];
+                html += '<div class="flag-section">';
+                html += '<div class="flag-section-title" style="color:' + color + ';">' +
+                    label + (indices ? ' (' + indices.length + ')' : '') + '</div>';
+                if (indices && indices.length > 0) {
+                    html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
+                } else {
+                    html += '<div class="flag-section-content empty">none</div>';
+                }
+                html += '</div>';
+            }
+
+            // any flags beyond 4
+            for (const k of Object.keys(groups).map(Number).sort()) {
+                if (k >= 1 && k <= 4) continue;
+                const indices = groups[k];
+                html += '<div class="flag-section">';
+                html += '<div class="flag-section-title" style="color:#555;">Flag ' + k +
+                    ' (' + indices.length + ')</div>';
+                html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
+                html += '</div>';
+            }
+
+            body.innerHTML = html;
         }
 
         function pushUndo() {
