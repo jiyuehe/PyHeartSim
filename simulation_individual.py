@@ -114,7 +114,7 @@ if __name__ == "__main__":
     n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 1025 # s1 pacing voxel id
-    s2 = 16281 # s2 pacing voxel id
+    s2 = [] # s2 pacing voxel id
 
     debug_plot = 1
     if debug_plot == 1: 
@@ -125,7 +125,8 @@ if __name__ == "__main__":
         ax = plt.axes(projection='3d')
         ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c='lightgray', edgecolor='none', linewidth=0, s=10, marker='.', alpha=0.3)
         ax.scatter(voxel[s1, 0], voxel[s1, 1], voxel[s1, 2], c='blue', edgecolor='none', linewidth=0, s=50, marker='o', label='s1')
-        ax.scatter(voxel[s2, 0], voxel[s2, 1], voxel[s2, 2], c='red', edgecolor='none', linewidth=0, s=50, marker='o', label='s2')
+        if s2 != []:
+            ax.scatter(voxel[s2, 0], voxel[s2, 1], voxel[s2, 2], c='red', edgecolor='none', linewidth=0, s=50, marker='o', label='s2')
         plt.legend()
         plt.axis('off')
         ax.view_init(elev=70, azim=-70)

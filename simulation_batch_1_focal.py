@@ -23,7 +23,7 @@ import configuration
 directory = configuration.directory_setup() # set up directories
 name_prefix = configuration.mesh_name() # get mesh name prefix
 
-n_simulations = 20
+n_simulations = 10
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
@@ -56,15 +56,41 @@ input_arguments['heart_model_parameters'] = heart_model_parameters
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
 
-    if not os.path.exists(directory['result'] / f'lat_{str(s1[loop_id])}.npz'):
+    file_name = f'{name_prefix}_simulation_results_{s1[loop_id]}.npz'
+
+    if not os.path.exists(directory['result'] / file_name):
         input_arguments['s1'] = s1[loop_id]
         input_arguments['s2'] = s2
         simulation_individual.run_simulation(input_arguments)
 
+        # display simulation movie
+        do_flag = 0
+        if do_flag == 1:
+            # load simulation results
+            simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False))
+
+            save_movie_flag = 1 # 1: save movie. 0: do not save movie
+            starting_time = 0 # 0 # ms
+            ending_time = 1000 # ms. []: till the end. or specify a value
+
+            simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1[loop_id])}.gif'
+            movie_save_dir = directory['result'] / simulation_results_file_name
+
+            in_arg = {}
+            in_arg['save_movie_flag'] = save_movie_flag
+            in_arg['starting_time'] = starting_time
+            in_arg['ending_time'] = ending_time
+            in_arg['simulation_results_file_name'] = simulation_results_file_name
+            in_arg['movie_save_dir'] = movie_save_dir
+            in_arg['simulation_results'] = simulation_results
+            in_arg['geometry_data'] = geometry_data
+            in_arg['save_action_potential_of_all_voxel_flag'] = simulation_parameters['save_action_potential_of_all_voxel_flag']
+            utility.display_simulation_movie.execute(in_arg)
+
         # compute local activation time
-        file_name = f'{name_prefix}_simulation_results_{s1[loop_id]}.npz'
         simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
         electrogram_unipolar = simulation_results['electrogram_unipolar']
+        
         lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
 
         # interpolate local activation time from electrode locations to all voxels
