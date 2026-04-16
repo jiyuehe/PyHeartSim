@@ -23,7 +23,7 @@ import configuration
 directory = configuration.directory_setup() # set up directories
 name_prefix = configuration.mesh_name() # get mesh name prefix
 
-n_simulations = 100
+n_simulations = 2
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
@@ -48,6 +48,7 @@ input_arguments['geometry_data'] = geometry_data
 input_arguments['save_result_flag'] = save_result_flag
 input_arguments['result_folder'] = directory['result'] / 'simulation_results'
 input_arguments['result_folder'].mkdir(exist_ok=True) # create the folder if it does not exist
+(input_arguments['result_folder'] / 'activation maps').mkdir(exist_ok=True) # create the folder if it does not exist
 input_arguments['simulation_parameters'] = simulation_parameters
 input_arguments['arrhythmia_parameters'] = arrhythmia_parameters
 input_arguments['heart_model_parameters'] = heart_model_parameters
@@ -102,7 +103,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
 
         # plot local activation time map
         if plot_lat_map_flag == 1:
-            fig_name = input_arguments['result_folder'] / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
+            fig_name = input_arguments['result_folder'] / 'activation maps' / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
             
             geometry_flag = simulation_results['geometry_flag']
             utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
