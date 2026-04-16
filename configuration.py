@@ -103,7 +103,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
                       ap_min=0, ap_max=0, h_min=0, h_max=0, s2_region_size_factor=0)
     elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
-                      s1_t=0,   s1_s2_delta_t=230,
+                      s1_t=0,   s1_s2_delta_t=220,
                       ap_min=0.00038510505014280766, ap_max=0.07687293043769826,
                       h_min=0.1623103413330824,      h_max=0.39717038588499276,
                       s2_region_size_factor=0.7)

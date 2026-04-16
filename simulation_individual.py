@@ -98,7 +98,7 @@ def run_simulation(input_arguments):
         elif str(s1) == '[]' and str(s2) == '[]':
             np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
         elif str(s1) != '[]' and str(s2) != '[]':
-            np.savez(result_folder / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2)}', **simulation_results)
+            np.savez(result_folder / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}', **simulation_results)
 
 #%%
 # If running this script directly, the following code block will be executed. 
@@ -116,8 +116,62 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 1025 # s1 pacing voxel id
-    s2 = [] # s2 pacing voxel id
+    s1 = 1676 # s1 pacing voxel id
+    
+    # find a voxel that is at a certain distance from s1
+    d_threshold_1 = 15 # mm
+    d_threshold_2 = d_threshold_1 + 20 # mm
+    voxel = geometry_data['voxel']
+    d = np.sqrt(np.sum((voxel - voxel[s1, :])**2, axis=1))
+    candidate_s2 = np.where((d >= d_threshold_1) & (d <= d_threshold_2))[0]
+
+    # cluster the candidate_s2 voxels into whatever number of cluster by connectivity
+    neighbor_id_2d = geometry_data['neighbor_id_2d']
+    visited = np.zeros(n_voxel, dtype=bool)
+    clusters = []
+    for voxel_id in candidate_s2:
+        if not visited[voxel_id]:
+            cluster = []
+            stack = [voxel_id]
+            visited[voxel_id] = True
+
+            while stack:
+                current_voxel_id = stack.pop()
+                cluster.append(current_voxel_id)
+
+                neighbors = neighbor_id_2d[current_voxel_id, :]
+                for neighbor in neighbors:
+                    if neighbor in candidate_s2 and not visited[neighbor]:
+                        visited[neighbor] = True
+                        stack.append(neighbor)
+
+            clusters.append(cluster)
+    
+    # find the largest cluster
+    largest_cluster = max(clusters, key=len)
+    candidate_s2 = largest_cluster[0] # s2 pacing voxel id
+
+    # if the amount of voxels in the largest cluster is larger than a threshold, select a subset of connected voxels: started from the first voxel, then add neighboring voxels until reaching the threshold, according to breadth first search
+    n_threshold = 200
+    if len(largest_cluster) > n_threshold:
+        visited = np.zeros(n_voxel, dtype=bool)
+        s2_pacing_voxel_id = []
+        queue = [candidate_s2]
+        visited[candidate_s2] = True
+
+        while queue and len(s2_pacing_voxel_id) < n_threshold:
+            current_voxel_id = queue.pop(0)
+            s2_pacing_voxel_id.append(current_voxel_id)
+
+            neighbors = neighbor_id_2d[current_voxel_id, :]
+            for neighbor in neighbors:
+                if neighbor in largest_cluster and not visited[neighbor]:
+                    visited[neighbor] = True
+                    queue.append(neighbor)
+        
+        s2 = s2_pacing_voxel_id # s2 pacing voxel id
+    else:
+        s2 = candidate_s2 # s2 pacing voxel id
 
     debug_plot = 0
     if debug_plot == 1: 
@@ -137,7 +191,7 @@ if __name__ == "__main__":
                 name='s1'
             ),
         ]
-        if s2 != []:
+        if str(s2) != '[]':
             traces.append(go.Scatter3d(
                 x=voxel[s2, 0], y=voxel[s2, 1], z=voxel[s2, 2],
                 mode='markers',
@@ -172,7 +226,7 @@ if __name__ == "__main__":
     if str(s2) == '[]':
         file_name = f'{name_prefix}_simulation_results_{s1}.npz'
     else: 
-        file_name = f'{name_prefix}_simulation_results_{s1}_{s2}.npz'
+        file_name = f'{name_prefix}_simulation_results_{s1}_{s2[0]}.npz'
     simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
     electrogram_unipolar = simulation_results['electrogram_unipolar']
     lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
@@ -187,7 +241,7 @@ if __name__ == "__main__":
         if str(s2) == '[]':
             fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1)}.png'
         else:
-            fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1)}_{str(s2)}.png'
+            fig_name = directory['result'] / f'{name_prefix}_lat_{str(s1)}_{str(s2[0])}.png'
         
         geometry_flag = simulation_results['geometry_flag']
         utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
@@ -204,7 +258,7 @@ if __name__ == "__main__":
         if str(s2) == '[]':
             simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}.npz', allow_pickle=False))
         else:
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
+            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.npz', allow_pickle=False))
 
         action_potential = simulation_results['action_potential_electrode']
         physical_time = simulation_results['physical_time']
@@ -233,7 +287,7 @@ if __name__ == "__main__":
                 axes[i, 1].set_xlabel('Time (ms)')
 
         plt.tight_layout()
-        plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2}.png', dpi=300)
+        plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}_{s2[0]}.png', dpi=300)
         plt.close()
 
     # display simulation movie
@@ -243,13 +297,13 @@ if __name__ == "__main__":
         if str(s2) == '[]':
             simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}.npz', allow_pickle=False))
         else:
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2)}.npz', allow_pickle=False))
+            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.npz', allow_pickle=False))
 
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
         ending_time = 1000 # ms. []: till the end. or specify a value
 
-        simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2)}.gif'
+        simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.gif'
         movie_save_dir = directory['result'] / simulation_results_file_name
 
         in_arg = {}

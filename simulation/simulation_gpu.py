@@ -26,7 +26,7 @@ except ImportError:
 
 @cuda.jit(device=True)
 def compute_reaction_only_gpu(heart_model_flag, u, h, P_2d, J_stim, n):
-    if heart_model_flag == 0:  # Mitchell-Schaeffer model
+    if heart_model_flag == 0: # Mitchell-Schaeffer model
         du_dt = (h[n] * (u[n]**2) * (1 - u[n])) / P_2d[n, 17] - \
                 u[n] / P_2d[n, 18] + J_stim[n]
         
@@ -35,7 +35,7 @@ def compute_reaction_only_gpu(heart_model_flag, u, h, P_2d, J_stim, n):
         else:
             dh_dt = -h[n] / P_2d[n, 16]
             
-    else:  # heart_model_flag == 1: Aliev-Panfilov model
+    else: # heart_model_flag == 1: Aliev-Panfilov model
         du_dt = -P_2d[n, 15]*u[n]*(u[n] - P_2d[n, 16])*(u[n] - 1) - u[n]*h[n] + J_stim[n]
         dh_dt = (P_2d[n, 17] + P_2d[n, 18]*h[n]/(u[n] + P_2d[n, 19])) * \
                 (-h[n] - P_2d[n, 15]*u[n]*(u[n] - P_2d[n, 16] - 1))
