@@ -113,8 +113,8 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 100 # s1 pacing voxel id
-    s2 = 15000 # s2 pacing voxel id
+    s1 = 13177 # s1 pacing voxel id
+    s2 = 29436 # s2 pacing voxel id
 
     debug_plot = 1
     if debug_plot == 1: 

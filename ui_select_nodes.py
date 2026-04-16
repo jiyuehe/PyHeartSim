@@ -16,6 +16,7 @@
 import os
 import numpy as np # pip install numpy
 import matplotlib # pip install matplotlib
+matplotlib.use('webagg') # use web-based backend so the UI works over VS Code Remote SSH
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
 import configuration
@@ -47,8 +48,8 @@ if debug_flag == 1:
 # ------------------------------
 # initialize variables
 selection_polygon = []
-is_selecting = False  # is selection mode or not
-selection_mode = False  # rotate/select mode
+is_selecting = False # is selection mode or not
+selection_mode = False # rotate/select mode
 
 # plot the nodes
 fig = plt.figure(figsize=(12, 8))
