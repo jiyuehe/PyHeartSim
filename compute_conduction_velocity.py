@@ -13,14 +13,9 @@
 # limitations under the License.
 
 #%%
-import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-script_dir = Path(script_dir)
-
-import simulation
+import utility
 import simulation_individual
+import configuration
 import numpy as np # pip install numpy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -30,20 +25,21 @@ import plotly.io as pio
 pio.renderers.default = "browser" # simulation result mesh display in internet browser
 
 #%%
-directory = {}
-directory['home'] = script_dir
-directory['result'] = script_dir / 'result'
+directory = configuration.directory_setup() # set up directories
+name_prefix = configuration.mesh_name()
+
+save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
+plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
 # load geometry
-geometry_name = 'long_slab_geometry.npz'
-file_path = directory['result'] / geometry_name
+file_path = directory['data'] / f'{name_prefix}_geometry.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
-
-geometry_flag = 3 # long slab for computing conduction velocity
+n_voxel = geometry_data['voxel'].shape[0]
 
 debug_plot = 0
-if debug_plot == 1: # show geometry voxel
+if debug_plot == 1: 
+    # show geometry voxel
     voxel = geometry_data['voxel']
     fig = go.Figure(data=[go.Scatter3d(
             x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
@@ -53,43 +49,48 @@ if debug_plot == 1: # show geometry voxel
     fig.update_layout(scene=dict(aspectmode='data')) # set aspect ratio to be equal
     fig.show()
 
-data_folder = script_dir / 'result'
-
-input_arguments = {}
-input_arguments['geometry_data'] = geometry_data
-input_arguments['save_result_flag'] = 1
-input_arguments['result_folder'] = directory['result']
-
 s1 = []
 s2 = []
+
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(geometry_data, s1, s2, n_voxel)
+
+input_arguments = {}
+input_arguments['name_prefix'] = name_prefix
+input_arguments['geometry_data'] = geometry_data
+input_arguments['save_result_flag'] = save_result_flag
+input_arguments['result_folder'] = directory['result']
 input_arguments['s1'] = s1
 input_arguments['s2'] = s2
-
-simulation_parameters = simulation.setting.assign_simulation_parameters(geometry_data)
 input_arguments['simulation_parameters'] = simulation_parameters
+input_arguments['arrhythmia_parameters'] = arrhythmia_parameters
+input_arguments['heart_model_parameters'] = heart_model_parameters
 
 # run simulation
 simulation_individual.run_simulation(input_arguments)
 
-# # display simulation movie
-# do_flag = 0
-# if do_flag == 1:
-#     save_movie_flag = 0 # 1: save movie. 0: do not save movie
-#     starting_time = 0 # 0 # ms
-#     ending_time = [] # ms. []: till the end. or specify a value
-#     sim_file_name = 'simulation_results.npz'
-#     data_file_path = script_dir.parent / 'result' 
-#     simulation_results_file_name = data_file_path / sim_file_name
-#     movie_save_dir = script_dir.parent / 'result' / sim_file_name.replace('.npz', '.gif') 
-#     simulation_results = np.load(data_file_path / simulation_results_file_name) # load simulation results
-#     input_arguments = {}
-#     input_arguments['save_movie_flag'] = save_movie_flag
-#     input_arguments['starting_time'] = starting_time
-#     input_arguments['ending_time'] = ending_time
-#     input_arguments['simulation_results_file_name'] = simulation_results_file_name
-#     input_arguments['movie_save_dir'] = movie_save_dir
-#     input_arguments['simulation_results'] = simulation_results
-#     display_simulation_movie.execute(input_arguments)
+# display simulation movie
+do_flag = 0
+if do_flag == 1:
+    # load simulation results
+    simulation_results = dict(np.load(directory['result'] / 'long_slab_simulation_results.npz', allow_pickle=False))
+
+    save_movie_flag = 1 # 1: save movie. 0: do not save movie
+    starting_time = 0 # 0 # ms
+    ending_time = 1000 # ms. []: till the end. or specify a value
+
+    simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results.gif'
+    movie_save_dir = directory['result'] / simulation_results_file_name
+
+    in_arg = {}
+    in_arg['save_movie_flag'] = save_movie_flag
+    in_arg['starting_time'] = starting_time
+    in_arg['ending_time'] = ending_time
+    in_arg['simulation_results_file_name'] = simulation_results_file_name
+    in_arg['movie_save_dir'] = movie_save_dir
+    in_arg['simulation_results'] = simulation_results
+    in_arg['geometry_data'] = geometry_data
+    in_arg['save_action_potential_of_all_voxel_flag'] = simulation_parameters['save_action_potential_of_all_voxel_flag']
+    utility.display_simulation_movie.execute(in_arg)
 
 #%%
 # compute conduction velocity
@@ -98,10 +99,10 @@ voxels_1 = np.where(x_coordinates == np.min(x_coordinates))[0]
 voxels_2 = np.where(x_coordinates == np.max(x_coordinates))[0]
 
 # load simulation results
-sim_data = np.load(data_folder / 'simulation_results.npz')
+simulation_results = dict(np.load(directory['result'] / 'long_slab_simulation_results.npz', allow_pickle=False))
 
-action_potential = sim_data['action_potential_voxel3mm']
-physical_time = sim_data['physical_time']
+action_potential = simulation_results['action_potential']
+physical_time = simulation_results['physical_time']
 
 voxel_1 = voxels_1[0]
 voxel_2 = voxels_2[0]
@@ -132,5 +133,5 @@ if debug_plot == 1:
 time_diff = physical_time[first_peak_index_2] - physical_time[first_peak_index_1] # ms
 distance = x_2 - x_1 # mm
 conduction_velocity = distance / time_diff # mm/ms
-print(f'Conduction Velocity: {conduction_velocity} mm/ms')
+print(f'Conduction Velocity: {conduction_velocity:.2f} mm/ms')
 # typical human left atrium conduction velocity is 0.5 to 1.0 mm/ms
