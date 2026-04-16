@@ -34,13 +34,11 @@ geometry_data = {k: data[k] for k in data.files}
 
 voxel = geometry_data['voxel']
 n_voxel = voxel.shape[0]
-electrode_voxel = voxel[geometry_data['voxel_id_of_electrode'], :]
 
 voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
-s1 = np.random.choice(voxel_id_of_electrode, size=n_simulations, replace=False) # random ids in voxel_id_of_electrode without replacement
-s2 = []
+electrode_voxel = voxel[voxel_id_of_electrode, :]
 
-simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [], n_voxel)
 
 input_arguments = {}
 input_arguments['name_prefix'] = name_prefix
@@ -53,6 +51,7 @@ input_arguments['heart_model_parameters'] = heart_model_parameters
 
 #%%
 # run simulations
+s1 = np.random.choice(voxel_id_of_electrode, size=n_simulations, replace=False) # random ids in voxel_id_of_electrode without replacement
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
 
@@ -60,7 +59,8 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
 
     if not os.path.exists(directory['result'] / file_name):
         input_arguments['s1'] = s1[loop_id]
-        input_arguments['s2'] = s2
+        input_arguments['s2'] = []
+        input_arguments['arrhythmia_parameters']['s1'] = s1[loop_id]
         simulation_individual.run_simulation(input_arguments)
 
         # display simulation movie
