@@ -41,10 +41,10 @@ def directory_setup():
 
 def mesh_name():
     # atrial mesh .obj file name
-    name_prefix = 'sheet'
+    # name_prefix = 'sheet'
     # name_prefix = 'long_slab'
     # name_prefix = '103_1-lagood'
-    # name_prefix = '102_1-LA FAM1'
+    name_prefix = '102_1-LA FAM1'
 
     return name_prefix
 
@@ -65,7 +65,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
         'voxel_id_of_electrode': geometry_data['voxel_id_of_electrode'], # electrode locations for computing electrograms
-        't_final': 1000, # ms
+        't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
         'arrhythmia_flag': 1,
@@ -89,7 +89,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
                       ap_min=0, ap_max=0, h_min=0, h_max=0, s2_region_size_factor=0)
     elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
         params = dict(pacing_start_time=0,   pacing_cycle_length=0,
-                      s1_t=0,   s1_s2_delta_t=220,
+                      s1_t=0,   s1_s2_delta_t=360,
                       ap_min=0.00039, ap_max=0.0769,
                       h_min=0.1629,      h_max=0.397)
     elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation

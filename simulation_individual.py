@@ -116,7 +116,7 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 1676 # s1 pacing voxel id
+    s1 = 18591 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
         save_movie_flag = 1 # 1: save movie. 0: do not save movie
         starting_time = 0 # 0 # ms
-        ending_time = 1000 # ms. []: till the end. or specify a value
+        ending_time = [] # ms. []: till the end. or specify a value
 
         simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{str(s1)}_{str(s2[0])}.gif'
         movie_save_dir = directory['result'] / simulation_results_file_name
