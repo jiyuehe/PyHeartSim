@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Node Selection Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: Arial, sans-serif; background: #1a1a2e; }
+
+        #canvas-container {
+            width: 100vw; height: 100vh;
+            position: absolute; top: 0; left: 0;
+        }
+        #lasso-canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 10;
+        }
+
+        /* toolbar */
+        #toolbar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 20; display: flex; gap: 10px; align-items: center;
+            background: rgba(255,255,255,0.95); padding: 8px 16px;
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        #toolbar label { font-size: 13px; font-weight: bold; }
+        #toolbar input, #toolbar select { font-size: 13px; }
+        #toolbar button {
+            padding: 6px 14px; border: none; border-radius: 4px;
+            cursor: pointer; font-size: 13px; font-weight: bold;
+        }
+        .btn-save  { background: #4CAF50; color: white; }
+        .btn-save:hover  { background: #45a049; }
+        .btn-clear { background: #f44336; color: white; }
+        .btn-clear:hover { background: #da190b; }
+        .btn-undo  { background: #2196F3; color: white; }
+        .btn-undo:hover  { background: #1976D2; }
+        .separator { width: 1px; height: 24px; background: #ccc; }
+
+        /* mode indicator */
+        #mode-indicator {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            z-index: 20; padding: 6px 16px; border-radius: 6px;
+            font-size: 14px; font-weight: bold; transition: all 0.2s;
+        }
+        .mode-rotate { background: #a5d6a7; color: #1b5e20; }
+        .mode-select { background: #fff176; color: #f57f17; }
+
+        /* instructions & status */
+        #instructions {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 20; background: rgba(255,255,255,0.85);
+            padding: 6px 16px; border-radius: 6px; font-size: 12px;
+        }
+        #status {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            z-index: 20; padding: 4px 12px; border-radius: 4px; font-size: 12px;
+            background: rgba(0,0,0,0.7); color: #4CAF50; display: none;
+        }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 30; color: white; font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading geometry...</div>
+
+    <div id="toolbar" style="display:none;">
+        <label>Flag:</label>
+        <select id="flag-value">
+            <option value="1">1 (S1)</option>
+            <option value="2">2 (S2)</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+        <div class="separator"></div>
+        <label>Depth&nbsp;%:</label>
+        <input type="range" id="depth-threshold" min="1" max="100" value="10" style="width:80px;">
+        <span id="depth-value">10%</span>
+        <div class="separator"></div>
+        <button class="btn-undo" id="btn-undo" title="Undo last selection">Undo</button>
+        <button class="btn-clear" id="btn-clear" title="Clear all flags">Clear All</button>
+        <button class="btn-save" id="btn-save" title="Save flags to file">Save</button>
+        <div class="separator"></div>
+        <span id="node-count" style="font-size:12px; color:#666;"></span>
+    </div>
+
+    <div id="mode-indicator" class="mode-rotate" style="display:none;">
+        Rotate Mode &mdash; Hold Shift to Select
+    </div>
+
+    <div id="instructions" style="display:none;">
+        Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Select: Shift + Left drag
+    </div>
+
+    <div id="status"></div>
+    <div id="canvas-container"></div>
+    <canvas id="lasso-canvas"></canvas>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ---- state ----
+        let nodePositions = null; // Float32Array (centered for display)
+        let nodeFlags = null;     // Int32Array
+        let nodeCount = 0;
+        let undoStack = [];
+        const MAX_UNDO = 20;
+        let isLassoing = false;
+        let lassoPoints = [];
+
+        // ---- color map (matches matplotlib version) ----
+        const COLOR_MAP = [
+            new THREE.Color(0.5, 0.5, 0.5),  // 0: grey
+            new THREE.Color(0.0, 0.0, 1.0),  // 1: blue  (S1)
+            new THREE.Color(1.0, 0.0, 0.0),  // 2: red   (S2)
+            new THREE.Color(1.0, 0.65, 0.0), // 3: orange
+            new THREE.Color(1.0, 0.0, 1.0),  // 4: magenta
+        ];
+
+        function getFlagColor(flag) {
+            if (flag === 0) return COLOR_MAP[0];
+            return COLOR_MAP[((flag - 1) % 4) + 1];
+        }
+
+        // ---- Three.js setup ----
+        const container = document.getElementById('canvas-container');
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x1a1a2e);
+        container.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(
+            60, window.innerWidth / window.innerHeight, 0.01, 1000
+        );
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.1;
+
+        // lasso overlay
+        const lassoCanvas = document.getElementById('lasso-canvas');
+        const lassoCtx = lassoCanvas.getContext('2d');
+        lassoCanvas.width = window.innerWidth;
+        lassoCanvas.height = window.innerHeight;
+
+        let geometry, material, points, colorsAttribute;
+
+        // ---- fetch data and initialize ----
+        async function init() {
+            const resp = await fetch('/api/nodes');
+            const data = await resp.json();
+
+            nodeCount = data.count;
+            nodePositions = new Float32Array(data.positions);
+            nodeFlags = new Int32Array(data.flags);
+
+            // center geometry at origin for proper rotation
+            let cx = 0, cy = 0, cz = 0;
+            for (let i = 0; i < nodeCount; i++) {
+                cx += nodePositions[i * 3];
+                cy += nodePositions[i * 3 + 1];
+                cz += nodePositions[i * 3 + 2];
+            }
+            cx /= nodeCount; cy /= nodeCount; cz /= nodeCount;
+
+            for (let i = 0; i < nodeCount; i++) {
+                nodePositions[i * 3]     -= cx;
+                nodePositions[i * 3 + 1] -= cy;
+                nodePositions[i * 3 + 2] -= cz;
+            }
+
+            // bounding sphere radius for camera placement
+            let maxR = 0;
+            for (let i = 0; i < nodeCount; i++) {
+                const x = nodePositions[i * 3];
+                const y = nodePositions[i * 3 + 1];
+                const z = nodePositions[i * 3 + 2];
+                const r = Math.sqrt(x * x + y * y + z * z);
+                if (r > maxR) maxR = r;
+            }
+
+            // build point cloud
+            geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
+
+            const colors = new Float32Array(nodeCount * 3);
+            for (let i = 0; i < nodeCount; i++) {
+                const c = getFlagColor(nodeFlags[i]);
+                colors[i * 3] = c.r;
+                colors[i * 3 + 1] = c.g;
+                colors[i * 3 + 2] = c.b;
+            }
+            colorsAttribute = new THREE.BufferAttribute(colors, 3);
+            geometry.setAttribute('color', colorsAttribute);
+
+            material = new THREE.PointsMaterial({
+                size: 4,
+                sizeAttenuation: false,
+                vertexColors: true,
+                depthWrite: true,
+                depthTest: true,
+            });
+
+            points = new THREE.Points(geometry, material);
+            scene.add(points);
+
+            // camera
+            camera.position.set(0, 0, maxR * 2.5);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+
+            // show UI
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('toolbar').style.display = 'flex';
+            document.getElementById('mode-indicator').style.display = 'block';
+            document.getElementById('instructions').style.display = 'block';
+            updateNodeCount();
+            animate();
+        }
+
+        function updateColors() {
+            const arr = colorsAttribute.array;
+            for (let i = 0; i < nodeCount; i++) {
+                const c = getFlagColor(nodeFlags[i]);
+                arr[i * 3] = c.r;
+                arr[i * 3 + 1] = c.g;
+                arr[i * 3 + 2] = c.b;
+            }
+            colorsAttribute.needsUpdate = true;
+        }
+
+        function updateNodeCount() {
+            let flagged = 0;
+            for (let i = 0; i < nodeCount; i++) if (nodeFlags[i] > 0) flagged++;
+            document.getElementById('node-count').textContent =
+                nodeCount + ' nodes | ' + flagged + ' flagged';
+        }
+
+        function pushUndo() {
+            undoStack.push(new Int32Array(nodeFlags));
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+        }
+
+        function showStatus(msg, duration) {
+            duration = duration || 2000;
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, duration);
+        }
+
+        // ---- lasso drawing ----
+        function drawLasso() {
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            if (lassoPoints.length < 2) return;
+            lassoCtx.beginPath();
+            lassoCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+            for (let i = 1; i < lassoPoints.length; i++) {
+                lassoCtx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+            }
+            lassoCtx.closePath();
+            lassoCtx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
+            lassoCtx.lineWidth = 2;
+            lassoCtx.stroke();
+            lassoCtx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+            lassoCtx.fill();
+        }
+
+        function clearLasso() {
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            lassoPoints = [];
+        }
+
+        // ---- point-in-polygon (ray casting algorithm) ----
+        function pointInPolygon(px, py, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                if ((yi > py) !== (yj > py) &&
+                    px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // ---- perform selection on lasso release ----
+        function performSelection() {
+            if (lassoPoints.length < 3) return;
+
+            const flagValue = parseInt(document.getElementById('flag-value').value);
+            const depthPercent = parseInt(document.getElementById('depth-threshold').value);
+            const w = renderer.domElement.clientWidth;
+            const h = renderer.domElement.clientHeight;
+
+            // project all points to screen coordinates
+            const screenX = new Float32Array(nodeCount);
+            const screenY = new Float32Array(nodeCount);
+            const depths  = new Float32Array(nodeCount);
+            const vec = new THREE.Vector3();
+
+            for (let i = 0; i < nodeCount; i++) {
+                vec.set(nodePositions[i * 3], nodePositions[i * 3 + 1], nodePositions[i * 3 + 2]);
+                vec.project(camera);
+                screenX[i] = (vec.x + 1) / 2 * w;
+                screenY[i] = (-vec.y + 1) / 2 * h;
+                depths[i]  = vec.z;
+            }
+
+            // lasso bounding box for quick rejection
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const p of lassoPoints) {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            }
+
+            // find points inside lasso
+            const insideIndices = [];
+            for (let i = 0; i < nodeCount; i++) {
+                if (screenX[i] < minX || screenX[i] > maxX ||
+                    screenY[i] < minY || screenY[i] > maxY) continue;
+                if (pointInPolygon(screenX[i], screenY[i], lassoPoints)) {
+                    insideIndices.push(i);
+                }
+            }
+
+            if (insideIndices.length === 0) return;
+
+            // depth filtering: keep only front-facing nodes
+            let minDepth = Infinity, maxDepth = -Infinity;
+            for (const i of insideIndices) {
+                if (depths[i] < minDepth) minDepth = depths[i];
+                if (depths[i] > maxDepth) maxDepth = depths[i];
+            }
+            const depthRange = maxDepth - minDepth;
+            const threshold = depthRange * (depthPercent / 100);
+
+            pushUndo();
+
+            let count = 0;
+            for (const i of insideIndices) {
+                if (depths[i] - minDepth <= threshold + 1e-6) {
+                    nodeFlags[i] = flagValue;
+                    count++;
+                }
+            }
+
+            updateColors();
+            updateNodeCount();
+            showStatus('Selected ' + count + ' nodes with flag ' + flagValue);
+        }
+
+        // ---- event handlers ----
+        const canvas = renderer.domElement;
+
+        // shift key state for mode indicator
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Shift') {
+                const ind = document.getElementById('mode-indicator');
+                ind.textContent = 'Select Mode \u2014 Shift + Drag to Select';
+                ind.className = 'mode-select';
+            }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            if (e.key === 'Shift' && !isLassoing) {
+                const ind = document.getElementById('mode-indicator');
+                ind.textContent = 'Rotate Mode \u2014 Hold Shift to Select';
+                ind.className = 'mode-rotate';
+            }
+        });
+
+        canvas.addEventListener('mousedown', function(e) {
+            if (e.button === 0 && e.shiftKey) {
+                e.preventDefault();
+                isLassoing = true;
+                controls.enabled = false;
+                canvas.style.cursor = 'crosshair';
+                lassoPoints = [{ x: e.clientX, y: e.clientY }];
+            }
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (isLassoing) {
+                lassoPoints.push({ x: e.clientX, y: e.clientY });
+                drawLasso();
+            }
+        });
+
+        canvas.addEventListener('mouseup', function(e) {
+            if (isLassoing && e.button === 0) {
+                isLassoing = false;
+                controls.enabled = true;
+                canvas.style.cursor = 'default';
+
+                if (lassoPoints.length >= 3) {
+                    performSelection();
+                }
+                clearLasso();
+
+                if (!e.shiftKey) {
+                    const ind = document.getElementById('mode-indicator');
+                    ind.textContent = 'Rotate Mode \u2014 Hold Shift to Select';
+                    ind.className = 'mode-rotate';
+                }
+            }
+        });
+
+        // prevent context menu on right-click (right-drag is used for pan)
+        canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+        // ---- UI buttons ----
+        document.getElementById('btn-save').addEventListener('click', async function() {
+            const resp = await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ flags: Array.from(nodeFlags) })
+            });
+            const result = await resp.json();
+            showStatus('Saved! S1: ' + result.s1_count + ' nodes, S2: ' + result.s2_count + ' nodes', 3000);
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', function() {
+            pushUndo();
+            nodeFlags.fill(0);
+            updateColors();
+            updateNodeCount();
+            showStatus('Cleared all flags');
+        });
+
+        document.getElementById('btn-undo').addEventListener('click', function() {
+            if (undoStack.length === 0) {
+                showStatus('Nothing to undo');
+                return;
+            }
+            nodeFlags = undoStack.pop();
+            updateColors();
+            updateNodeCount();
+            showStatus('Undone');
+        });
+
+        document.getElementById('depth-threshold').addEventListener('input', function(e) {
+            document.getElementById('depth-value').textContent = e.target.value + '%';
+        });
+
+        // ---- window resize ----
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            lassoCanvas.width = window.innerWidth;
+            lassoCanvas.height = window.innerHeight;
+        });
+
+        // ---- animation loop ----
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // ---- start ----
+        init();
+    </script>
+</body>
+</html>
