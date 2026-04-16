@@ -46,7 +46,7 @@ Patient left atrium rotor simulation:
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
-Patient left atrium 2 focal sources simulation:  
+Patient left atrium focal sources simulation:  
 <img src="example/left_atrium_focal.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
 

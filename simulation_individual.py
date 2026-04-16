@@ -27,8 +27,6 @@ pio.renderers.default = "browser" # simulation result mesh display in internet b
 
 #%%
 def run_simulation(input_arguments):
-    s1 = input_arguments['s1']
-    s2 = input_arguments['s2']
     save_result_flag = input_arguments['save_result_flag']
     result_folder = input_arguments['result_folder']
     geometry_data = input_arguments['geometry_data']
@@ -111,7 +109,7 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
     n_voxel = geometry_data['voxel'].shape[0]
 
-    s1 = 10025 # s1 pacing voxel id
+    s1 = 14062 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
