@@ -108,7 +108,6 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
     elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
-        # ms = dict(tau_in=0.08, tau_out=6, tau_open=80,  tau_close=30, v_gate=0.13)
         ms = dict(tau_in=0.3,  tau_out=12, tau_open=30, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging
