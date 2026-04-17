@@ -51,7 +51,7 @@ def find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data):
     candidate_s2 = largest_cluster[0] # s2 pacing voxel id
 
     # if the amount of voxels in the largest cluster is larger than a threshold, select a subset of connected voxels: started from the first voxel, then add neighboring voxels until reaching the threshold, according to breadth first search
-    n_threshold = 200
+    n_threshold = 300
     if len(largest_cluster) > n_threshold:
         visited = np.zeros(n_voxel, dtype=bool)
         s2_pacing_voxel_id = []
@@ -78,13 +78,9 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
     s1_pacing_voxel_id = arrhythmia_parameters['s1_pacing_voxel_id'] 
     s1_t = arrhythmia_parameters['s1_t'] 
     s2_t = s1_t + arrhythmia_parameters['s1_s2_delta_t'] 
-    ap_min = arrhythmia_parameters['ap_min'] 
-    ap_max = arrhythmia_parameters['ap_max'] 
-    h_min = arrhythmia_parameters['h_min'] 
-    h_max = arrhythmia_parameters['h_max'] 
 
     s2_pacing_voxel_id = []
-    if arrhythmia_flag in (1, 3, 4, 5, 6):
+    if arrhythmia_flag in (1, 2, 3, 4, 5, 6):
         s2_pacing_voxel_id = arrhythmia_parameters['s2_pacing_voxel_id'] 
 
     do_flag = 0
@@ -110,9 +106,9 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
         J_stim_magnitude = 1
         pacing_duration = 5 / simulation_parameters['time_scale']
 
-    return J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max
+    return J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t
 
-def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max, sim_u_voxel, sim_h_voxel, neighbor_id_2d):
+def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, sim_u_voxel, sim_h_voxel, neighbor_id_2d):
     # s1 pacing
     if arrhythmia_flag in (0, 4): # focal arrhythmia, s1 pace according to cycle length setting
         t = model_time

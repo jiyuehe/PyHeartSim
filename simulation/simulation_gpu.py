@@ -270,7 +270,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     arrhythmia_flag = simulation_parameters['arrhythmia_flag']
     
     # pacing parameters
-    J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, ap_min, ap_max, h_min, h_max = assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, neighbor_id_2d, simulation_parameters)
+    J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t = assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, neighbor_id_2d, simulation_parameters)
     
     # set initial value at rest
     if simulation_parameters['heart_model_flag'] == 0:
@@ -345,7 +345,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         J_stim.fill(0.0)
         J_stim = apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, 
                              J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, 
-                             pacing_duration, s2_t, ap_min, ap_max, h_min, h_max, 
+                             pacing_duration, s2_t,
                              sim_u_voxel, sim_h_voxel, neighbor_id_2d)
         
         # Transfer J_stim to GPU
