@@ -110,17 +110,13 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
 
 def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, sim_u_voxel, sim_h_voxel, neighbor_id_2d):
     # s1 pacing
-    if arrhythmia_flag in (0, 4): # focal arrhythmia, s1 pace according to cycle length setting
+    if arrhythmia_flag == 0: # focal arrhythmia, s1 pace according to cycle length setting
         t = model_time
         while t - arrhythmia_parameters['pacing_start_time'] > arrhythmia_parameters['pacing_cycle_length']:
             t = t - arrhythmia_parameters['pacing_cycle_length']
 
         if t >= arrhythmia_parameters['pacing_start_time'] and t <= arrhythmia_parameters['pacing_start_time'] + pacing_duration:
-            if arrhythmia_flag in (0, 4):
                 J_stim[s1_pacing_voxel_id] = J_stim_magnitude
-            
-            if arrhythmia_flag == 4:
-                J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
     if arrhythmia_flag == 5:
         f1_time = 0/simulation_parameters['time_scale'] # focal 1 pacing time
@@ -138,7 +134,7 @@ def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, 
         if model_time >= f2_time and model_time <= f2_time + pacing_duration:
             J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
-    elif arrhythmia_flag in (1, 2, 3): # not focal arrhythmia, s1 pace only once
+    elif arrhythmia_flag in (1, 2, 3, 4):
         if model_time >= s1_t and model_time <= s1_t + pacing_duration:
             J_stim[s1_pacing_voxel_id] = J_stim_magnitude
 
