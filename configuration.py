@@ -29,7 +29,7 @@ def directory_setup():
     # directory folder
     directory = {}
     directory['home'] = script_dir
-    directory['mesh_database'] = script_dir / 'mesh_database'
+    directory['mesh_database'] = script_dir / 'mesh_database' / 'left_atrium'
     directory['result'] = script_dir.parent / 'result'
     directory['data'] = script_dir.parent / 'data'
 
