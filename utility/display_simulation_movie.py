@@ -23,7 +23,7 @@ import numpy as np # pip install numpy
 from matplotlib.animation import PillowWriter
 import matplotlib.pyplot as plt # pip install matplotlib
 import matplotlib.animation as animation
-from . import common
+from .. import common
 
 def _ensure_interactive_backend():
     """Switch from Agg to an interactive backend when a display is available."""

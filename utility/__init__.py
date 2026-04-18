@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from . import automatic_mesh_refinement
-from . import common
 from . import display_simulation_movie
 from . import lat_map
 from . import voxelization
