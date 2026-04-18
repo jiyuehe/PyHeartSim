@@ -18,6 +18,7 @@ from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import utility
+import common
 import configuration
 
 directory = configuration.directory_setup()
@@ -27,7 +28,7 @@ name_prefix = configuration.mesh_name()
 # the original mesh
 # ==============================
 # original .obj mesh
-vertex_original, face_original = utility.common.load_obj(directory['mesh_database'], name_prefix)
+vertex_original, face_original = common.load_obj(directory['mesh_database'], name_prefix)
 
 # automatically refine the mesh
 # ==============================
@@ -74,7 +75,7 @@ print('done automatic mesh refinement')
 #         Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
 
 # load the refined .obj mesh
-vertex_refined, face_refined = utility.common.load_obj(directory['data'], name_prefix + '_refined')
+vertex_refined, face_refined = common.load_obj(directory['data'], name_prefix + '_refined')
 
 debug_plot = 0
 if debug_plot == 1:
@@ -90,13 +91,13 @@ if debug_plot == 1:
         ax.add_collection3d(poly)
         ax.set_title(title, fontsize=10)
         ax.view_init(elev=70, azim=-70)
-        utility.common.set_axes_equal(ax)
+        common.set_axes_equal(ax)
     
     png_path = str(directory['result'] / f'{name_prefix}_mesh_before_after.png')
     plt.savefig(png_path, dpi=300)
     plt.close(fig)
 
-    utility.common.crop_image(png_path)
+    common.crop_image(png_path)
 
 #%%
 # cut holes: cut the mitral valve, pulmonary veins, etc
@@ -106,7 +107,7 @@ if debug_plot == 1:
 # save the cut mesh as {name_prefix}_refined_cut.obj
 
 # load the refined and holes cut .obj mesh
-vertex, face = utility.common.load_obj(directory['data'], name_prefix + '_refined_cut')
+vertex, face = common.load_obj(directory['data'], name_prefix + '_refined_cut')
 
 #%%
 # convert triangular mesh to cartesian nodes for heart simulation

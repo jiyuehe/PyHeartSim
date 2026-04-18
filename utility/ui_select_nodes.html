@@ -327,7 +327,7 @@
                 const indices = groups[k];
                 html += '<div class="flag-section">';
                 html += '<div class="flag-section-title" style="color:' + color + ';">' +
-                    label + (indices ? ' (' + indices.length + ')' : '') + '</div>';
+                    label + '</div>';
                 if (indices && indices.length > 0) {
                     html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
                 } else {
@@ -341,8 +341,7 @@
                 if (k >= 1 && k <= 4) continue;
                 const indices = groups[k];
                 html += '<div class="flag-section">';
-                html += '<div class="flag-section-title" style="color:#555;">Flag ' + k +
-                    ' (' + indices.length + ')</div>';
+                html += '<div class="flag-section-title" style="color:#555;">Flag ' + k + '</div>';
                 html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
                 html += '</div>';
             }

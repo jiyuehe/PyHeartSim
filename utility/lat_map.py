@@ -15,7 +15,7 @@
 import numpy as np # pip install numpy
 import matplotlib.pyplot as plt # pip install matplotlib
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator # pip install scipy
-from .. import common
+import common
 
 def compute_electrode_lat(electrode_signal):
     dvdt = np.diff(electrode_signal, axis=0)

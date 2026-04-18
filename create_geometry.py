@@ -16,6 +16,7 @@
 import matplotlib.pyplot as plt # for plotting
 import configuration
 import utility
+import common
 import numpy as np # pip install numpy
 
 #%%
@@ -116,11 +117,11 @@ if debug_plot == 1:
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=0.5, c='gray', marker='.', depthshade=False, alpha=1, edgecolors='none')
     ax.scatter(voxel[voxel_id_of_electrode, 0], voxel[voxel_id_of_electrode, 1], voxel[voxel_id_of_electrode, 2], s=2, c='blue', marker='.', depthshade=False, alpha=1, edgecolors='none')
-    utility.common.set_axes_equal(ax)
+    common.set_axes_equal(ax)
     file_path = directory['data'] / (name_prefix + '_geometry.png')
     plt.savefig(file_path, dpi=300)
     plt.close()
-    utility.common.crop_image(file_path)
+    common.crop_image(file_path)
 
 # save geometry data
 geometry = {}

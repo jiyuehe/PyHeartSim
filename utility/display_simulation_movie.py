@@ -14,16 +14,11 @@
 
 #%%
 import os
-from pathlib import Path
-script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
-os.chdir(script_dir) # change the working directory
-
 import numpy as np # pip install numpy
-
 from matplotlib.animation import PillowWriter
 import matplotlib.pyplot as plt # pip install matplotlib
 import matplotlib.animation as animation
-from .. import common
+import common
 
 def _ensure_interactive_backend():
     """Switch from Agg to an interactive backend when a display is available."""

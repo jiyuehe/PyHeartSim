@@ -19,6 +19,7 @@ from numba import cuda # pip install numba
 import matplotlib.pyplot as plt # pip install matplotlib
 import simulation
 import utility
+import common
 import configuration
 
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
@@ -180,7 +181,7 @@ if __name__ == "__main__":
         
         geometry_flag = simulation_results['geometry_flag']
         utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
-        utility.common.crop_image(fig_name)
+        common.crop_image(fig_name)
 
     # save lat to simulation_results
     simulation_results['lat_electrode'] = lat_electrode

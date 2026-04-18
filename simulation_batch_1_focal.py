@@ -17,6 +17,7 @@ import numpy as np # pip install numpy
 import os
 import simulation_individual
 import utility
+import common
 import configuration
 
 #%% 
@@ -107,7 +108,7 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
             
             geometry_flag = simulation_results['geometry_flag']
             utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
-            utility.common.crop_image(fig_name)
+            common.crop_image(fig_name)
 
         # save lat to simulation_results
         simulation_results['lat_electrode'] = lat_electrode
