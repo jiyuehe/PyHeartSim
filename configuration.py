@@ -43,8 +43,8 @@ def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = 'sheet'
     # name_prefix = 'long_slab'
-    # name_prefix = '103_1-lagood'
-    name_prefix = '102_1-LA FAM1'
+    # name_prefix = '102_1-lagood'
+    name_prefix = '101_1-LA FAM1'
 
     return name_prefix
 
