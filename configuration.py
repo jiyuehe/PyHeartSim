@@ -30,8 +30,8 @@ def directory_setup():
     directory = {}
     directory['home'] = script_dir
     directory['mesh_database'] = script_dir / 'mesh_database' / 'left_atrium'
-    directory['result'] = script_dir.parent / 'result'
-    directory['data'] = script_dir.parent / 'data'
+    directory['data'] = '/home/j/Desktop/hdd/patient_data'
+    directory['result'] = '/home/j/Desktop/hdd/simulation_results'
 
     # create the folder if it does not exist
     directory['result'].mkdir(exist_ok=True)

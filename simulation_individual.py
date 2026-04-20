@@ -79,12 +79,10 @@ def run_simulation(input_arguments):
 
         simulation_results = {}
         simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_electrode] # shape: (time, n_electrode)
-        # simulation_results['h_electrode'] = h[:, voxel_id_of_electrode] # shape: (time, n_electrode)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
 
         if simulation_parameters['compute_electrogram_flag'] == 1:
-            simulation_results['voxel_id_of_electrode'] = simulation_parameters['voxel_id_of_electrode']
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
 
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
