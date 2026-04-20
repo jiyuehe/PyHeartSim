@@ -30,8 +30,8 @@ def directory_setup():
     directory = {}
     directory['home'] = script_dir
     directory['mesh_database'] = script_dir / 'mesh_database' / 'left_atrium'
-    directory['data'] = '/home/j/Desktop/hdd/patient_data'
-    directory['result'] = '/home/j/Desktop/hdd/simulation_results'
+    directory['data'] = Path('/home/j/Desktop/hdd/patient_data')
+    directory['result'] = Path('/home/j/Desktop/hdd/simulation_results')
 
     # create the folder if it does not exist
     directory['result'].mkdir(exist_ok=True)
@@ -48,7 +48,7 @@ def mesh_name():
 
     return name_prefix
 
-def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
+def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
     if name_prefix == 'sheet':
         geometry_flag = 0  # 2D
     elif name_prefix == 'long_slab':
@@ -64,7 +64,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
         'save_action_potential_of_all_voxel_flag': 0,
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
-        'voxel_id_of_electrode': geometry_data['voxel_id_of_electrode'], # electrode locations for computing electrograms
+        'voxel_id_of_simulation_electrode': geometry_data['voxel_id_of_simulation_electrode'], # electrode locations for computing electrograms
         't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
@@ -113,6 +113,8 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel):
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
+
+    n_voxel = geometry_data['voxel'].shape[0]
 
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
         heart_model_parameters = {

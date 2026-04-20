@@ -107,7 +107,7 @@ neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel)
 # voxel locations for computing unipolar electrograms
 N = 2000
 n_voxel = voxel.shape[0]
-voxel_id_of_electrode = np.sort(np.random.choice(n_voxel, size=min(N, n_voxel), replace=False)) 
+voxel_id_of_simulation_electrode = np.sort(np.random.choice(n_voxel, size=min(N, n_voxel), replace=False)) 
 
 #%%
 debug_plot = 1
@@ -116,7 +116,7 @@ if debug_plot == 1:
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=0.5, c='gray', marker='.', depthshade=False, alpha=1, edgecolors='none')
-    ax.scatter(voxel[voxel_id_of_electrode, 0], voxel[voxel_id_of_electrode, 1], voxel[voxel_id_of_electrode, 2], s=2, c='blue', marker='.', depthshade=False, alpha=1, edgecolors='none')
+    ax.scatter(voxel[voxel_id_of_simulation_electrode, 0], voxel[voxel_id_of_simulation_electrode, 1], voxel[voxel_id_of_simulation_electrode, 2], s=2, c='blue', marker='.', depthshade=False, alpha=1, edgecolors='none')
     common.set_axes_equal(ax)
     file_path = directory['data'] / (name_prefix + '_geometry.png')
     plt.savefig(file_path, dpi=300)
@@ -133,7 +133,7 @@ geometry = {
     'vertex_id_of_voxel': vertex_id_of_voxel,
     'vertex': vertex, # triangular mesh vertex
     'face': face, # triangular mesh face
-    'voxel_id_of_electrode': voxel_id_of_electrode, # these locations are used for computing unipolar electrograms
+    'voxel_id_of_simulation_electrode': voxel_id_of_simulation_electrode, # these locations are used for computing unipolar electrograms
 }
 
 file_path = directory['data'] / (name_prefix + '_geometry.npz') # save as .npz, the most compatible format for different versions of Python and Numpy

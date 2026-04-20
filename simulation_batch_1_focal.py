@@ -24,7 +24,7 @@ import configuration
 directory = configuration.directory_setup() # set up directories
 name_prefix = configuration.mesh_name() # get mesh name prefix
 
-n_simulations = 2
+n_simulations = 1
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
@@ -33,13 +33,7 @@ file_path = directory['data'] / f'{name_prefix}_geometry.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 
-voxel = geometry_data['voxel']
-n_voxel = voxel.shape[0]
-
-voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
-electrode_voxel = voxel[voxel_id_of_electrode, :]
-
-simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [], n_voxel)
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [])
 
 simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
 
@@ -47,16 +41,19 @@ input_arguments = {}
 input_arguments['name_prefix'] = name_prefix
 input_arguments['geometry_data'] = geometry_data
 input_arguments['save_result_flag'] = save_result_flag
-input_arguments['result_folder'] = directory['result'] / 'simulation_results'
+input_arguments['result_folder'] = directory['result']
 input_arguments['result_folder'].mkdir(exist_ok=True) # create the folder if it does not exist
-(input_arguments['result_folder'] / 'activation maps').mkdir(exist_ok=True) # create the folder if it does not exist
+(input_arguments['result_folder'] / 'activation_maps').mkdir(exist_ok=True) # create the folder if it does not exist
 input_arguments['simulation_parameters'] = simulation_parameters
 input_arguments['arrhythmia_parameters'] = arrhythmia_parameters
 input_arguments['heart_model_parameters'] = heart_model_parameters
 
 #%%
 # run simulations
-s1 = np.random.choice(voxel_id_of_electrode, size=n_simulations, replace=False) # random ids in voxel_id_of_electrode without replacement
+voxel_electrode = geometry_data['voxel3mm_1mm_spacing']
+
+s1_electrode = np.random.choice(np.arange(0,voxel_electrode.shape[0]), size=n_simulations, replace=False) # random ids in voxel_id_of_simulation_electrode without replacement
+s1 = geometry_data['voxel_id_of_simulation_electrode'][s1_electrode] # convert to voxel ids
 
 for loop_id in range(n_simulations): # 0 to n_simulations-1
     print(f'===== simulation set {loop_id+1} of {n_simulations} =====')
@@ -99,15 +96,12 @@ for loop_id in range(n_simulations): # 0 to n_simulations-1
         
         lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
 
-        # interpolate local activation time from electrode locations to all voxels
-        lat_voxel = utility.lat_map.interpolate_lat(voxel, electrode_voxel, lat_electrode)
-
         # plot local activation time map
         if plot_lat_map_flag == 1:
-            fig_name = input_arguments['result_folder'] / 'activation maps' / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
+            fig_name = input_arguments['result_folder'] / 'activation_maps' / f'{name_prefix}_lat_{str(s1[loop_id])}.png'
             
             geometry_flag = simulation_results['geometry_flag']
-            utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
+            utility.lat_map.plot(voxel_electrode, lat_electrode, geometry_flag, fig_name)
             common.crop_image(fig_name)
 
         # save lat to simulation_results

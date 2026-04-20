@@ -60,8 +60,8 @@ def run_simulation(input_arguments):
     start = time.time()
     if simulation_parameters['compute_electrogram_flag'] == 1:
         voxel = geometry_data['voxel']
-        voxel_id_of_electrode = simulation_parameters['voxel_id_of_electrode']
-        electrode_xyz = voxel[voxel_id_of_electrode, :]
+        voxel_id_of_simulation_electrode = simulation_parameters['voxel_id_of_simulation_electrode']
+        electrode_xyz = voxel[voxel_id_of_simulation_electrode, :]
         Delta = geometry_data['Delta']
         neighbor_id_2d = geometry_data['neighbor_id_2d']
         
@@ -74,11 +74,11 @@ def run_simulation(input_arguments):
 
     # save simulation results
     if save_result_flag == 1:
-        voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
+        voxel_id_of_simulation_electrode = geometry_data['voxel_id_of_simulation_electrode']
         s1 = arrhythmia_parameters['s1_pacing_voxel_id']
 
         simulation_results = {}
-        simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_electrode] # shape: (time, n_electrode)
+        simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
         simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
 
@@ -107,12 +107,11 @@ if __name__ == "__main__":
     file_path = directory['data'] / f'{name_prefix}_geometry.npz'
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
-    n_voxel = geometry_data['voxel'].shape[0]
 
     s1 = 14062 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
 
     s2 = arrhythmia_parameters['s2_pacing_voxel_id']
     simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
@@ -171,16 +170,14 @@ if __name__ == "__main__":
     lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
 
     # interpolate local activation time from electrode locations to all voxels
-    voxel = geometry_data['voxel']
-    electrode_voxel = geometry_data['voxel'][geometry_data['voxel_id_of_electrode'], :]
-    lat_voxel = utility.lat_map.interpolate_lat(voxel, electrode_voxel, lat_electrode)
+    voxel_electrode = geometry_data['voxel3mm_1mm_spacing']
 
     # plot local activation time map
     if plot_lat_map_flag == 1:
         fig_name = directory['result'] / f'{name_prefix}_lat_{s1}.png'
         
         geometry_flag = simulation_results['geometry_flag']
-        utility.lat_map.plot(voxel, lat_voxel, geometry_flag, fig_name)
+        utility.lat_map.plot(voxel_electrode, lat_electrode, geometry_flag, fig_name)
         common.crop_image(fig_name)
 
     # save lat to simulation_results
@@ -205,7 +202,7 @@ if __name__ == "__main__":
             nrows=3, ncols=2, figsize=(12, 8), sharex='col', sharey=False
         )
 
-        for i, eid in enumerate([simulation_parameters['voxel_id_of_electrode'][0], simulation_parameters['voxel_id_of_electrode'][1], simulation_parameters['voxel_id_of_electrode'][2]]):
+        for i, eid in enumerate([simulation_parameters['voxel_id_of_simulation_electrode'][0], simulation_parameters['voxel_id_of_simulation_electrode'][1], simulation_parameters['voxel_id_of_simulation_electrode'][2]]):
             # left column: action potentials
             axes[i, 0].plot(physical_time, action_potential[:, eid])
             axes[i, 0].set_title(f'Action Potential at Location {eid}')
@@ -215,7 +212,7 @@ if __name__ == "__main__":
             # right column: unipolar electrograms
             if simulation_parameters['compute_electrogram_flag'] == 1:
                 axes[i, 1].plot(physical_time, electrogram_unipolar[:, i])
-                axes[i, 1].set_title(f'Unipolar Electrogram at Location {simulation_parameters['voxel_id_of_electrode'][i]}')
+                axes[i, 1].set_title(f'Unipolar Electrogram at Location {simulation_parameters['voxel_id_of_simulation_electrode'][i]}')
                 axes[i, 1].set_ylabel('Voltage (scaled)')
                 axes[i, 1].set_xlabel('Time (ms)')
 

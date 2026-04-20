@@ -52,9 +52,18 @@ def plot(voxel, lat_voxel, geometry_flag, fig_name):
     data_threshold = data_min-0.1 # a little small than data_min, so that places with value of data_min will have color
     color = common.convert_value_to_red_blue(data, data_min, data_max, data_threshold)
     
+    # Compute voxel spacing to size each cube so there are no gaps
+    unique_x = np.unique(voxel[:, 0])
+    spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
+    offset = spacing / 2.0
+
     plt.figure()
     ax = plt.axes(projection='3d')
-    ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], c=color, edgecolor='none', linewidth=0, s=10, marker='.')
+    ax.bar3d(
+        voxel[:, 0] - offset, voxel[:, 1] - offset, voxel[:, 2] - offset,
+        spacing, spacing, spacing,
+        color=color, shade=False, edgecolor='none', linewidth=0
+    )
     plt.axis('off')
 
     if geometry_flag in [1, 2]: # 3D geometry and long slab
@@ -65,5 +74,5 @@ def plot(voxel, lat_voxel, geometry_flag, fig_name):
     common.set_axes_equal(ax)
     plt.tight_layout()
 
-    plt.savefig(fig_name, dpi=300)
+    plt.savefig(fig_name, dpi=100)
     plt.close()
