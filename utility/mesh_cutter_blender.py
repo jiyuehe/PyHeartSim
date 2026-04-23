@@ -17,9 +17,11 @@ import os
 from mathutils import Vector
 
 # --- CONFIGURATION ---
-FILE_PATH = "//mesh_example/before_hole_cut.obj"
+#FILE_PATH = "/home/j/Desktop/hdd/share_folder/patient_data/0_1-la1 78 240_refined.obj"
+FILE_PATH = "/home/j/Desktop/hdd/share_folder/patient_data/0_1-la1 78 240_refined.obj"
 USE_SCRIPT_DIR_FALLBACK = True
-EXPORT_PATH = "//mesh_example/cut_result.obj"
+#EXPORT_PATH = "/home/j/Desktop/hdd/share_folder/patient_data/0_1-la1 78 240_refined_cut.obj"
+EXPORT_PATH = "/home/j/Desktop/hdd/share_folder/patient_data/0_1-la1 78 240_refined_cut.obj"
 
 # Number of interactive cutters to create.
 N_CUT_CUBES = 3
