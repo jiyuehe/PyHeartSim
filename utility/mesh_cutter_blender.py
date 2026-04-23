@@ -1,14 +1,16 @@
 import bpy
 import os
 from mathutils import Vector
+from pathlib import Path
 
 # --- CONFIGURATION ---
 name_prefix = '0_1-la1 78 240'
 
-FILE_PATH ="/home/j/Desktop/hdd/share_folder/patient_data" 
-#FILE_PATH = "//mesh_example/before_hole_cut.obj"
+BASE_PATH = Path("/home/j/Desktop/hdd/share_folder/patient_data")
+#BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
 
-EXPORT_FILE_PATH = FILE_PATH / f"{name_prefix}_refined_cut.obj"
+FILE_PATH = BASE_PATH / f"{name_prefix}_refined.obj"
+EXPORT_FILE_PATH = BASE_PATH / f"{name_prefix}_refined_cut.obj"
 USE_SCRIPT_DIR_FALLBACK = True
 
 # Number of interactive cutters to create.
