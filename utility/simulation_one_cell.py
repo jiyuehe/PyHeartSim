@@ -16,12 +16,17 @@
 # This script is useful for comparing heart models.
 
 #%%
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 import matplotlib.pyplot as plt # for plotting
 import configuration
 
 #%%
 directory = configuration.directory_setup()
+directory['result'] = directory['home'] / 'result'
+directory['result'].mkdir(exist_ok=True)
 
 # simulation parameters
 dt = 0.05 # ms, time step
