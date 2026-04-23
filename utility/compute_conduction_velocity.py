@@ -13,6 +13,9 @@
 # limitations under the License.
 
 #%%
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utility
 import simulation_individual
 import configuration
@@ -26,7 +29,10 @@ pio.renderers.default = "browser" # simulation result mesh display in internet b
 
 #%%
 directory = configuration.directory_setup() # set up directories
-name_prefix = configuration.mesh_name()
+directory['result'] = directory['home'] / 'result'
+directory['result'].mkdir(exist_ok=True)
+
+name_prefix = 'long_slab'
 
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
@@ -52,7 +58,8 @@ if debug_plot == 1:
 s1 = []
 s2 = []
 
-simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, n_voxel)
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
+simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
 
 input_arguments = {}
 input_arguments['name_prefix'] = name_prefix
@@ -69,7 +76,7 @@ input_arguments['heart_model_parameters'] = heart_model_parameters
 simulation_individual.run_simulation(input_arguments)
 
 # display simulation movie
-do_flag = 0
+do_flag = 1
 if do_flag == 1:
     # load simulation results
     simulation_results = dict(np.load(directory['result'] / 'long_slab_simulation_results.npz', allow_pickle=False))

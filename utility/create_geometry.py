@@ -13,6 +13,9 @@
 # limitations under the License.
 
 #%%
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt # for plotting
 import configuration
 import utility
@@ -22,7 +25,7 @@ import numpy as np # pip install numpy
 #%%
 directory = configuration.directory_setup()
 
-geometry_flag = 0
+geometry_flag = 2
 # 0: 2D sheet
 # 1: 3D slab, typical shape
 # 2: 3D slab, long, for computing conduction velocity
@@ -57,26 +60,22 @@ match geometry_flag:
     case 1 | 2 | 3: # 3D slab
         if geometry_flag == 1: # regular slab
             name_prefix = 'regular_slab'
-
             # half lengths, unit: mm
             lx = 40/2
             ly = 50/2
             lz = 20/2
         elif geometry_flag == 2: # long slab
             name_prefix = 'long_slab'
-
             # half lengths, unit: mm
             lx = 100/2
             ly = 10/2
             lz = 10/2
         elif geometry_flag == 3: # hollow cube
             name_prefix = 'hollow_cube'
-
             # half lengths, unit: mm
             lx = 64/2
             ly = 64/2
             lz = 64/2
-
         # create the Cartesian voxels
         xCoordinates = np.arange(-lx, lx, 1)
         yCoordinates = np.arange(-ly, ly, 1)
@@ -92,7 +91,6 @@ match geometry_flag:
                     voxel.append([xCoordinates[i], yCoordinates[j], zCoordinates[k]])
                     id += 1
         voxel = np.array(voxel)
-
         if geometry_flag == 3: # hollow cube
             # remove internal voxels to create a hollow cube
             voxel_filtered = []

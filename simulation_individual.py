@@ -91,7 +91,10 @@ def run_simulation(input_arguments):
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
-        np.savez(result_folder / f'{name_prefix}_simulation_results_{s1}', **simulation_results)
+        if name_prefix == 'long_slab': # long slab simulation is for computing conduction velocity
+            np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
+        elif name_prefix != 'long_slab':
+            np.savez(result_folder / f'{name_prefix}_simulation_results_{s1}', **simulation_results)
 
 #%%
 # If running this script directly, the following code block will be executed. 

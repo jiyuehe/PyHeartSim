@@ -65,8 +65,8 @@ def execute(in_arg):
     if in_arg['save_action_potential_of_all_voxel_flag'] == 1:
         voxel_valid = voxel
         action_potential = simulation_results['action_potential']
-    else:
-        voxel_id_of_electrode = geometry_data['voxel_id_of_electrode']
+    elif in_arg['save_action_potential_of_all_voxel_flag'] == 0:
+        voxel_id_of_electrode = geometry_data['voxel_id_of_simulation_electrode']
         voxel_valid = voxel[voxel_id_of_electrode, :]
         action_potential = simulation_results['action_potential_electrode']
 
