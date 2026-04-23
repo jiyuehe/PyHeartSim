@@ -3,7 +3,7 @@ Patient left atrium rotor simulation:
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
-# Introduction
+# Highlights
 - This is an electrophysiological heart simulator written in **Python**.  
 - Patient atria: 
   - A 3D triangular mesh database of the left and right atria. 
