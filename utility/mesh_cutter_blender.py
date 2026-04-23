@@ -1,25 +1,11 @@
-# Copyright 2026 Mason Manetta
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import bpy
 import os
 from mathutils import Vector
 
 # --- CONFIGURATION ---
 FILE_PATH = "//mesh_example/before_hole_cut.obj"
+EXPORT_FILE_PATH = "//mesh_example/after_hole_cut.obj" # <-- NEW: Export destination
 USE_SCRIPT_DIR_FALLBACK = True
-EXPORT_PATH = "//mesh_example/cut_result.obj"
 
 # Number of interactive cutters to create.
 N_CUT_CUBES = 3
@@ -33,12 +19,8 @@ CYLINDER_DEPTH_FACTOR = 0.30
 # Additional spacing so cutters spawn outside the target mesh bounds.
 SPAWN_MARGIN_FACTOR = 0.20
 
-# Viewport defaults for transform controls.
-ENABLE_GIZMOS = True
-DEFAULT_TRANSFORM_ORIENTATION = 'LOCAL'
-
 class MESH_OT_InteractiveCutter(bpy.types.Operator):
-    """Press K to toggle between Move (Fast) and Cut (Live) modes"""
+    """Press K to toggle Cut Mode, E to Export, ESC to cancel"""
     bl_idname = "mesh.interactive_cutter"
     bl_label = "Interactive Mesh Cutter"
     
@@ -47,66 +29,17 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
     target = None
     cutters = []
 
-    def configure_viewport_defaults(self, context):
-        """Enable transform gizmos in all 3D views and default to local orientation."""
-        if not ENABLE_GIZMOS:
-            return
-
-        for window in context.window_manager.windows:
-            screen = window.screen
-            if not screen:
-                continue
-
-            for area in screen.areas:
-                if area.type != 'VIEW_3D':
-                    continue
-
-                space = area.spaces.active
-                if not space:
-                    continue
-
-                space.show_gizmo = True
-                space.show_gizmo_object_translate = True
-                space.show_gizmo_object_rotate = True
-                space.show_gizmo_object_scale = True
-                space.transform_orientation = DEFAULT_TRANSFORM_ORIENTATION
-
-        # Keep operator transforms on LOCAL axes too.
-        context.scene.transform_orientation_slots[0].type = DEFAULT_TRANSFORM_ORIENTATION
-
-    def export_target_mesh(self):
-        if self.target is None:
-            self.report({'ERROR'}, "No target mesh to export.")
-            return
-
-        export_path = bpy.path.abspath(EXPORT_PATH)
-        export_dir = os.path.dirname(export_path)
-        os.makedirs(export_dir, exist_ok=True)
-
-        bpy.ops.object.select_all(action='DESELECT')
-        self.target.select_set(True)
-        bpy.context.view_layer.objects.active = self.target
-
-        # Blender's OBJ exporter options differ across versions.
-        try:
-            bpy.ops.wm.obj_export(filepath=export_path, export_selected_objects=True)
-        except TypeError:
-            bpy.ops.export_scene.obj(filepath=export_path, use_selection=True)
-
-        self.report({'INFO'}, f"Exported target mesh to: {export_path}")
-        print(f"EXPORTED: {export_path}")
-
-    def resolve_mesh_path(self):
+    def resolve_mesh_path(self, path):
         """Resolve Blender-style // paths, with optional script-dir fallback."""
-        resolved = bpy.path.abspath(FILE_PATH)
+        resolved = bpy.path.abspath(path)
         if os.path.exists(resolved):
             return resolved
 
         if USE_SCRIPT_DIR_FALLBACK:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            script_relative = FILE_PATH[2:] if FILE_PATH.startswith("//") else FILE_PATH
+            script_relative = path[2:] if path.startswith("//") else path
             fallback = os.path.normpath(os.path.join(script_dir, script_relative))
-            if os.path.exists(fallback):
+            if os.path.exists(os.path.dirname(fallback)): # Only check if directory exists for exporting
                 return fallback
 
         return resolved
@@ -173,7 +106,7 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         bpy.ops.object.delete()
         
         # 2. Import the OBJ
-        resolved_path = self.resolve_mesh_path()
+        resolved_path = self.resolve_mesh_path(FILE_PATH)
         if not os.path.exists(resolved_path):
             self.report({'ERROR'}, f"File not found: {resolved_path}")
             return False
@@ -187,11 +120,9 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         self.target.location = (0, 0, 0)
         
         # --- THE FIX: MAKE IT A HOLLOW SHELL ---
-        # We add a Solidify modifier to create a microscopically thin wall.
-        # When the Boolean cuts through this wall, it leaves an open hole.
         solid_mod = self.target.modifiers.new(name="Hollow_Shell", type='SOLIDIFY')
-        solid_mod.thickness = 0.0001  # Extremely thin
-        solid_mod.offset = 0.0        # Keep it centered on original geometry
+        solid_mod.thickness = 0.0001
+        solid_mod.offset = 0.0
         
         # 3. Create Cutters
         dim = self.target.dimensions
@@ -200,10 +131,17 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             
         context.view_layer.objects.active = self.target
         
-        # 4. Viewport Zoom Fix
+        # 4. Viewport Zoom & Gizmo Fix
         for window in context.window_manager.windows:
             for area in window.screen.areas:
                 if area.type == 'VIEW_3D':
+                    # --- NEW: Enable transform gizmos by default ---
+                    if area.spaces.active:
+                        area.spaces.active.show_gizmo = True
+                        area.spaces.active.show_gizmo_object_translate = True
+                        area.spaces.active.show_gizmo_object_rotate = True
+                        area.spaces.active.show_gizmo_object_scale = True
+                        
                     for region in area.regions:
                         if region.type == 'WINDOW':
                             with context.temp_override(window=window, area=area, region=region):
@@ -214,7 +152,7 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
     def toggle_booleans(self):
         if not self._is_cutting:
-            # Enable Booleans (They will automatically stack below the Solidify modifier)
+            # Enable Booleans
             for c in self.cutters:
                 mod = self.target.modifiers.new(name=c.name, type='BOOLEAN')
                 mod.object = c
@@ -230,12 +168,61 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             self._is_cutting = False
             print("MODE: MOVE (Zero Lag)")
 
+    def export_mesh(self, context):
+        """Exports the target mesh with all current boolean cuts applied."""
+        # 1. Temporarily enforce CUTTING mode so the export has the holes
+        was_cutting = self._is_cutting
+        if not was_cutting:
+            self.toggle_booleans()
+            
+        # 2. Isolate selection to the target object only
+        bpy.ops.object.select_all(action='DESELECT')
+        self.target.select_set(True)
+        context.view_layer.objects.active = self.target
+        
+        # 3. Resolve path and ensure directories exist
+        resolved_export_path = bpy.path.abspath(EXPORT_FILE_PATH)
+        export_dir = os.path.dirname(resolved_export_path)
+        if export_dir and not os.path.exists(export_dir):
+            os.makedirs(export_dir, exist_ok=True)
+            
+        print(f"Attempting to export cut mesh to: {resolved_export_path}")
+        
+        try:
+            # Modern OBJ export (Blender 3.2+), applies modifiers automatically
+            bpy.ops.wm.obj_export(
+                filepath=resolved_export_path,
+                export_selected_objects=True
+            )
+            self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
+            print(f"SUCCESS: Exported to {resolved_export_path}")
+        except AttributeError:
+            # Fallback for older Blender versions (<3.2)
+            bpy.ops.export_scene.obj(
+                filepath=resolved_export_path,
+                use_selection=True,
+                use_mesh_modifiers=True
+            )
+            self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
+            print(f"SUCCESS: Exported to {resolved_export_path}")
+        except Exception as e:
+            self.report({'ERROR'}, f"Export failed: {str(e)}")
+            print(f"ERROR: Export failed: {str(e)}")
+            
+        # 4. Restore previous toggle state (if you were in Move mode, go back to it)
+        if not was_cutting:
+            self.toggle_booleans()
+            
+        # Reselect cutters so the user can keep working immediately
+        for c in self.cutters:
+            c.select_set(True)
+
     def modal(self, context, event):
         if event.type == 'K' and event.value == 'PRESS':
             self.toggle_booleans()
-
+            
         elif event.type == 'E' and event.value == 'PRESS':
-            self.export_target_mesh()
+            self.export_mesh(context)
             
         elif event.type == 'ESC':
             print("Interactive Cutter Stopped.")
@@ -245,9 +232,8 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
     def execute(self, context):
         if self.setup_scene(context):
-            self.configure_viewport_defaults(context)
             context.window_manager.modal_handler_add(self)
-            print("RUNNING: Press 'K' to toggle cuts, 'E' to export OBJ, 'ESC' to stop script.")
+            print("RUNNING: Press 'K' to toggle cuts, 'E' to export, 'ESC' to stop script.")
             return {'RUNNING_MODAL'}
         return {'CANCELLED'}
 
