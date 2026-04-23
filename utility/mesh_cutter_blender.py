@@ -37,13 +37,14 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
     def resolve_mesh_path(self, path):
         """Resolve Blender-style // paths, with optional script-dir fallback."""
-        resolved = bpy.path.abspath(path)
+        path_str = str(path)
+        resolved = bpy.path.abspath(path_str)
         if os.path.exists(resolved):
             return resolved
 
         if USE_SCRIPT_DIR_FALLBACK:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            script_relative = path[2:] if path.startswith("//") else path
+            script_relative = path_str[2:] if path_str.startswith("//") else path_str
             fallback = os.path.normpath(os.path.join(script_dir, script_relative))
             if os.path.exists(os.path.dirname(fallback)): # Only check if directory exists for exporting
                 return fallback
@@ -187,7 +188,7 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         context.view_layer.objects.active = self.target
         
         # 3. Resolve path and ensure directories exist
-        resolved_export_path = bpy.path.abspath(EXPORT_FILE_PATH)
+        resolved_export_path = bpy.path.abspath(str(EXPORT_FILE_PATH))
         export_dir = os.path.dirname(resolved_export_path)
         if export_dir and not os.path.exists(export_dir):
             os.makedirs(export_dir, exist_ok=True)
