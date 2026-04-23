@@ -3,9 +3,16 @@ import os
 from mathutils import Vector
 
 # --- CONFIGURATION ---
-FILE_PATH = "//mesh_example/before_hole_cut.obj"
+name_prefix = "Geometry"
+name_
+
+FILE_PATH ="/home/j/Desktop/hdd/share_folder/patient_data" 
+#FILE_PATH = "//mesh_example/before_hole_cut.obj"
 EXPORT_FILE_PATH = "//mesh_example/after_hole_cut.obj" # <-- NEW: Export destination
 USE_SCRIPT_DIR_FALLBACK = True
+
+FILE_PATH = os.path.join(FILE_PATH, f"{name_prefix}.obj")
+EXPORT_FILE_PATH = os.path.join(FILE_PATH, f"{name_prefix}_cut.obj")
 
 # Number of interactive cutters to create.
 N_CUT_CUBES = 3
