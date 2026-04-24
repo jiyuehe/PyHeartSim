@@ -13,14 +13,19 @@
 # limitations under the License.
 
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 from flask import Flask, render_template, jsonify, request
 import configuration
 
-app = Flask(__name__, template_folder='utility')
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__)))
 
 # load geometry data
 directory = configuration.directory_setup()
+directory['result'] = directory['home'] / 'result'
+directory['result'].mkdir(exist_ok=True)
+
 name_prefix = configuration.mesh_name()
 
 file_path = directory['data'] / f'{name_prefix}_geometry.npz'
@@ -28,7 +33,7 @@ data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 node = geometry_data['voxel']
 
-flag_file = directory['data'] / f'{name_prefix}_node_flag.npy'
+flag_file = directory['result'] / f'{name_prefix}_node_flag.npy'
 if os.path.exists(flag_file):
     node_flag = np.load(flag_file).copy()
 else:
@@ -71,5 +76,3 @@ if __name__ == '__main__':
     port = 5000
     print(f'Starting 3D Node Selection Tool at http://127.0.0.1:{port}')
     app.run(host='127.0.0.1', port=port, debug=False)
-
-    
