@@ -82,13 +82,13 @@ def run_simulation(input_arguments):
 
         if simulation_parameters['compute_electrogram_flag'] == 0:
             simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
-            simulation_results['physical_time'] = physical_time
         elif simulation_parameters['compute_electrogram_flag'] == 1:
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
 
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
             simulation_results['action_potential'] = action_potential # shape: (time, n_voxel)
             simulation_results['h'] = h # shape: (time, n_voxel)
+            simulation_results['physical_time'] = physical_time
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
 
     s2 = arrhythmia_parameters['s2_pacing_voxel_id']
-    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
+    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
 
     debug_plot = 0
     if debug_plot == 1: 
