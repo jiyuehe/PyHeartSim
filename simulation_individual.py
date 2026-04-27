@@ -78,11 +78,12 @@ def run_simulation(input_arguments):
         s1 = arrhythmia_parameters['s1_pacing_voxel_id']
 
         simulation_results = {}
-        simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
-        simulation_results['physical_time'] = physical_time
         simulation_results['geometry_flag'] = simulation_parameters['geometry_flag']
 
-        if simulation_parameters['compute_electrogram_flag'] == 1:
+        if simulation_parameters['compute_electrogram_flag'] == 0:
+            simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
+            simulation_results['physical_time'] = physical_time
+        elif simulation_parameters['compute_electrogram_flag'] == 1:
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
 
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
@@ -111,13 +112,13 @@ if __name__ == "__main__":
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
-    s1 = 14062 # s1 pacing voxel id
+    s1 = 8889 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
 
     s2 = arrhythmia_parameters['s2_pacing_voxel_id']
-    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
+    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
 
     debug_plot = 0
     if debug_plot == 1: 
@@ -193,31 +194,21 @@ if __name__ == "__main__":
         # load simulation results
         simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
 
-        action_potential = simulation_results['action_potential_electrode']
-        physical_time = simulation_results['physical_time']
         if simulation_parameters['compute_electrogram_flag'] == 1:
-            electrogram_unipolar = simulation_results['electrogram_unipolar']
-        else:
-            electrogram_unipolar = None
+            signal = simulation_results['electrogram_unipolar']
+        elif simulation_parameters['compute_electrogram_flag'] == 0:
+            signal = simulation_results['action_potential_electrode']
+        
+        n_e_id = 5
+        e_id = np.linspace(0, signal.shape[1] - 1, n_e_id, dtype=int)
 
-        # show some action potentials and electrograms
         fig, axes = plt.subplots(
-            nrows=3, ncols=2, figsize=(12, 8), sharex='col', sharey=False
+            nrows=n_e_id, ncols=1, figsize=(6, 8), sharex='col', sharey=False
         )
 
-        for i, eid in enumerate([simulation_parameters['voxel_id_of_simulation_electrode'][0], simulation_parameters['voxel_id_of_simulation_electrode'][1], simulation_parameters['voxel_id_of_simulation_electrode'][2]]):
+        for i, eid in enumerate(e_id):
             # left column: action potentials
-            axes[i, 0].plot(physical_time, action_potential[:, eid])
-            axes[i, 0].set_title(f'Action Potential at Location {eid}')
-            axes[i, 0].set_ylabel('Voltage (scaled)')
-            axes[i, 0].set_xlabel('Time (ms)')
-
-            # right column: unipolar electrograms
-            if simulation_parameters['compute_electrogram_flag'] == 1:
-                axes[i, 1].plot(physical_time, electrogram_unipolar[:, i])
-                axes[i, 1].set_title(f'Unipolar Electrogram at Location {simulation_parameters['voxel_id_of_simulation_electrode'][i]}')
-                axes[i, 1].set_ylabel('Voltage (scaled)')
-                axes[i, 1].set_xlabel('Time (ms)')
+            axes[i].plot(signal[:, eid])
 
         plt.tight_layout()
         plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}.png', dpi=300)
@@ -226,25 +217,27 @@ if __name__ == "__main__":
     # display simulation movie
     do_flag = 1
     if do_flag == 1:
-        # load simulation results
-        simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
+        if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
+            # load simulation results
+            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
 
-        save_movie_flag = 1 # 1: save movie. 0: do not save movie
-        starting_time = 0 # 0 # ms
-        ending_time = [] # ms. []: till the end. or specify a value
+            save_movie_flag = 1 # 1: save movie. 0: do not save movie
+            starting_time = 0 # 0 # ms
+            ending_time = [] # ms. []: till the end. or specify a value
 
-        simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{s1}.gif'
-        movie_save_dir = directory['result'] / simulation_results_file_name
+            simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{s1}.gif'
+            movie_save_dir = directory['result'] / simulation_results_file_name
 
-        in_arg = {}
-        in_arg['save_movie_flag'] = save_movie_flag
-        in_arg['starting_time'] = starting_time
-        in_arg['ending_time'] = ending_time
-        in_arg['simulation_results_file_name'] = simulation_results_file_name
-        in_arg['movie_save_dir'] = movie_save_dir
-        in_arg['simulation_results'] = simulation_results
-        in_arg['geometry_data'] = geometry_data
-        in_arg['save_action_potential_of_all_voxel_flag'] = simulation_parameters['save_action_potential_of_all_voxel_flag']
-        utility.display_simulation_movie.execute(in_arg)
+            in_arg = {}
+            in_arg['save_movie_flag'] = save_movie_flag
+            in_arg['starting_time'] = starting_time
+            in_arg['ending_time'] = ending_time
+            in_arg['simulation_results_file_name'] = simulation_results_file_name
+            in_arg['movie_save_dir'] = movie_save_dir
+            in_arg['simulation_results'] = simulation_results
+            in_arg['geometry_data'] = geometry_data
+            in_arg['save_action_potential_of_all_voxel_flag'] = simulation_parameters['save_action_potential_of_all_voxel_flag']
+            utility.display_simulation_movie.execute(in_arg)
 
+    print('done')
 #%%
