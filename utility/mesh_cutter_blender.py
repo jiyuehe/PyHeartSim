@@ -14,18 +14,21 @@
 
 import bpy
 import os
+import ast
 from mathutils import Vector
 from pathlib import Path
 
 # --- CONFIGURATION ---
-name_prefix = '0_1-la1 78 240'
+name_prefix = '2_2-lafam pr'
 
-BASE_PATH = Path("/home/j/Desktop/hdd/share_folder/patient_data")
+BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
 
 FILE_PATH = BASE_PATH / f"{name_prefix}_refined.obj"
 EXPORT_FILE_PATH = BASE_PATH / f"{name_prefix}_refined_cut.obj"
+CUTS_FILE_PATH = BASE_PATH / f"{name_prefix}_cuts.yaml"
 USE_SCRIPT_DIR_FALLBACK = True
+LOAD_CUTS = False
 
 # Number of interactive cutters to create.
 N_CUT_CUBES = 4
@@ -45,14 +48,64 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
     bl_label = "Interactive Mesh Cutter"
     
     _timer = None
+    _active_session_id = 0
     _is_cutting = False
     target = None
     cutters = []
+    _session_id = None
 
-    def resolve_mesh_path(self, path):
+    def _object_exists(self, obj):
+        if obj is None:
+            return False
+
+        try:
+            obj.name
+            return True
+        except ReferenceError:
+            return False
+
+    def _get_live_cutters(self):
+        live_cutters = []
+        for cutter in self.cutters:
+            if self._object_exists(cutter):
+                live_cutters.append(cutter)
+        self.cutters = live_cutters
+        return live_cutters
+
+    def _require_live_scene_objects(self):
+        if not self._object_exists(self.target):
+            self.report({'ERROR'}, "Target mesh is no longer valid. Rerun the script to rebuild the scene.")
+            self._is_cutting = False
+            self.target = None
+            self.cutters = []
+            return False
+
+        live_cutters = self._get_live_cutters()
+        if not live_cutters:
+            self.report({'ERROR'}, "Cutters are no longer valid. Rerun the script to rebuild the scene.")
+            self._is_cutting = False
+            return False
+
+        return True
+
+    def _blend_base_dir(self):
+        blend_filepath = bpy.data.filepath
+        if blend_filepath:
+            return os.path.dirname(blend_filepath)
+        return os.getcwd()
+
+    def resolve_path(self, path, allow_missing_parent=False):
         """Resolve Blender-style // paths, with optional script-dir fallback."""
         path_str = str(path)
-        resolved = bpy.path.abspath(path_str)
+        if path_str == "//":
+            resolved = self._blend_base_dir()
+        elif path_str.startswith("//"):
+            resolved = os.path.normpath(
+                os.path.join(self._blend_base_dir(), path_str[2:])
+            )
+        else:
+            resolved = bpy.path.abspath(path_str)
+
         if os.path.exists(resolved):
             return resolved
 
@@ -60,15 +113,129 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             script_dir = os.path.dirname(os.path.abspath(__file__))
             script_relative = path_str[2:] if path_str.startswith("//") else path_str
             fallback = os.path.normpath(os.path.join(script_dir, script_relative))
-            if os.path.exists(os.path.dirname(fallback)): # Only check if directory exists for exporting
+            if allow_missing_parent:
+                fallback_parent = os.path.dirname(fallback)
+                if not fallback_parent or os.path.exists(fallback_parent):
+                    return fallback
+            elif os.path.exists(fallback):
                 return fallback
 
         return resolved
 
+    def _format_vector_yaml(self, values):
+        return "[{}]".format(", ".join(f"{float(value):.8f}" for value in values))
+
+    def _parse_vector_yaml(self, value, field_name, cutter_name):
+        try:
+            parsed = ast.literal_eval(value)
+        except (SyntaxError, ValueError) as exc:
+            raise ValueError(f"Invalid {field_name} for {cutter_name}: {value}") from exc
+
+        if not isinstance(parsed, (list, tuple)) or len(parsed) != 3:
+            raise ValueError(f"Invalid {field_name} for {cutter_name}: {value}")
+
+        return tuple(float(component) for component in parsed)
+
+    def save_cut_transforms(self):
+        live_cutters = self._get_live_cutters()
+        if not live_cutters:
+            self.report({'WARNING'}, "No cutters available to save.")
+            return False
+
+        resolved_path = self.resolve_path(CUTS_FILE_PATH, allow_missing_parent=True)
+        cuts_dir = os.path.dirname(resolved_path)
+        if cuts_dir and os.path.isfile(cuts_dir):
+            cuts_dir = os.path.dirname(cuts_dir)
+            resolved_path = os.path.join(cuts_dir, os.path.basename(resolved_path))
+        if cuts_dir:
+            os.makedirs(cuts_dir, exist_ok=True)
+
+        lines = ["cutters:"]
+        for cutter in live_cutters:
+            lines.extend([
+                f"  - name: {cutter.name}",
+                f"    location: {self._format_vector_yaml(cutter.location)}",
+                f"    rotation: {self._format_vector_yaml(cutter.rotation_euler)}",
+                f"    scale: {self._format_vector_yaml(cutter.scale)}",
+            ])
+
+        with open(resolved_path, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+
+        self.report({'INFO'}, f"Saved cut transforms to {resolved_path}")
+        print(f"SAVED CUTS: {resolved_path}")
+        return True
+
+    def load_cut_transforms(self):
+        if not self._require_live_scene_objects():
+            return False
+
+        resolved_path = self.resolve_path(CUTS_FILE_PATH)
+        if not os.path.exists(resolved_path):
+            self.report({'WARNING'}, f"Cuts file not found: {resolved_path}")
+            return False
+
+        cutter_states = []
+        current_state = None
+
+        with open(resolved_path, "r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line == "cutters:":
+                    continue
+
+                if line.startswith("- name:"):
+                    if current_state is not None:
+                        cutter_states.append(current_state)
+                    current_state = {"name": line.split(":", 1)[1].strip()}
+                    continue
+
+                if current_state is None or ":" not in line:
+                    continue
+
+                key, value = line.split(":", 1)
+                current_state[key.strip()] = value.strip()
+
+        if current_state is not None:
+            cutter_states.append(current_state)
+
+        cutters_by_name = {cutter.name: cutter for cutter in self.cutters}
+        applied_count = 0
+
+        for cutter_state in cutter_states:
+            cutter_name = cutter_state.get("name")
+            cutter = cutters_by_name.get(cutter_name)
+            if cutter is None:
+                continue
+
+            try:
+                cutter.location = self._parse_vector_yaml(
+                    cutter_state["location"], "location", cutter_name
+                )
+                cutter.rotation_mode = 'XYZ'
+                cutter.rotation_euler = self._parse_vector_yaml(
+                    cutter_state["rotation"], "rotation", cutter_name
+                )
+                cutter.scale = self._parse_vector_yaml(
+                    cutter_state["scale"], "scale", cutter_name
+                )
+            except KeyError as exc:
+                self.report({'ERROR'}, f"Missing {exc.args[0]} for {cutter_name} in {resolved_path}")
+                return False
+            except ValueError as exc:
+                self.report({'ERROR'}, str(exc))
+                return False
+
+            applied_count += 1
+
+        self.report({'INFO'}, f"Loaded {applied_count} cutter transforms from {resolved_path}")
+        print(f"LOADED CUTS: {resolved_path}")
+        return True
+
     def _build_spawn_directions(self, count):
         base_dirs = [
-            Vector((1, 0, 0)), Vector((-1, 0, 0)),
-            Vector((0, 1, 0)), Vector((0, -1, 0)),
+            Vector((3/4, 3/4, 0)), Vector((-3/4, -3/4, 0)),
+            Vector((3/4, -3/4, 0)), Vector((-3/4, 3/4, 0)),
             Vector((0, 0, 1)), Vector((0, 0, -1)),
             Vector((1, 1, 0)).normalized(), Vector((-1, 1, 0)).normalized(),
             Vector((1, 0, 1)).normalized(), Vector((-1, 0, 1)).normalized(),
@@ -127,7 +294,7 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         bpy.ops.object.delete()
         
         # 2. Import the OBJ
-        resolved_path = self.resolve_mesh_path(FILE_PATH)
+        resolved_path = self.resolve_path(FILE_PATH)
         if not os.path.exists(resolved_path):
             self.report({'ERROR'}, f"File not found: {resolved_path}")
             return False
@@ -149,6 +316,8 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         dim = self.target.dimensions
         avg = (dim.x + dim.y + dim.z) / 3
         self._create_cutters(context, dim, avg)
+        if LOAD_CUTS:
+            self.load_cut_transforms()
             
         context.view_layer.objects.active = self.target
         
@@ -172,6 +341,9 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         return True
 
     def toggle_booleans(self):
+        if not self._require_live_scene_objects():
+            return False
+
         if not self._is_cutting:
             # Enable Booleans
             for c in self.cutters:
@@ -189,8 +361,15 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             self._is_cutting = False
             print("MODE: MOVE (Zero Lag)")
 
+        return True
+
     def export_mesh(self, context):
         """Exports the target mesh with all current boolean cuts applied."""
+        if not self._require_live_scene_objects():
+            return False
+
+        self.save_cut_transforms()
+
         # 1. Temporarily enforce CUTTING mode so the export has the holes
         was_cutting = self._is_cutting
         if not was_cutting:
@@ -202,8 +381,11 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         context.view_layer.objects.active = self.target
         
         # 3. Resolve path and ensure directories exist
-        resolved_export_path = bpy.path.abspath(str(EXPORT_FILE_PATH))
+        resolved_export_path = self.resolve_path(EXPORT_FILE_PATH, allow_missing_parent=True)
         export_dir = os.path.dirname(resolved_export_path)
+        if export_dir and os.path.isfile(export_dir):
+            export_dir = os.path.dirname(export_dir)
+            resolved_export_path = os.path.join(export_dir, os.path.basename(resolved_export_path))
         if export_dir and not os.path.exists(export_dir):
             os.makedirs(export_dir, exist_ok=True)
             
@@ -238,12 +420,23 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
         for c in self.cutters:
             c.select_set(True)
 
+        return True
+
     def modal(self, context, event):
+        if self._session_id != type(self)._active_session_id:
+            return {'CANCELLED'}
+
         if event.type == 'K' and event.value == 'PRESS':
-            self.toggle_booleans()
+            if not self.toggle_booleans():
+                return {'CANCELLED'}
+
+        elif event.type == 'S' and event.value == 'PRESS':
+            if not self.save_cut_transforms():
+                return {'CANCELLED'}
             
         elif event.type == 'E' and event.value == 'PRESS':
-            self.export_mesh(context)
+            if not self.export_mesh(context):
+                return {'CANCELLED'}
             
         elif event.type == 'ESC':
             print("Interactive Cutter Stopped.")
@@ -253,8 +446,10 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
     def execute(self, context):
         if self.setup_scene(context):
+            type(self)._active_session_id += 1
+            self._session_id = type(self)._active_session_id
             context.window_manager.modal_handler_add(self)
-            print("RUNNING: Press 'K' to toggle cuts, 'E' to export, 'ESC' to stop script.")
+            print("RUNNING: Press 'K' to toggle cuts, 'S' to save cuts, 'E' to export, 'ESC' to stop script.")
             return {'RUNNING_MODAL'}
         return {'CANCELLED'}
 
