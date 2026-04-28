@@ -118,7 +118,7 @@ if __name__ == "__main__":
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
 
     s2 = arrhythmia_parameters['s2_pacing_voxel_id']
-    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
+    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
 
     debug_plot = 0
     if debug_plot == 1: 

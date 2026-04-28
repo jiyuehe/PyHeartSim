@@ -16,6 +16,10 @@ import numpy as np # pip install numpy
 from scipy.spatial import cKDTree
 from . import lat_map
 
+# NOTE:
+# normal conduction velocity of the left atrium is about 0.5 to 1.2 mm/ms in most healthy atrial tissue
+# atrial fibrillation is about ~0.8–1.0 mm/ms
+
 def compute(simulation_results, geometry_data):
     # compute local activation time
     electrogram_unipolar = simulation_results['electrogram_unipolar']
