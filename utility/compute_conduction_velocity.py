@@ -81,7 +81,7 @@ if do_flag == 1:
     # load simulation results
     simulation_results = dict(np.load(directory['result'] / 'long_slab_simulation_results.npz', allow_pickle=False))
 
-    save_movie_flag = 1 # 1: save movie. 0: do not save movie
+    save_movie_flag = 0 # 1: save movie. 0: do not save movie
     starting_time = 0 # 0 # ms
     ending_time = 1000 # ms. []: till the end. or specify a value
 
@@ -100,7 +100,9 @@ if do_flag == 1:
     utility.display_simulation_movie.execute(in_arg)
 
 #%%
-# compute conduction velocity
+# typical human left atrium conduction velocity is 0.5 to 1.0 mm/ms
+
+# compute conduction velocity, method 1
 x_coordinates = geometry_data['voxel'][:, 0]
 voxels_1 = np.where(x_coordinates == np.min(x_coordinates))[0]
 voxels_2 = np.where(x_coordinates == np.max(x_coordinates))[0]
@@ -140,5 +142,56 @@ if debug_plot == 1:
 time_diff = physical_time[first_peak_index_2] - physical_time[first_peak_index_1] # ms
 distance = x_2 - x_1 # mm
 conduction_velocity = distance / time_diff # mm/ms
-print(f'Conduction Velocity: {conduction_velocity:.2f} mm/ms')
-# typical human left atrium conduction velocity is 0.5 to 1.0 mm/ms
+print(f'conduction velocity (method 1): {conduction_velocity:.2f} mm/ms')
+
+#%%
+# compute conduction velocity, method 2
+# compute local activation time
+electrogram_unipolar = simulation_results['electrogram_unipolar']
+lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
+
+voxel_id_of_simulation_electrode = geometry_data['voxel_id_of_simulation_electrode']
+xyz = geometry_data['voxel'][voxel_id_of_simulation_electrode, :] # coordinates of electrode voxels
+lat = lat_electrode
+
+# compute conduction velocity for each point
+from scipy.spatial import cKDTree
+tree = cKDTree(xyz)
+n_points = xyz.shape[0]
+conduction_velocity_vectors = np.zeros((n_points, 3))
+conduction_velocity_magnitudes = np.zeros(n_points)
+neighbor_radius = 8.0 # mm
+
+for i in range(n_points):
+    # find neighbors (including self)
+    idx = tree.query_ball_point(xyz[i], neighbor_radius)
+    if len(idx) < 4:
+        # not enough neighbors for 3D fit
+        conduction_velocity_vectors[i, :] = np.nan
+        conduction_velocity_magnitudes[i] = np.nan
+        continue
+    
+    pts = xyz[idx]
+    lats = lat[idx]
+
+    # least-squares fit: lat = a*x + b*y + c*z + d
+    A = np.column_stack((pts, np.ones(len(pts))))
+    coeffs, _, _, _ = np.linalg.lstsq(A, lats, rcond=None)
+    grad = coeffs[:3]  # gradient of activation time
+
+    # conduction velocity vector: v = grad_t / |grad_t|^2
+    grad_norm_sq = np.dot(grad, grad)
+    if grad_norm_sq > 1e-8:
+        v_vec = grad / grad_norm_sq
+        v_mag = 1.0 / np.linalg.norm(grad)
+        conduction_velocity_vectors[i, :] = v_vec
+        conduction_velocity_magnitudes[i] = v_mag
+    else:
+        conduction_velocity_vectors[i, :] = np.nan
+        conduction_velocity_magnitudes[i] = np.nan
+
+# mean conduction velocity
+mean_cv = np.nanmean(conduction_velocity_magnitudes)
+print(f'conduction velocity (method 2): {mean_cv:.3f} mm/ms')
+
+print('done')
