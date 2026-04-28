@@ -112,7 +112,7 @@ if __name__ == "__main__":
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
-    s1 = 8889 # s1 pacing voxel id
+    s1 = 8888 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
