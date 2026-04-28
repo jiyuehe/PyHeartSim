@@ -27,8 +27,9 @@ Patient left atrium rotor simulation:
 - Folder structure:  
   ├─ example/, examples of simulations.  
   ├─ legacy/, old functions that no longer in use, keeping them because they may be useful in the future.  
-  ├─ mesh_database/, 3D triangular mesh database of the left and/or right atria from more than 100 patients.  
+  ├─ mesh_database/, 3D triangular mesh database of the left and/or right atria from more than 105 patients.  
   ├─ simulation/, functions for running heart simulations.  
+  ├─ tool/, useful standalone codes.  
   └─ utility/, functions for mesh processing, display, analysis, debug, etc.  
 
 # Contributors
