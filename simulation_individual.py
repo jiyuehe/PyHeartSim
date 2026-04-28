@@ -118,7 +118,7 @@ if __name__ == "__main__":
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2)
 
     s2 = arrhythmia_parameters['s2_pacing_voxel_id']
-    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 1
+    simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
 
     debug_plot = 0
     if debug_plot == 1: 
@@ -187,6 +187,10 @@ if __name__ == "__main__":
     # save lat to simulation_results
     simulation_results['lat_electrode'] = lat_electrode
     np.savez(directory['result'] / file_name, **simulation_results)
+
+    # compute conduction velocity
+    conduction_velocity_vectors, conduction_velocity_magnitudes, conduction_velocity_mean = utility.conduction_velocity.compute(simulation_results, geometry_data)
+    print(f'mean conduction velocity: {conduction_velocity_mean:.2f} mm/ms')
 
     # plot some action potentials and electrograms
     do_flag = 1
