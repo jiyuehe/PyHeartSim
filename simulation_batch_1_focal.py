@@ -24,7 +24,7 @@ import configuration
 directory = configuration.directory_setup() # set up directories
 name_prefix = configuration.mesh_name() # get mesh name prefix
 
-n_simulations = 2
+n_simulations = 1000
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 

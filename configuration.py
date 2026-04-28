@@ -43,9 +43,9 @@ def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = 'sheet'
     # name_prefix = 'long_slab'
-    name_prefix = '102_1-lagood'
     # name_prefix = '101_1-LA FAM1'
-
+    name_prefix = '102_1-lagood'
+    
     return name_prefix
 
 def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
