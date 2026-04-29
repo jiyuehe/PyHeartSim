@@ -7,7 +7,7 @@ Patient left atrium rotor simulation:
 - This is an electrophysiological heart simulator written in **Python**.  
 - Patient atria: 
   - A 3D triangular mesh database of the left and right atria. 
-  - A total of **166 atria from 105 patients**: 105 left atria and 61 right atria.  
+  - A total of **165 atria from 104 patients**: 104 left atria and 61 right atria.  
 - Heart model: 
   - **Mitchell-Schaeffer**  
   - **Aliev-Panfilov**  
