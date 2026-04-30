@@ -11,8 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# mesh_cutter_blender_knife.py
+#
+# Rewrite of mesh_cutter_blender.py that uses direct bmesh bisect/delete
+# operations instead of Blender's Boolean modifier.  Because we never add a
+# Solidify modifier we avoid all volume-related errors and the heavyweight
+# BVH surface-filter pass on export.
+#
+# How cuts work
+# -------------
+# Each cutter object (cube or cylinder) is a convex mesh.  Its outward-facing
+# face planes are extracted from the cutter's mesh data and transformed into the
+# target mesh's local space.  We then:
+#   1. Bisect the target bmesh along every plane (no geometry is removed yet;
+#      we just create new vertices/edges at each intersection).
+#   2. Delete every face whose centroid lies strictly inside the convex hull
+#      of the cutter planes.
+# Cuts are stored as a bmesh snapshot so toggling/restoring is a simple memcpy
+# rather than a modifier rebuild.
+#
+# NOTE: This approach assumes each cutter is a *convex* mesh.  Non-convex
+# cutters will produce unexpected results.
 
 import bpy
+import bmesh
 import os
 import ast
 from mathutils import Vector
@@ -28,7 +51,7 @@ FILE_PATH = BASE_PATH / f"{name_prefix}_refined.obj"
 EXPORT_FILE_PATH = BASE_PATH / f"{name_prefix}_refined_cut.obj"
 CUTS_FILE_PATH = BASE_PATH / f"{name_prefix}_cuts.yaml"
 USE_SCRIPT_DIR_FALLBACK = True
-LOAD_CUTS = False
+LOAD_CUTS = True
 
 # Number of interactive cutters to create.
 N_CUT_CUBES = 4
@@ -42,22 +65,35 @@ CYLINDER_DEPTH_FACTOR = 0.30
 # Additional spacing so cutters spawn outside the target mesh bounds.
 SPAWN_MARGIN_FACTOR = 0.20
 
-class MESH_OT_InteractiveCutter(bpy.types.Operator):
-    """Press K to toggle Cut Mode, E to Export, ESC to cancel"""
-    bl_idname = "mesh.interactive_cutter"
-    bl_label = "Interactive Mesh Cutter"
-    
+# Relative epsilon for plane-distance tests and bisect snapping.  Applied as a
+# fraction of the target mesh's average dimension so it scales with the model.
+BISECT_EPSILON_FACTOR = 1e-5
+
+
+class MESH_OT_KnifeCutter(bpy.types.Operator):
+    """Press K to toggle Cut Mode, S to save cuts, E to Export, ESC to cancel."""
+    bl_idname = "mesh.knife_cutter"
+    bl_label = "Interactive Knife Cutter"
+
     _timer = None
     _active_session_id = 0
     _is_cutting = False
     target = None
     cutters = []
+    _export_matrix = None
+    _original_verts = None   # list[Vector] – original mesh vertex positions
+    _original_edges = None   # list[tuple[int,int]]
+    _original_faces = None   # list[list[int]]
+    _bisect_eps = None       # float – absolute epsilon for this model
     _session_id = None
+
+    # ------------------------------------------------------------------
+    # Object validity helpers
+    # ------------------------------------------------------------------
 
     def _object_exists(self, obj):
         if obj is None:
             return False
-
         try:
             obj.name
             return True
@@ -65,28 +101,28 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             return False
 
     def _get_live_cutters(self):
-        live_cutters = []
-        for cutter in self.cutters:
-            if self._object_exists(cutter):
-                live_cutters.append(cutter)
-        self.cutters = live_cutters
-        return live_cutters
+        live = [c for c in self.cutters if self._object_exists(c)]
+        self.cutters = live
+        return live
 
     def _require_live_scene_objects(self):
         if not self._object_exists(self.target):
-            self.report({'ERROR'}, "Target mesh is no longer valid. Rerun the script to rebuild the scene.")
+            self.report({'ERROR'}, "Target mesh is no longer valid. Rerun the script.")
             self._is_cutting = False
             self.target = None
             self.cutters = []
             return False
 
-        live_cutters = self._get_live_cutters()
-        if not live_cutters:
-            self.report({'ERROR'}, "Cutters are no longer valid. Rerun the script to rebuild the scene.")
+        if not self._get_live_cutters():
+            self.report({'ERROR'}, "Cutters are no longer valid. Rerun the script.")
             self._is_cutting = False
             return False
 
         return True
+
+    # ------------------------------------------------------------------
+    # Path helpers (unchanged from original)
+    # ------------------------------------------------------------------
 
     def _blend_base_dir(self):
         blend_filepath = bpy.data.filepath
@@ -122,19 +158,21 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
         return resolved
 
+    # ------------------------------------------------------------------
+    # YAML save / load (unchanged from original)
+    # ------------------------------------------------------------------
+
     def _format_vector_yaml(self, values):
-        return "[{}]".format(", ".join(f"{float(value):.8f}" for value in values))
+        return "[{}]".format(", ".join(f"{float(v):.8f}" for v in values))
 
     def _parse_vector_yaml(self, value, field_name, cutter_name):
         try:
             parsed = ast.literal_eval(value)
         except (SyntaxError, ValueError) as exc:
             raise ValueError(f"Invalid {field_name} for {cutter_name}: {value}") from exc
-
         if not isinstance(parsed, (list, tuple)) or len(parsed) != 3:
             raise ValueError(f"Invalid {field_name} for {cutter_name}: {value}")
-
-        return tuple(float(component) for component in parsed)
+        return tuple(float(c) for c in parsed)
 
     def save_cut_transforms(self):
         live_cutters = self._get_live_cutters()
@@ -183,41 +221,41 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
                 line = raw_line.strip()
                 if not line or line == "cutters:":
                     continue
-
                 if line.startswith("- name:"):
                     if current_state is not None:
                         cutter_states.append(current_state)
                     current_state = {"name": line.split(":", 1)[1].strip()}
                     continue
-
                 if current_state is None or ":" not in line:
                     continue
-
                 key, value = line.split(":", 1)
                 current_state[key.strip()] = value.strip()
 
         if current_state is not None:
             cutter_states.append(current_state)
 
-        cutters_by_name = {cutter.name: cutter for cutter in self.cutters}
+        cutters_by_name = {c.name: c for c in self.cutters}
         applied_count = 0
 
-        for cutter_state in cutter_states:
-            cutter_name = cutter_state.get("name")
+        for index, state in enumerate(cutter_states):
+            cutter_name = state.get("name")
             cutter = cutters_by_name.get(cutter_name)
             if cutter is None:
-                continue
+                if index >= len(self.cutters):
+                    continue
+                cutter = self.cutters[index]
+                print(f"LOAD CUTS: Matched {cutter_name} to {cutter.name} by order.")
 
             try:
                 cutter.location = self._parse_vector_yaml(
-                    cutter_state["location"], "location", cutter_name
+                    state["location"], "location", cutter_name
                 )
                 cutter.rotation_mode = 'XYZ'
                 cutter.rotation_euler = self._parse_vector_yaml(
-                    cutter_state["rotation"], "rotation", cutter_name
+                    state["rotation"], "rotation", cutter_name
                 )
                 cutter.scale = self._parse_vector_yaml(
-                    cutter_state["scale"], "scale", cutter_name
+                    state["scale"], "scale", cutter_name
                 )
             except KeyError as exc:
                 self.report({'ERROR'}, f"Missing {exc.args[0]} for {cutter_name} in {resolved_path}")
@@ -228,9 +266,14 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
             applied_count += 1
 
+        bpy.context.view_layer.update()
         self.report({'INFO'}, f"Loaded {applied_count} cutter transforms from {resolved_path}")
         print(f"LOADED CUTS: {resolved_path}")
         return True
+
+    # ------------------------------------------------------------------
+    # Cutter placement helpers (unchanged from original)
+    # ------------------------------------------------------------------
 
     def _build_spawn_directions(self, count):
         base_dirs = [
@@ -252,17 +295,16 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
 
     def _create_cutters(self, context, dim, avg):
         self.cutters = []
-        total_cutters = N_CUT_CUBES + N_CUT_CYLINDERS
-        if total_cutters <= 0:
+        total = N_CUT_CUBES + N_CUT_CYLINDERS
+        if total <= 0:
             return
 
         cube_scale = avg * CUBE_SCALE_FACTOR
         cyl_radius = avg * CYLINDER_RADIUS_FACTOR
         cyl_depth = avg * CYLINDER_DEPTH_FACTOR
-
-        max_cutter_extent = max(cube_scale * 0.5, cyl_radius, cyl_depth * 0.5)
-        clearance = avg * SPAWN_MARGIN_FACTOR + max_cutter_extent
-        directions = self._build_spawn_directions(total_cutters)
+        max_extent = max(cube_scale * 0.5, cyl_radius, cyl_depth * 0.5)
+        clearance = avg * SPAWN_MARGIN_FACTOR + max_extent
+        directions = self._build_spawn_directions(total)
 
         for i in range(N_CUT_CUBES):
             pos = self._outside_location_from_direction(directions[i], dim, clearance)
@@ -285,102 +327,270 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             c.parent = self.target
             self.cutters.append(c)
 
+    # ------------------------------------------------------------------
+    # Original mesh snapshot
+    # ------------------------------------------------------------------
+
+    def _store_original_mesh(self):
+        """Snapshot the target mesh topology so cuts can be undone at any time.
+
+        NOTE: Only raw geometry (verts/edges/faces) is stored.  UV maps, sharp
+        flags, and other data layers from the imported OBJ are discarded on the
+        first toggle.  This is acceptable for simulation-mesh workflows where the
+        cut OBJ is the final product.
+        """
+        mesh = self.target.data
+        self._original_verts = [v.co.copy() for v in mesh.vertices]
+        self._original_edges = [(e.vertices[0], e.vertices[1]) for e in mesh.edges]
+        self._original_faces = [list(p.vertices) for p in mesh.polygons]
+
+    def _restore_original_mesh(self):
+        """Overwrite the target mesh data with the stored snapshot."""
+        mesh = self.target.data
+        mesh.clear_geometry()
+        mesh.from_pydata(self._original_verts, self._original_edges, self._original_faces)
+        mesh.update()
+
+    # ------------------------------------------------------------------
+    # Knife / plane-bisect cut engine
+    # ------------------------------------------------------------------
+
+    def _get_cutter_planes_in_target_local(self, cutter):
+        """Return the outward face planes of *cutter* transformed into the
+        target object's local coordinate space.
+
+        Each cutter face contributes one (plane_co, plane_no) pair.  Because
+        planes are derived directly from the cutter's mesh data rather than from
+        a hardcoded primitive description, this works for any convex shape.
+
+        Normal transform uses the inverse-transpose of the combined linear map
+        so non-uniform cutter scales are handled correctly.
+        """
+        combined = self.target.matrix_world.inverted() @ cutter.matrix_world
+        normal_mat = combined.to_3x3().inverted().transposed()
+
+        planes = []
+        mesh_data = cutter.data
+        for poly in mesh_data.polygons:
+            vert_co = mesh_data.vertices[poly.vertices[0]].co
+            plane_co = combined @ vert_co
+            plane_no = (normal_mat @ poly.normal).normalized()
+            planes.append((plane_co, plane_no))
+
+        return planes
+
+    def _is_inside_planes(self, point, planes):
+        """Return True if *point* is strictly inside (or on) all half-spaces.
+
+        A point is "inside" when it is on the negative side of every outward
+        plane normal, i.e. the signed distance to each plane is ≤ epsilon.
+        """
+        eps = self._bisect_eps
+        for plane_co, plane_no in planes:
+            if (point - plane_co).dot(plane_no) > eps:
+                return False
+        return True
+
+    def _apply_all_cuts_to_bm(self, bm):
+        """Apply every live cutter to the given bmesh in place.
+
+        Algorithm per cutter
+        --------------------
+        1. Bisect the mesh along each cutter face plane (no geometry removed
+           yet).  This inserts new vertices/edges exactly where the mesh
+           surface crosses each cutter boundary, so every face after this step
+           lies entirely on one side of every plane.  The new edges created by
+           each bisect are tracked.
+        2. Delete faces whose centroids are inside the cutter's convex hull.
+        3. Dissolve bisect-created edges that are still manifold (2 face
+           neighbors) after the deletion step.  These are interior seam lines
+           on kept faces — visible as spurious wireframe lines — that carry no
+           geometric information and should be merged away.  Edges with only 1
+           face neighbor are the actual hole boundary and are preserved.
+        4. Remove isolated vertices left behind after face deletion.
+        """
+        dist = self._bisect_eps
+
+        for cutter in self._get_live_cutters():
+            planes = self._get_cutter_planes_in_target_local(cutter)
+            if not planes:
+                continue
+
+            # Step 1 – bisect along each plane, collecting newly created edges.
+            bisect_new_edges = []
+            for plane_co, plane_no in planes:
+                geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
+                result = bmesh.ops.bisect_plane(
+                    bm,
+                    geom=geom,
+                    plane_co=plane_co,
+                    plane_no=plane_no,
+                    dist=dist,
+                    clear_inner=False,
+                    clear_outer=False,
+                )
+                bisect_new_edges.extend(
+                    e for e in result.get("geom_cut", [])
+                    if isinstance(e, bmesh.types.BMEdge)
+                )
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
+
+            # Step 2 – delete faces whose centroids lie inside this cutter.
+            faces_to_delete = [
+                f for f in bm.faces
+                if self._is_inside_planes(f.calc_center_median(), planes)
+            ]
+
+            if faces_to_delete:
+                bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
+
+            # Step 3 – dissolve bisect-created edges that are interior to kept
+            # faces (2 face links = seam line, not hole boundary).
+            seam_edges = [
+                e for e in bisect_new_edges
+                if e.is_valid and len(e.link_faces) == 2
+            ]
+            if seam_edges:
+                bmesh.ops.dissolve_edges(bm, edges=seam_edges, use_verts=True)
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
+
+            # Step 4 – remove vertices that are no longer part of any face.
+            isolated_verts = [v for v in bm.verts if not v.link_faces]
+            if isolated_verts:
+                bmesh.ops.delete(bm, geom=isolated_verts, context='VERTS')
+
+        bm.normal_update()
+
+    # ------------------------------------------------------------------
+    # Scene setup
+    # ------------------------------------------------------------------
+
     def setup_scene(self, context):
-        # 1. Clear scene safely
         if bpy.ops.object.mode_set.poll():
             bpy.ops.object.mode_set(mode='OBJECT')
-            
+
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
-        
-        # 2. Import the OBJ
+
         resolved_path = self.resolve_path(FILE_PATH)
         if not os.path.exists(resolved_path):
             self.report({'ERROR'}, f"File not found: {resolved_path}")
             return False
-            
+
         bpy.ops.wm.obj_import(filepath=resolved_path)
         if not context.selected_objects:
             return False
-            
+
         self.target = context.selected_objects[0]
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+        self._export_matrix = self.target.matrix_world.copy()
         self.target.location = (0, 0, 0)
-        
-        # --- THE FIX: MAKE IT A HOLLOW SHELL ---
-        solid_mod = self.target.modifiers.new(name="Hollow_Shell", type='SOLIDIFY')
-        solid_mod.thickness = 0.0001
-        solid_mod.offset = 0.0
-        
-        # 3. Create Cutters
+
+        # Store the uncut mesh so we can restore it on demand.
+        self._store_original_mesh()
+
         dim = self.target.dimensions
         avg = (dim.x + dim.y + dim.z) / 3
+        self._bisect_eps = avg * BISECT_EPSILON_FACTOR
+
         self._create_cutters(context, dim, avg)
-        if LOAD_CUTS:
+        if LOAD_CUTS and os.path.exists(self.resolve_path(CUTS_FILE_PATH)):
             self.load_cut_transforms()
-            
+
         context.view_layer.objects.active = self.target
-        
-        # 4. Viewport Zoom & Gizmo Fix
+
         for window in context.window_manager.windows:
             for area in window.screen.areas:
                 if area.type == 'VIEW_3D':
-                    # --- NEW: Enable transform gizmos by default ---
                     if area.spaces.active:
                         area.spaces.active.show_gizmo = True
                         area.spaces.active.show_gizmo_object_translate = True
                         area.spaces.active.show_gizmo_object_rotate = True
                         area.spaces.active.show_gizmo_object_scale = True
-                        
+
                     for region in area.regions:
                         if region.type == 'WINDOW':
                             with context.temp_override(window=window, area=area, region=region):
                                 bpy.ops.view3d.view_all(center=False)
                             break
-                            
+
         return True
 
-    def toggle_booleans(self):
+    # ------------------------------------------------------------------
+    # Cut toggle
+    # ------------------------------------------------------------------
+
+    def toggle_cuts(self):
         if not self._require_live_scene_objects():
             return False
 
         if not self._is_cutting:
-            # Enable Booleans
-            for c in self.cutters:
-                mod = self.target.modifiers.new(name=c.name, type='BOOLEAN')
-                mod.object = c
-                mod.solver = 'EXACT'
-                mod.operation = 'DIFFERENCE'
+            # Restore the original mesh, then apply all cuts.
+            self._restore_original_mesh()
+
+            bm = bmesh.new()
+            bm.from_mesh(self.target.data)
+            self._apply_all_cuts_to_bm(bm)
+            bm.to_mesh(self.target.data)
+            bm.free()
+            self.target.data.update()
+
             self._is_cutting = True
-            print("MODE: CUTTING (Live Calculation)")
+            print("MODE: CUTTING (Knife)")
         else:
-            # Remove Booleans for fast moving
-            for c in self.cutters:
-                if c.name in self.target.modifiers:
-                    self.target.modifiers.remove(self.target.modifiers[c.name])
+            self._restore_original_mesh()
             self._is_cutting = False
             print("MODE: MOVE (Zero Lag)")
 
         return True
 
+    # ------------------------------------------------------------------
+    # Export
+    # ------------------------------------------------------------------
+
+    def _build_export_object(self, context):
+        """Create a temporary export object with cuts applied at the original
+        world position.  Caller is responsible for removing the object.
+
+        A temporary copy is used so the live target (and its child cutters) are
+        never moved, avoiding modal-state corruption.
+        """
+        # Build a fresh bmesh from the stored uncut snapshot.
+        bm = bmesh.new()
+        temp_mesh = bpy.data.meshes.new("_knife_export_temp")
+        temp_mesh.from_pydata(
+            self._original_verts, self._original_edges, self._original_faces
+        )
+        temp_mesh.update()
+        bm.from_mesh(temp_mesh)
+
+        self._apply_all_cuts_to_bm(bm)
+
+        bm.to_mesh(temp_mesh)
+        bm.free()
+        temp_mesh.update()
+
+        temp_obj = bpy.data.objects.new("_knife_export_temp", temp_mesh)
+        # Apply the original world matrix so the exported vertices match the
+        # position of the source OBJ file.
+        temp_obj.matrix_world = self._export_matrix
+        context.collection.objects.link(temp_obj)
+        return temp_obj
+
     def export_mesh(self, context):
-        """Exports the target mesh with all current boolean cuts applied."""
+        """Export the cut result as a single-layer surface OBJ."""
         if not self._require_live_scene_objects():
             return False
 
         self.save_cut_transforms()
 
-        # 1. Temporarily enforce CUTTING mode so the export has the holes
-        was_cutting = self._is_cutting
-        if not was_cutting:
-            self.toggle_booleans()
-            
-        # 2. Isolate selection to the target object only
-        bpy.ops.object.select_all(action='DESELECT')
-        self.target.select_set(True)
-        context.view_layer.objects.active = self.target
-        
-        # 3. Resolve path and ensure directories exist
         resolved_export_path = self.resolve_path(EXPORT_FILE_PATH, allow_missing_parent=True)
         export_dir = os.path.dirname(resolved_export_path)
         if export_dir and os.path.isfile(export_dir):
@@ -388,58 +598,73 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             resolved_export_path = os.path.join(export_dir, os.path.basename(resolved_export_path))
         if export_dir and not os.path.exists(export_dir):
             os.makedirs(export_dir, exist_ok=True)
-            
-        print(f"Attempting to export cut mesh to: {resolved_export_path}")
-        
-        try:
-            # Modern OBJ export (Blender 3.2+), applies modifiers automatically
-            bpy.ops.wm.obj_export(
-                filepath=resolved_export_path,
-                export_selected_objects=True
-            )
-            self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
-            print(f"SUCCESS: Exported to {resolved_export_path}")
-        except AttributeError:
-            # Fallback for older Blender versions (<3.2)
-            bpy.ops.export_scene.obj(
-                filepath=resolved_export_path,
-                use_selection=True,
-                use_mesh_modifiers=True
-            )
-            self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
-            print(f"SUCCESS: Exported to {resolved_export_path}")
-        except Exception as e:
-            self.report({'ERROR'}, f"Export failed: {str(e)}")
-            print(f"ERROR: Export failed: {str(e)}")
-            
-        # 4. Restore previous toggle state (if you were in Move mode, go back to it)
-        if not was_cutting:
-            self.toggle_booleans()
-            
-        # Reselect cutters so the user can keep working immediately
-        for c in self.cutters:
-            c.select_set(True)
 
-        return True
+        print(f"Attempting to export cut mesh to: {resolved_export_path}")
+
+        export_obj = self._build_export_object(context)
+        if export_obj is None:
+            return False
+
+        success = False
+        try:
+            bpy.ops.object.select_all(action='DESELECT')
+            export_obj.select_set(True)
+            context.view_layer.objects.active = export_obj
+
+            try:
+                # Blender 3.2+
+                bpy.ops.wm.obj_export(
+                    filepath=resolved_export_path,
+                    export_selected_objects=True,
+                )
+            except AttributeError:
+                # Older Blender
+                bpy.ops.export_scene.obj(
+                    filepath=resolved_export_path,
+                    use_selection=True,
+                    use_mesh_modifiers=False,
+                )
+
+            self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
+            print(f"SUCCESS: Exported to {resolved_export_path}")
+            success = True
+        except Exception as exc:
+            self.report({'ERROR'}, f"Export failed: {exc}")
+            print(f"ERROR: Export failed: {exc}")
+        finally:
+            temp_mesh = export_obj.data
+            bpy.data.objects.remove(export_obj, do_unlink=True)
+            bpy.data.meshes.remove(temp_mesh)
+
+            # Restore selection so the user can keep working immediately.
+            context.view_layer.objects.active = self.target
+            for c in self._get_live_cutters():
+                c.select_set(True)
+
+        return success
+
+    # ------------------------------------------------------------------
+    # Modal loop
+    # ------------------------------------------------------------------
 
     def modal(self, context, event):
         if self._session_id != type(self)._active_session_id:
             return {'CANCELLED'}
 
         if event.type == 'K' and event.value == 'PRESS':
-            if not self.toggle_booleans():
+            if not self.toggle_cuts():
                 return {'CANCELLED'}
 
         elif event.type == 'S' and event.value == 'PRESS':
             if not self.save_cut_transforms():
                 return {'CANCELLED'}
-            
+
         elif event.type == 'E' and event.value == 'PRESS':
             if not self.export_mesh(context):
                 return {'CANCELLED'}
-            
+
         elif event.type == 'ESC':
-            print("Interactive Cutter Stopped.")
+            print("Knife Cutter Stopped.")
             return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -449,22 +674,25 @@ class MESH_OT_InteractiveCutter(bpy.types.Operator):
             type(self)._active_session_id += 1
             self._session_id = type(self)._active_session_id
             context.window_manager.modal_handler_add(self)
-            print("RUNNING: Press 'K' to toggle cuts, 'S' to save cuts, 'E' to export, 'ESC' to stop script.")
+            print("RUNNING: Press 'K' to toggle cuts, 'S' to save cuts, 'E' to export, 'ESC' to stop.")
             return {'RUNNING_MODAL'}
         return {'CANCELLED'}
 
+
 # --- RUN SCRIPT ---
 def register():
-    bpy.utils.register_class(MESH_OT_InteractiveCutter)
+    bpy.utils.register_class(MESH_OT_KnifeCutter)
+
 
 def unregister():
-    bpy.utils.unregister_class(MESH_OT_InteractiveCutter)
+    bpy.utils.unregister_class(MESH_OT_KnifeCutter)
+
 
 if __name__ == "__main__":
     try:
         unregister()
-    except:
+    except Exception:
         pass
-        
+
     register()
-    bpy.ops.mesh.interactive_cutter()
+    bpy.ops.mesh.knife_cutter()
