@@ -21,6 +21,7 @@ import simulation
 import utility
 import common
 import configuration
+from pathlib import Path
 
 import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
 import plotly.io as pio
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
     # load geometry data
-    file_path = directory['data'] / f'{name_prefix}_geometry.npz'
+    file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     input_arguments['name_prefix'] = name_prefix
     input_arguments['geometry_data'] = geometry_data
     input_arguments['save_result_flag'] = save_result_flag
-    input_arguments['result_folder'] = directory['result']
+    input_arguments['result_folder'] = Path('/home/j/Desktop/ssd/git/PyHeartSim/result')
     input_arguments['s1'] = s1
     input_arguments['s2'] = s2
     input_arguments['simulation_parameters'] = simulation_parameters
@@ -161,7 +162,7 @@ if __name__ == "__main__":
 
     # compute local activation time
     file_name = f'{name_prefix}_simulation_results_{s1}.npz'
-    simulation_results = dict(np.load(directory['result'] / file_name, allow_pickle=False)) # load simulation results
+    simulation_results = dict(np.load(input_arguments['result_folder'] / file_name, allow_pickle=False)) # load simulation results
     electrogram_unipolar = simulation_results['electrogram_unipolar']
     lat_electrode = utility.lat_map.compute_electrode_lat(electrogram_unipolar)
 
@@ -170,7 +171,7 @@ if __name__ == "__main__":
 
     # plot local activation time map
     if plot_lat_map_flag == 1:
-        fig_name = directory['result'] / f'{name_prefix}_lat_{s1}.png'
+        fig_name = input_arguments['result_folder'] / f'{name_prefix}_lat_{s1}.png'
         
         geometry_flag = simulation_results['geometry_flag']
         utility.lat_map.plot(voxel_electrode, lat_electrode, geometry_flag, fig_name)
@@ -178,7 +179,7 @@ if __name__ == "__main__":
 
     # save lat to simulation_results
     simulation_results['lat_electrode'] = lat_electrode
-    np.savez(directory['result'] / file_name, **simulation_results)
+    np.savez(input_arguments['result_folder'] / file_name, **simulation_results)
 
     # compute conduction velocity
     conduction_velocity_vectors, conduction_velocity_magnitudes, conduction_velocity_mean = utility.conduction_velocity.compute(simulation_results, geometry_data)
@@ -188,7 +189,7 @@ if __name__ == "__main__":
     do_flag = 1
     if do_flag == 1: 
         # load simulation results
-        simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
+        simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
 
         if simulation_parameters['compute_electrogram_flag'] == 1:
             signal = simulation_results['electrogram_unipolar']
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             axes[i].plot(signal[:, eid])
 
         plt.tight_layout()
-        plt.savefig(directory['result'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}.png', dpi=300)
+        plt.savefig(input_arguments['result_folder'] / f'{name_prefix}_ap_egm_{simulation_parameters['heart_model_flag']}_{simulation_parameters['arrhythmia_flag']}_{s1}.png', dpi=300)
         plt.close()
 
     # display simulation movie
@@ -215,14 +216,14 @@ if __name__ == "__main__":
     if do_flag == 1:
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
             # load simulation results
-            simulation_results = dict(np.load(directory['result'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
+            simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results_{s1}.npz', allow_pickle=False))
 
             save_movie_flag = 1 # 1: save movie. 0: do not save movie
             starting_time = 0 # 0 # ms
             ending_time = [] # ms. []: till the end. or specify a value
 
-            simulation_results_file_name = directory['result'] / f'{name_prefix}_simulation_results_{s1}.gif'
-            movie_save_dir = directory['result'] / simulation_results_file_name
+            simulation_results_file_name = input_arguments['result_folder'] / f'{name_prefix}_simulation_results_{s1}.gif'
+            movie_save_dir = input_arguments['result_folder'] / simulation_results_file_name
 
             in_arg = {}
             in_arg['save_movie_flag'] = save_movie_flag
