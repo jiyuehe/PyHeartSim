@@ -37,11 +37,6 @@ def run_simulation(input_arguments):
 
     n_voxel = geometry_data['voxel'].shape[0]
 
-    if simulation_parameters['geometry_flag'] == 2: # long slab for computing conduction velocity
-        x_coordinates = geometry_data['voxel'][:, 0]
-        voxels_1 = np.where(x_coordinates == np.min(x_coordinates))[0]
-        arrhythmia_parameters['s1_pacing_voxel_id'] = voxels_1
-
     # fiber orientations
     D0 = simulation.equation_parts.load_fiber(n_voxel)
 
@@ -92,10 +87,7 @@ def run_simulation(input_arguments):
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
-        if name_prefix == 'long_slab': # long slab simulation is for computing conduction velocity
-            np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
-        elif name_prefix != 'long_slab':
-            np.savez(result_folder / f'{name_prefix}_simulation_results_{s1}', **simulation_results)
+        np.savez(result_folder / f'{name_prefix}_simulation_results_{s1}', **simulation_results)
 
 #%%
 # If running this script directly, the following code block will be executed. 

@@ -28,8 +28,7 @@ directory = configuration.directory_setup()
 geometry_flag = 2
 # 0: 2D sheet
 # 1: 3D slab, typical shape
-# 2: 3D slab, long, for computing conduction velocity
-# 3: 3D hollow cube
+# 2: 3D hollow cube
 
 voxel = []
 neighbor_id_2d = []
@@ -57,20 +56,14 @@ match geometry_flag:
             for j in range(ny):
                 voxel[id, :] = [xCoordinates[i], yCoordinates[j], 0]
                 id += 1
-    case 1 | 2 | 3: # 3D slab
+    case 1 | 2: # 3D slab
         if geometry_flag == 1: # regular slab
             name_prefix = 'regular_slab'
             # half lengths, unit: mm
             lx = 40/2
             ly = 50/2
             lz = 20/2
-        elif geometry_flag == 2: # long slab
-            name_prefix = 'long_slab'
-            # half lengths, unit: mm
-            lx = 100/2
-            ly = 10/2
-            lz = 10/2
-        elif geometry_flag == 3: # hollow cube
+        elif geometry_flag == 2: # hollow cube
             name_prefix = 'hollow_cube'
             # half lengths, unit: mm
             lx = 64/2
