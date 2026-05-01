@@ -42,17 +42,15 @@ def directory_setup():
 def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = 'sheet'
-    # name_prefix = 'long_slab'
-    # name_prefix = '101_1-LA FAM1'
-    name_prefix = '102_1-lagood'
+    name_prefix = '99_2-LaFAM_cartofinder_data_refined'
+    # name_prefix = '100_1-LA FAM1'
+    # name_prefix = '101_1-lagood'
     
     return name_prefix
 
 def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
     if name_prefix == 'sheet':
         geometry_flag = 0  # 2D
-    elif name_prefix == 'long_slab':
-        geometry_flag = 2  # long slab for computing conduction velocity
     else:
         geometry_flag = 1  # 3D
 
@@ -84,21 +82,18 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
 
     # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
-        params = dict(pacing_start_time=10,  pacing_cycle_length=300,
-                      s1_t=0,   s1_s2_delta_t=0)
+        params = dict(pacing_start_time=10, pacing_cycle_length=300, s1_t=0, s1_s2_delta_t=0)
     elif simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
-        params = dict(pacing_start_time=0,   pacing_cycle_length=0,
-                      s1_t=0,   s1_s2_delta_t=350)
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=350)
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging, manually assign s1 and s2 region
-        params = dict(pacing_start_time=0,   pacing_cycle_length=0,
-                      s1_t=0,   s1_s2_delta_t=230)
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=230)
     arrhythmia_parameters = {
-        'pacing_start_time':   params['pacing_start_time'],  # ms
+        'pacing_start_time': params['pacing_start_time'], # ms
         'pacing_cycle_length': params['pacing_cycle_length'], # ms
-        's1_pacing_voxel_id':  s1,                           # node id for s1 pacing
-        's2_pacing_voxel_id':  s2,                           # node id for s2 pacing
-        's1_t':                params['s1_t'],                # ms. time of s1 pacing
-        's1_s2_delta_t':       params['s1_s2_delta_t'],      # ms. time interval between s1 and s2
+        's1_pacing_voxel_id': s1, # node id for s1 pacing
+        's2_pacing_voxel_id': s2, # node id for s2 pacing
+        's1_t': params['s1_t'], # ms. time of s1 pacing
+        's1_s2_delta_t': params['s1_s2_delta_t'], # ms. time interval between s1 and s2
     }
 
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
@@ -118,21 +113,21 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
 
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
         heart_model_parameters = {
-            'tau_in_voxel':    np.ones(n_voxel) * ms['tau_in'],    # determines the shape of action potential
-            'tau_out_voxel':   np.ones(n_voxel) * ms['tau_out'],   # determines the shape of action potential
-            'tau_open_voxel':  np.ones(n_voxel) * ms['tau_open'],  # determines the shape of action potential
+            'tau_in_voxel': np.ones(n_voxel) * ms['tau_in'], # determines the shape of action potential
+            'tau_out_voxel': np.ones(n_voxel) * ms['tau_out'], # determines the shape of action potential
+            'tau_open_voxel': np.ones(n_voxel) * ms['tau_open'], # determines the shape of action potential
             'tau_close_voxel': np.ones(n_voxel) * ms['tau_close'], # determines the shape of action potential
-            'v_gate_voxel':    np.ones(n_voxel) * ms['v_gate'],    # gating variable threshold
-            'c_voxel':         np.ones(n_voxel) * 4.0,             # diffusion coefficient
+            'v_gate_voxel': np.ones(n_voxel) * ms['v_gate'], # gating variable threshold
+            'c_voxel': np.ones(n_voxel) * 4.0, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {
-            'k_voxel':         np.ones(n_voxel) * ap['k'],
-            'a_voxel':         np.ones(n_voxel) * ap['a'],
+            'k_voxel': np.ones(n_voxel) * ap['k'],
+            'a_voxel': np.ones(n_voxel) * ap['a'],
             'epsilon_0_voxel': np.ones(n_voxel) * ap['epsilon_0'],
-            'mu1_voxel':       np.ones(n_voxel) * ap['mu1'],
-            'mu2_voxel':       np.ones(n_voxel) * ap['mu2'],
-            'c_voxel':         np.ones(n_voxel) * 1.6,             # diffusion coefficient
+            'mu1_voxel': np.ones(n_voxel) * ap['mu1'],
+            'mu2_voxel': np.ones(n_voxel) * ap['mu2'],
+            'c_voxel': np.ones(n_voxel) * 1.6, # diffusion coefficient
         }
 
     # scale heart model time
