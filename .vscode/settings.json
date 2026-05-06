@@ -1,5 +1,8 @@
 {
     "python.defaultInterpreterPath": "/home/j/Desktop/ssd/myenv/bin/python3",
-    // "python.defaultInterpreterPath": "./venv/bin/python", 
-    "python.terminal.activateEnvironment": true
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.env.linux": {
+        "VIRTUAL_ENV": "/home/j/Desktop/ssd/myenv",
+        "PATH": "/home/j/Desktop/ssd/myenv/bin:${env:PATH}"
+    }
 }
