@@ -468,6 +468,40 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
 
         bm.normal_update()
 
+    def _prepare_export_bmesh(self, bm):
+        """Finalize the export mesh for the simulation OBJ pipeline.
+
+        The downstream loader expects triangle-only ``f`` records and ignores
+        materials and normals, so we triangulate here before writing the OBJ.
+        """
+        bmesh.ops.triangulate(bm, faces=list(bm.faces))
+        bm.normal_update()
+
+    def _sanitize_exported_obj(self, export_path):
+        """Strip OBJ records that the simulation mesh loader does not use."""
+        with open(export_path, 'r', encoding='utf-8') as fid:
+            lines = fid.readlines()
+
+        sanitized_lines = []
+        for line in lines:
+            if line.startswith(('mtllib ', 'usemtl ', 'vn ', 's ')):
+                continue
+
+            if line.startswith('f '):
+                tokens = line.split()[1:]
+                vertex_indices = [token.split('/')[0] for token in tokens]
+                sanitized_lines.append(f"f {' '.join(vertex_indices)}\n")
+                continue
+
+            sanitized_lines.append(line)
+
+        with open(export_path, 'w', encoding='utf-8') as fid:
+            fid.writelines(sanitized_lines)
+
+        material_path = os.path.splitext(export_path)[0] + '.mtl'
+        if os.path.exists(material_path):
+            os.remove(material_path)
+
     # ------------------------------------------------------------------
     # Scene setup
     # ------------------------------------------------------------------
@@ -572,6 +606,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         bm.from_mesh(temp_mesh)
 
         self._apply_all_cuts_to_bm(bm)
+        self._prepare_export_bmesh(bm)
 
         bm.to_mesh(temp_mesh)
         bm.free()
@@ -624,6 +659,8 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                     use_selection=True,
                     use_mesh_modifiers=False,
                 )
+
+            self._sanitize_exported_obj(resolved_export_path)
 
             self.report({'INFO'}, f"Exported successfully to {resolved_export_path}")
             print(f"SUCCESS: Exported to {resolved_export_path}")
