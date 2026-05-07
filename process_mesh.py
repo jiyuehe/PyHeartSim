@@ -26,6 +26,8 @@ import configuration
 # directory folder
 directory = configuration.directory_setup()
 
+mesh_id = 6
+
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
 name_prefixes = [mesh_file.stem for mesh_file in mesh_files]
@@ -58,7 +60,7 @@ if do_flag == 1: # load the mesh and save as figure
 # automatically refine the mesh and save as figure
 do_flag = 0
 if do_flag == 1: 
-    for n in [99]:#range(len(name_prefixes)):
+    for n in [mesh_id]:#range(len(name_prefixes)):
         name_prefix = name_prefixes[n]
         print(f'processing {name_prefix}')
 
@@ -134,7 +136,7 @@ if do_flag == 1:
 
 #%%
 # convert mesh to Cartesian voxels
-for n in [99]:#range(len(name_prefixes)):
+for n in [mesh_id]:#range(len(name_prefixes)):
     name_prefix = name_prefixes[n]
     print(f'processing {name_prefix}')
 
