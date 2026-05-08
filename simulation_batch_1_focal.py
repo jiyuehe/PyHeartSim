@@ -21,8 +21,9 @@ import common
 import configuration
 
 #%% 
+mesh_id = 6
+name_prefix = configuration.mesh_name(mesh_id) # get mesh name prefix
 directory = configuration.directory_setup() # set up directories
-name_prefix = configuration.mesh_name() # get mesh name prefix
 
 n_simulations = 1000
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
