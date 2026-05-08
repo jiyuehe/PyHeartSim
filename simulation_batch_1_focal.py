@@ -29,7 +29,7 @@ save_result_flag = 1 # 1: save simulation results, 0: do not save simulation res
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
 # load geometry data
-file_path = directory['data'] / f'{name_prefix}_geometry.npz'
+file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 

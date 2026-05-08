@@ -42,7 +42,8 @@ def directory_setup():
 def mesh_name():
     # atrial mesh .obj file name
     # name_prefix = 'sheet'
-    name_prefix = '6_2-LA MEM'
+    name_prefix = '0_1-la1 78 240'
+    # name_prefix = '6_2-LA MEM'
     # name_prefix = '99_2-LaFAM_cartofinder_data'
     # name_prefix = '100_1-LA FAM1'
     # name_prefix = '101_1-lagood'
