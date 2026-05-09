@@ -16,15 +16,18 @@
 # This script is useful for comparing heart models.
 
 #%%
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 import matplotlib.pyplot as plt # for plotting
-import configuration
+
+import os
+from pathlib import Path
+script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
+os.chdir(script_dir) # change the working directory
+script_dir = Path(script_dir)
 
 #%%
-directory = configuration.directory_setup()
+directory = {}
+directory['home'] = script_dir
 directory['result'] = directory['home'] / 'result'
 directory['result'].mkdir(exist_ok=True)
 
