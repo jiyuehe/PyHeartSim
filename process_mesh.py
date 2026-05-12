@@ -26,7 +26,7 @@ import configuration
 # directory folder
 directory = configuration.directory_setup()
 
-mesh_id = 100
+mesh_id = 98
 
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
