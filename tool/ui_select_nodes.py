@@ -33,7 +33,7 @@ name_prefix = configuration.mesh_name(0)
 file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
-node = geometry_data['voxel']
+node = geometry_data['voxel3mm']
 
 flag_file = directory['result'] / f'{name_prefix}_node_flag.npy'
 if os.path.exists(flag_file):
