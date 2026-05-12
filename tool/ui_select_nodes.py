@@ -15,6 +15,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import threading
+import webbrowser
 import numpy as np
 from flask import Flask, render_template, jsonify, request
 import configuration
@@ -26,9 +28,9 @@ directory = configuration.directory_setup()
 directory['result'] = directory['home'] / 'result'
 directory['result'].mkdir(exist_ok=True)
 
-name_prefix = configuration.mesh_name()
+name_prefix = configuration.mesh_name(0)
 
-file_path = directory['data'] / f'{name_prefix}_geometry.npz'
+file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 node = geometry_data['voxel']
@@ -74,5 +76,7 @@ def save_flags():
 
 if __name__ == '__main__':
     port = 5000
-    print(f'Starting 3D Node Selection Tool at http://127.0.0.1:{port}')
+    url = f'http://127.0.0.1:{port}'
+    print(f'Starting 3D Node Selection Tool at {url}')
+    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     app.run(host='127.0.0.1', port=port, debug=False)
