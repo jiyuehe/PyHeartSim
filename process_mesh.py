@@ -26,7 +26,7 @@ import configuration
 # directory folder
 directory = configuration.directory_setup()
 
-mesh_id = 7
+mesh_id = 97
 
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
@@ -36,25 +36,27 @@ name_prefixes = sorted(name_prefixes, key=lambda x: int(x.split('_')[0])) # sort
 do_flag = 0
 if do_flag == 1: # load the mesh and save as figure
     for name_prefix in name_prefixes:
-        print(f'processing {name_prefix}')
+        # if the png does not exist
+        png_path = directory['mesh_database'] / f'{name_prefix}.png'
+        if not png_path.exists():
+            print(f'processing {name_prefix}')
 
-        vertex, face = common.load_obj(directory['mesh_database'], name_prefix)
+            vertex, face = common.load_obj(directory['mesh_database'], name_prefix)
 
-        fig = plt.figure(figsize=(6, 6))
-        ax = fig.add_subplot(111, projection='3d')
-        poly = Poly3DCollection(
-            vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
-        )
-        ax.add_collection3d(poly)
-        ax.view_init(elev=70, azim=-70)
-        ax.set_axis_off()
-        common.set_axes_equal(ax)
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(111, projection='3d')
+            poly = Poly3DCollection(
+                vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+            )
+            ax.add_collection3d(poly)
+            ax.view_init(elev=70, azim=-70)
+            ax.set_axis_off()
+            common.set_axes_equal(ax)
 
-        png_path = str(directory['mesh_database'] / f'{name_prefix}.png')
-        plt.savefig(png_path, dpi=100)
-        plt.close(fig)
+            plt.savefig(str(png_path), dpi=100)
+            plt.close(fig)
 
-        common.crop_image(png_path)
+            common.crop_image(png_path)
 
 #%%
 # automatically refine the mesh and save as figure
