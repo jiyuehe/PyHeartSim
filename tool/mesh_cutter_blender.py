@@ -11,14 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# mesh_cutter_blender_knife.py
-#
-# Rewrite of mesh_cutter_blender.py that uses direct bmesh bisect/delete
-# operations instead of Blender's Boolean modifier.  Because we never add a
-# Solidify modifier we avoid all volume-related errors and the heavyweight
-# BVH surface-filter pass on export.
-#
+
 # How cuts work
 # -------------
 # Each cutter object (cube or cylinder) is a convex mesh.  Its outward-facing
@@ -42,7 +35,7 @@ from mathutils import Vector
 from pathlib import Path
 
 # --- CONFIGURATION ---
-name_prefix = '2_2-lafam pr'
+name_prefix = '7_2-LA FAM'
 
 BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
@@ -417,7 +410,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                 continue
 
             # Step 1 – bisect along each plane, collecting newly created edges.
-            bisect_new_edges = []
+            bisect_new_edges = set()
             for plane_co, plane_no in planes:
                 geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
                 result = bmesh.ops.bisect_plane(
@@ -429,7 +422,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                     clear_inner=False,
                     clear_outer=False,
                 )
-                bisect_new_edges.extend(
+                bisect_new_edges.update(
                     e for e in result.get("geom_cut", [])
                     if isinstance(e, bmesh.types.BMEdge)
                 )
