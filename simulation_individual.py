@@ -95,7 +95,7 @@ def run_simulation(input_arguments):
 # If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
-    name_prefix = configuration.mesh_name() # get mesh name prefix
+    name_prefix = configuration.mesh_name(7) # get mesh name prefix
 
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
