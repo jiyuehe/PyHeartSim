@@ -58,6 +58,29 @@ if do_flag == 1: # load the mesh and save as figure
 
             common.crop_image(png_path)
 
+        png_path = directory['data'] / f'{name_prefix}_refined_cut.obj'
+        save_path = directory['data'] / f'{name_prefix}_refined_cut.png'
+        if png_path.exists() and (not save_path.exists()):
+            print(f'processing {name_prefix}')
+
+            vertex, face = common.load_obj(directory['data'], name_prefix + '_refined_cut')
+
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(111, projection='3d')
+            poly = Poly3DCollection(
+                vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+            )
+            ax.add_collection3d(poly)
+            ax.view_init(elev=70, azim=-70)
+            ax.set_axis_off()
+            common.set_axes_equal(ax)
+
+            
+            plt.savefig(str(save_path), dpi=100)
+            plt.close(fig)
+
+            common.crop_image(save_path)
+
 #%%
 # automatically refine the mesh and save as figure
 do_flag = 0
