@@ -25,7 +25,7 @@ import configuration
 #%%
 app = Flask(__name__, template_folder=script_dir, static_folder=script_dir, static_url_path='')
 
-mesh_id = 102
+mesh_id = 78
 name_prefix = configuration.mesh_name(mesh_id)
 
 directory = {

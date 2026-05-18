@@ -20,13 +20,16 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import utility
 import common
 from pathlib import Path
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import configuration
 
 #%%
 # directory folder
 directory = configuration.directory_setup()
 
-mesh_id = 102
+mesh_id = 78
 
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
