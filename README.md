@@ -58,3 +58,7 @@ Patient left atrium fibrillation simulation:
 2D rotor simulation:  
 <img src="example/2d_rotor.gif" alt="Demo" width="250" />  
 <img src="example/2d_rotor.png" alt="Demo" width="500" />  
+
+# Private notes for myself
+Mount from client  
+sudo mount 10.36.169.238:/home/j/Desktop/hdd/share_folder /mnt/share_folder  
