@@ -145,7 +145,7 @@ def mesh_name(mesh_id):
         99: '99_2-LaFAM_cartofinder_data',
         100: '100_1-LA FAM1',
         101: '101_1-lagood',
-        102: '102_2-1-1-ReLA FAM AT',
+        102: '102_2-LA FAM AFL1edit',
         103: '103_6-LA',
     }
 
