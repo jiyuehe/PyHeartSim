@@ -18,10 +18,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import threading
 import webbrowser
 import numpy as np
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, send_from_directory, jsonify, request
 import configuration
 
-app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__)))
+_tool_dir = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, template_folder=_tool_dir)
+
+@app.route('/ui_select_nodes.css')
+def serve_css():
+    return send_from_directory(_tool_dir, 'ui_select_nodes.css')
 
 # load geometry data
 directory = configuration.directory_setup()
