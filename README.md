@@ -61,4 +61,4 @@ Patient left atrium fibrillation simulation:
 
 # Private notes for myself
 Mount from client  
-sudo mount 10.36.169.238:/home/j/Desktop/hdd/share_folder /mnt/share_folder  
+sudo mount -t nfs 10.36.169.238:/mnt/hdd/jay/share_folder /mnt/jay
