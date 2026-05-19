@@ -21,7 +21,7 @@ import common
 import configuration
 
 #%% 
-mesh_id = 7 
+mesh_id = 87
 name_prefix = configuration.mesh_name(mesh_id) # get mesh name prefix
 directory = configuration.directory_setup() # set up directories
 
