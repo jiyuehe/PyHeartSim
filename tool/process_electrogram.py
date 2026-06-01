@@ -38,6 +38,7 @@ workspace_root = Path().resolve().parent # Path().resolve() returns an absolute 
 if str(workspace_root) not in sys.path:
     sys.path.insert(0, str(workspace_root))
 import common
+import configuration
 
 directory = {}
 directory['home'] = script_dir
@@ -51,7 +52,7 @@ directory['result'].mkdir(exist_ok=True)
 half_window_size = 500//2 # number of time points before and after the 2000 ms mark
 
 # load data
-name_prefix = '78_2-LA_1'
+name_prefix = configuration.mesh_name(102)
 
 data = np.load(directory['data_carto'] / f'{name_prefix}_carto_data.npz', allow_pickle=True)
 carto_data = {k: data[k] for k in data.files}
