@@ -35,7 +35,7 @@ from mathutils import Vector
 from pathlib import Path
 
 # --- CONFIGURATION ---
-name_prefix = '7_2-LA FAM'
+name_prefix = '78_2-LA_1'
 
 BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
@@ -51,9 +51,9 @@ N_CUT_CUBES = 4
 N_CUT_CYLINDERS = 1
 
 # Cutter sizing, expressed as a fraction of average target dimension.
-CUBE_SCALE_FACTOR = 0.15
-CYLINDER_RADIUS_FACTOR = 0.12
-CYLINDER_DEPTH_FACTOR = 0.30
+CUBE_SCALE_FACTOR = 0.3
+CYLINDER_RADIUS_FACTOR = 0.17
+CYLINDER_DEPTH_FACTOR = 0.5
 
 # Additional spacing so cutters spawn outside the target mesh bounds.
 SPAWN_MARGIN_FACTOR = 0.20
@@ -270,9 +270,9 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
 
     def _build_spawn_directions(self, count):
         base_dirs = [
-            Vector((3/4, 3/4, 0)), Vector((-3/4, -3/4, 0)),
-            Vector((3/4, -3/4, 0)), Vector((-3/4, 3/4, 0)),
-            Vector((0, 0, 1)), Vector((0, 0, -1)),
+            Vector((3/4, 1/8, -1/8)), Vector((-3/4, 1/8, -1/8)),
+            Vector((3/4, 1/8, 1/2)), Vector((-3/4, 1/8, 1/2)),
+            Vector((1/4, -1/4, 1/2)), Vector((0, 0, -1)),
             Vector((1, 1, 0)).normalized(), Vector((-1, 1, 0)).normalized(),
             Vector((1, 0, 1)).normalized(), Vector((-1, 0, 1)).normalized(),
             Vector((0, 1, 1)).normalized(), Vector((0, -1, 1)).normalized(),

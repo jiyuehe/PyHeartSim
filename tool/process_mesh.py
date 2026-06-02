@@ -25,11 +25,13 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import configuration
 
+import plotly.graph_objects as go
+
 #%%
 # directory folder
 directory = configuration.directory_setup()
 
-mesh_id = 78
+mesh_id = 99
 
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
@@ -155,6 +157,37 @@ if do_flag == 1:
 #             -> Laplacian Smooth (Smoothing steps set to 1)
 #         Remeshing: Isotropic Explicit Remeshing (Target Length (inter-vertex distance) set to 0.5 mm)
 
+#%%
+# automatically identify the tip of the pulmonary veins
+do_flag = 0
+if do_flag == 1:
+    for n in [mesh_id]:
+        name_prefix = name_prefixes[n]
+        print(f'processing {name_prefix}')
+
+        vertex, face = common.load_obj(directory['data'], name_prefix + '_refined')
+
+        do_flag = 0
+        if do_flag == 1:
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(111, projection='3d')
+            poly = Poly3DCollection(
+                vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+            )
+            ax.add_collection3d(poly)
+            ax.view_init(elev=70, azim=-70)
+            ax.set_axis_off()
+            common.set_axes_equal(ax)
+
+        # find neighbor vertices for each vertex
+        n_vertices = vertex.shape[0]
+        neighbor_vertices_ids = utility.mesh_related.find_neighbor_vertices(n_vertices, face)
+
+        # identify the tip of the pulmonary veins
+        center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_cluster_labels = utility.mesh_related.identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids)
+
+
+                    
 #%%
 # cut holes: cut the mitral valve, pulmonary veins, etc
 # NOTE:
