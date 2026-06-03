@@ -27,6 +27,11 @@
                     <span class="toggle-text">Latest</span>
                 </label>
                 <button id="btnSave">Save</button>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggleFullHue">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Full Hue for Colors</span>
+                </label>
             </div>
         </div>
         
@@ -89,8 +94,8 @@
                 // Normalize to 0-1
                 const norm = range === 0 ? 0 : (act - minVal) / range;
                 
-                // HSV colormap: hue from 0 to 240/360 (blue to red)
-                const hue = norm * (240.0 / 360.0);
+                // HSV colormap: hue from 0 to 240/360 (blue to red), or full 0-1 hue range
+                const hue = document.getElementById('toggleFullHue').checked ? norm : norm * (240.0 / 360.0);
                 const saturation = 1.0;
                 const value = 1.0;
                 
@@ -502,6 +507,16 @@
             } else {
                 setSliderEnabled(true);
                 navigateElectrodes(parseInt(document.getElementById('pageSlider').value));
+            }
+        });
+
+        document.getElementById('toggleFullHue').addEventListener('change', () => {
+            if (document.getElementById('toggleEarliest').checked) {
+                showSortedElectrodes('earliest');
+            } else if (document.getElementById('toggleLatest').checked) {
+                showSortedElectrodes('latest');
+            } else {
+                render3DPlot(true);
             }
         });
 
