@@ -153,7 +153,7 @@ def mesh_name(mesh_id):
 
     return name_prefix
 
-def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
+def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
     if name_prefix == 'sheet':
         geometry_flag = 0  # 2D
     else:
@@ -168,7 +168,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
         'voxel_id_of_simulation_electrode': geometry_data['voxel_id_of_simulation_electrode'], # electrode locations for computing electrograms
-        't_final': 500, # ms
+        't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
         'arrhythmia_flag': 4,
@@ -247,6 +247,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2):
     arrhythmia_parameters['pacing_cycle_length'] = arrhythmia_parameters['pacing_cycle_length'] / simulation_parameters['time_scale']
     arrhythmia_parameters['s1_t'] = arrhythmia_parameters['s1_t'] / simulation_parameters['time_scale']
     arrhythmia_parameters['s1_s2_delta_t'] = arrhythmia_parameters['s1_s2_delta_t'] / simulation_parameters['time_scale']
+    arrhythmia_parameters['node_flag'] = node_flag
     heart_model_parameters['c_voxel'] = heart_model_parameters['c_voxel'] * simulation_parameters['time_scale']
 
     return simulation_parameters, arrhythmia_parameters, heart_model_parameters

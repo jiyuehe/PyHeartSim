@@ -260,6 +260,11 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
     return u_next
 
 def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
+    ##############################
+    node_flag = arrhythmia_parameters['node_flag']
+    block_voxel_id = np.where(node_flag == 3)[0]
+    ##############################
+
     # geometry data
     neighbor_id_2d = geometry_data['neighbor_id_2d']
     Delta = geometry_data['Delta']
@@ -310,6 +315,16 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     # Pre-compute the Crank-Nicolson system matrix (I - dt/2 * L) - only once!
     I_gpu = cp_sparse.identity(n_voxel, format='csr', dtype=cp.float32)
     A_gpu_cached = I_gpu - (dt_float / 2.0) * L_matrix_gpu
+
+    # Pre-build blocked diffusion matrix (P_2d[:, 20] = 0 for block_voxel_id)
+    if len(block_voxel_id) > 0:
+        P_2d_blocked = P_2d.copy()
+        P_2d_blocked[block_voxel_id, 20] = 0.0
+        L_matrix_gpu_blocked = build_diffusion_matrix_gpu(P_2d_blocked, neighbor_id_2d_2, Delta_float)
+        A_gpu_cached_blocked = I_gpu - (dt_float / 2.0) * L_matrix_gpu_blocked
+    else:
+        L_matrix_gpu_blocked = L_matrix_gpu
+        A_gpu_cached_blocked = A_gpu_cached
     
     # Allocate GPU memory for CUDA kernels (CuPy arrays for unified memory access)
     d_u_current = cp.zeros(n_voxel, dtype=cp.float32)
@@ -340,6 +355,15 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
             print(f'simulating {(model_time_step+1)/total_model_time_steps*100:.1f}%')
         
         model_time = model_time_step * dt
+
+        # ##############################
+        if model_time >= 0 and model_time < 350 * dt:
+            active_L = L_matrix_gpu_blocked
+            active_A = A_gpu_cached_blocked
+        else:
+            active_L = L_matrix_gpu
+            active_A = A_gpu_cached
+        # ##############################
         
         # apply pacing - this is CPU-side since it has complex conditionals
         J_stim.fill(0.0)
@@ -360,7 +384,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         )
         
         # Step 2: Diffusion step (GPU Crank-Nicolson) - d_u_star already on GPU
-        u_next = crank_nicolson_diffusion_step_gpu(d_u_star, L_matrix_gpu, dt_float, method='gmres', A_gpu_cached=A_gpu_cached, tol=1e-5)
+        u_next = crank_nicolson_diffusion_step_gpu(d_u_star, active_L, dt_float, method='gmres', A_gpu_cached=active_A, tol=1e-5)
         
         # Update for next iteration (stay on GPU)
         d_u_current[:] = u_next
