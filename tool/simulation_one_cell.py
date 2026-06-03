@@ -16,11 +16,14 @@
 # This script is useful for comparing heart models.
 
 #%%
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import matplotlib.pyplot as plt # for plotting
 
 import os
-from pathlib import Path
 script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)

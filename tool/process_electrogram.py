@@ -13,17 +13,15 @@
 # limitations under the License.
 
 #%%
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import os
 from pathlib import Path
 script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the current script
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
-
-# add the workspace root to Python path
-import sys
-workspace_root = Path().resolve().parent # Path().resolve() returns an absolute path, the full path
-if str(workspace_root) not in sys.path:
-    sys.path.insert(0, str(workspace_root))
 
 import numpy as np
 from scipy.signal import find_peaks

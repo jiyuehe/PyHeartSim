@@ -27,15 +27,83 @@
 # NOTE: This approach assumes each cutter is a *convex* mesh.  Non-convex
 # cutters will produce unexpected results.
 
+#%%
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import common
+import plotly.graph_objects as go
+import numpy as np
+
+debug_plot = 0
+if debug_plot == 1:
+    file_dir = Path('/home/j/Desktop/hdd/share_folder/patient_data')
+    mesh_name = '99_2-LaFAM_cartofinder_data'
+    vertex, face = common.load_obj(file_dir, mesh_name+'_refined')
+
+    center_of_mass = vertex.mean(axis=0)
+
+    # load the 4 pulmonery vein tip vertices
+    tip_vertex = np.array([list(map(float, i.split())) for i in open(file_dir / f'{mesh_name}_tip_vertex.txt').read().splitlines()])
+
+    # build face list for Mesh3d
+    fi, fj, fk = face[:, 0], face[:, 1], face[:, 2]
+
+    fig = go.Figure(data=[
+        go.Mesh3d(
+            x=vertex[:, 0], y=vertex[:, 1], z=vertex[:, 2],
+            i=fi, j=fj, k=fk,
+            color='white', opacity=0.2,
+            lighting=dict(ambient=1.0, diffuse=0, specular=0, roughness=1, fresnel=0),
+            flatshading=True,
+        ),
+
+        # triangle edges: interleave [A, B, C, A, None] per triangle
+        go.Scatter3d(
+            x=np.stack([vertex[fi, 0], vertex[fj, 0], vertex[fk, 0], vertex[fi, 0], np.full(len(fi), None)], axis=1).ravel(),
+            y=np.stack([vertex[fi, 1], vertex[fj, 1], vertex[fk, 1], vertex[fi, 1], np.full(len(fi), None)], axis=1).ravel(),
+            z=np.stack([vertex[fi, 2], vertex[fj, 2], vertex[fk, 2], vertex[fi, 2], np.full(len(fi), None)], axis=1).ravel(),
+            mode='lines',
+            opacity=0.5,
+            line=dict(color='gray', width=1),
+        ),
+
+        # top 4 tip vertices as large red dots
+        go.Scatter3d(
+            x=tip_vertex[:, 0], y=tip_vertex[:, 1], z=tip_vertex[:, 2],
+            mode='markers',
+            marker=dict(size=8, color='red'),
+        ),
+
+        # center of mass as a black dot
+        go.Scatter3d(
+            x=[center_of_mass[0]], y=[center_of_mass[1]], z=[center_of_mass[2]],
+            mode='markers',
+            marker=dict(size=8, color='black'),
+        ),
+
+        # lines from each tip vertex to the center of mass
+        go.Scatter3d(
+            x=np.stack([tip_vertex[:, 0], np.full(4, center_of_mass[0]), np.full(4, None)], axis=1).ravel(),
+            y=np.stack([tip_vertex[:, 1], np.full(4, center_of_mass[1]), np.full(4, None)], axis=1).ravel(),
+            z=np.stack([tip_vertex[:, 2], np.full(4, center_of_mass[2]), np.full(4, None)], axis=1).ravel(),
+            mode='lines',
+            line=dict(color='black', width=3),
+        ),
+    ])
+    fig.update_layout(scene=dict(aspectmode='data'))
+    fig.show() # opens in browser
+
+#%%
 import bpy
 import bmesh
 import os
 import ast
 from mathutils import Vector
-from pathlib import Path
 
 # --- CONFIGURATION ---
-name_prefix = '78_2-LA_1'
+name_prefix = '99_2-LaFAM_cartofinder_data'
 
 BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
@@ -61,7 +129,6 @@ SPAWN_MARGIN_FACTOR = 0.20
 # Relative epsilon for plane-distance tests and bisect snapping.  Applied as a
 # fraction of the target mesh's average dimension so it scales with the model.
 BISECT_EPSILON_FACTOR = 1e-5
-
 
 class MESH_OT_KnifeCutter(bpy.types.Operator):
     """Press K to toggle Cut Mode, S to save cuts, E to Export, ESC to cancel."""

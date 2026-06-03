@@ -13,19 +13,17 @@
 # limitations under the License.
 
 #%%
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import utility
 import common
-from pathlib import Path
-
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import configuration
-
-import plotly.graph_objects as go
 
 #%%
 # directory folder
@@ -186,8 +184,10 @@ if do_flag == 1:
         # identify the tip of the pulmonary veins
         center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_cluster_labels = utility.mesh_related.identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids)
 
+        # write the tip vertex and the center of massto a text file
+        tip_vertex_path = directory['data'] / f'{name_prefix}_tip_vertex.txt'
+        np.savetxt(tip_vertex_path, top_4_tip_vertex, fmt='%.6f')
 
-                    
 #%%
 # cut holes: cut the mitral valve, pulmonary veins, etc
 # NOTE:

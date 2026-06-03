@@ -14,6 +14,9 @@
 
 import numpy as np
 import plotly.graph_objects as go
+from scipy.spatial import distance
+from scipy.cluster.hierarchy import linkage, fcluster
+import matplotlib.pyplot as plt
 
 # find neighbor vertices for each vertex
 def find_neighbor_vertices(n_vertices, face):
@@ -130,16 +133,14 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
     highest_vertex_id = np.unique(highest_vertex_id_of_each_trail)
     highest_vertex = vertex[highest_vertex_id, :]
 
-    # combine the trails belong to the same highest_vertex
-    vertex_cluster_labels = np.zeros(n_vertices, dtype=int)
+    # give labels to the each vertex based on the highest_vertex it leads to. vertices leading to the same highest_vertex will have the same label
+    vertex_labels = np.zeros(n_vertices, dtype=int)
     for i, trail in enumerate(vertex_id_trail):
-        vertex_cluster_labels[trail] = cluster_labels[np.where(highest_vertex_id == highest_vertex_id_of_each_trail[i])[0][0]]
+        vertex_labels[trail] = trail[-1]
 
     # cluster the highest_vertex based on their spatial proximity
     distanceThreshold = 25  # unit: mm
-    from scipy.spatial import distance
     pairwise_distances = distance.pdist(highest_vertex) # condensed distance matrix
-    from scipy.cluster.hierarchy import linkage, fcluster
     Z = linkage(pairwise_distances, method='single')
     cluster_labels = fcluster(Z, t=distanceThreshold, criterion='distance')
 
@@ -150,9 +151,9 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         tip_vertex_id = cluster_member_ids[np.argmax(cluster_member_distances)]
 
         # assign the same label to all vertices in the same cluster
-        vertex_cluster_labels[vertex_cluster_labels == cluster_id] = tip_vertex_id
+        vertex_labels[np.isin(vertex_labels, cluster_member_ids)] = tip_vertex_id
 
-    tip_vertex_ids = np.unique(vertex_cluster_labels)
+    tip_vertex_ids = np.unique(vertex_labels)
 
     # find the 4 tip vertices with the largest distance to center of mass
     tip_vertex_distances = vertex_to_COM_distance[tip_vertex_ids]
@@ -160,20 +161,28 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
     top_4_tip_vertex = vertex[top_4_tip_vertex_ids, :]
 
     debug_plot = 0
-    if debug_plot == 1: # show the regions of the 4 tip vertices
-        cluster_colors = [[1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 1, 0]]  # red, blue, green, yellow
-        vertex_color = np.ones((n_vertices, 3))
-        for i in range(4):
-            vertex_color[vertex_cluster_labels == top_4_tip_vertex_ids[i], :] = cluster_colors[i]
+    if debug_plot == 1: # show all the regions
+        n_regions = len(tip_vertex_ids)
+        cluster_colors = plt.colormaps['tab20'](np.linspace(0, 1, n_regions))
+        vertex_color = np.ones((n_vertices, 4))
+        for i in range(n_regions):
+            vertex_color[vertex_labels == tip_vertex_ids[i], :] = cluster_colors[i]
 
+        # 3d scatter plot with vertex colors
+        fig = go.Figure(data=[
+            go.Scatter3d(
+                x=vertex[:, 0], y=vertex[:, 1], z=vertex[:, 2],
+                mode='markers',
+                marker=dict(size=2, color=['rgba({},{},{},{})'.format(int(r*255), int(g*255), int(b*255), a) for r, g, b, a in vertex_color]),
+            ),
+        ])
+        fig.update_layout(scene=dict(aspectmode='data'))
+        fig.show() # opens in browser
+
+    debug_plot = 0
+    if debug_plot == 1: # show the regions of the 4 tip vertices
         # build face list for Mesh3d
         fi, fj, fk = face[:, 0], face[:, 1], face[:, 2]
-
-        in_cluster = np.isin(vertex_cluster_labels, top_4_tip_vertex_ids)
-        vertex_color_str = [
-            'rgba({},{},{},1)'.format(int(r*255), int(g*255), int(b*255)) if in_cluster[idx] else 'rgba(0,0,0,0)'
-            for idx, (r, g, b) in enumerate(vertex_color)
-        ]
 
         fig = go.Figure(data=[
             go.Mesh3d(
@@ -193,12 +202,6 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
                 opacity=0.5,
                 line=dict(color='gray', width=1),
             ),
-
-            # go.Scatter3d(
-            #     x=vertex[:, 0], y=vertex[:, 1], z=vertex[:, 2],
-            #     mode='markers',
-            #     marker=dict(size=2, color=vertex_color_str),
-            # ),
 
             # top 4 tip vertices as large red dots
             go.Scatter3d(
@@ -226,6 +229,6 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         fig.update_layout(scene=dict(aspectmode='data'))
         fig.show() # opens in browser
 
-    return center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_cluster_labels
+    return center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_labels
 
 
