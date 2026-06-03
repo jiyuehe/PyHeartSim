@@ -261,6 +261,7 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
 
 def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
     ##############################
+    # for macro re-entry
     node_flag = arrhythmia_parameters['node_flag']
     block_voxel_id = np.where(node_flag == 3)[0]
     ##############################
@@ -357,6 +358,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         model_time = model_time_step * dt
 
         # ##############################
+        # for macro re-entry
         if model_time >= 0 and model_time < 350 * dt:
             active_L = L_matrix_gpu_blocked
             active_A = A_gpu_cached_blocked

@@ -183,6 +183,130 @@ if __name__ == "__main__":
         utility.lat_map.plot(voxel_electrode, lat_electrode, geometry_flag, fig_name)
         common.crop_image(fig_name)
 
+    # plot phase map
+    ########## revise it using linear phase instead of hilbert
+    plot_phase_map_flag = 1
+    if plot_phase_map_flag == 1:
+        from scipy.signal import hilbert, butter, filtfilt
+        egm = electrogram_unipolar  # shape: (time, n_electrode)
+
+        # band-pass filter to make the signal oscillatory (required for Hilbert phase)
+        fs = 1000  # Hz, simulation sampling frequency
+        lowcut, highcut = 1.0, 40.0
+        b, a = butter(4, [lowcut / (fs / 2), highcut / (fs / 2)], btype='band')
+        egm_filtered = filtfilt(b, a, egm, axis=0)
+
+        # compute instantaneous phase via Hilbert transform on mean-centred signal
+        ap_centered = egm_filtered - np.mean(egm_filtered, axis=0)
+        analytic_signal = hilbert(ap_centered, axis=0)
+        instantaneous_phase = np.angle(analytic_signal)  # range [-pi, pi]
+        phase_normalized = (instantaneous_phase + np.pi) / (2 * np.pi)  # map to [0, 1]
+
+        # plot phase at mid-simulation time
+        t_idx = egm_filtered.shape[0] // 2
+        phase_at_t = phase_normalized[t_idx, :]
+
+        fig_name = input_arguments['result_folder'] / f'{name_prefix}_phase_egm.png'
+        geometry_flag_val = int(simulation_results['geometry_flag'])
+        color = common.convert_value_to_red_blue(phase_at_t, 0.0, 1.0, -0.1)
+
+        unique_x = np.unique(voxel_electrode[:, 0])
+        spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
+        offset = spacing / 2.0
+
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.bar3d(
+            voxel_electrode[:, 0] - offset, voxel_electrode[:, 1] - offset, voxel_electrode[:, 2] - offset,
+            spacing, spacing, spacing,
+            color=color, shade=False, edgecolor='none', linewidth=0
+        )
+        plt.axis('off')
+        ax.view_init(elev=70, azim=-70)
+        common.set_axes_equal(ax)
+        plt.tight_layout()
+        plt.savefig(fig_name, dpi=100)
+        plt.close()
+        common.crop_image(fig_name)
+
+    # plot phase map from action potential
+    if plot_phase_map_flag == 1:
+        from scipy.signal import hilbert
+        ap_all = simulation_results['action_potential']  # shape: (time, n_voxel)
+        voxel_id_electrode = geometry_data['voxel_id_of_simulation_electrode']
+        ap_electrode = ap_all[:, voxel_id_electrode]  # shape: (time, n_electrode)
+
+        # compute instantaneous phase via Hilbert transform on mean-centred signal
+        ap_centered = ap_electrode - np.mean(ap_electrode, axis=0)
+        analytic_signal = hilbert(ap_centered, axis=0)
+        instantaneous_phase = np.angle(analytic_signal)  # range [-pi, pi]
+        phase_normalized = (instantaneous_phase + np.pi) / (2 * np.pi)  # map to [0, 1]
+
+        # plot phase at mid-simulation time
+        t_idx = ap_electrode.shape[0] // 2
+        phase_at_t = phase_normalized[t_idx, :]
+
+        fig_name = input_arguments['result_folder'] / f'{name_prefix}_phase_ap.png'
+        geometry_flag_val = int(simulation_results['geometry_flag'])
+        color = common.convert_value_to_red_blue(phase_at_t, 0.0, 1.0, -0.1)
+
+        unique_x = np.unique(voxel_electrode[:, 0])
+        spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
+        offset = spacing / 2.0
+
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.bar3d(
+            voxel_electrode[:, 0] - offset, voxel_electrode[:, 1] - offset, voxel_electrode[:, 2] - offset,
+            spacing, spacing, spacing,
+            color=color, shade=False, edgecolor='none', linewidth=0
+        )
+        plt.axis('off')
+        ax.view_init(elev=70, azim=-70)
+        common.set_axes_equal(ax)
+        plt.tight_layout()
+        plt.savefig(fig_name, dpi=100)
+        plt.close()
+        common.crop_image(fig_name)
+
+        # interactive plotly phase map (cubes)
+        cmap = plt.cm.hsv
+        rgba = cmap(phase_at_t)  # shape: (n_electrode, 4)
+        face_colors_per_cube = [f'rgb({int(r*255)},{int(g*255)},{int(b*255)})' for r, g, b, _ in rgba]
+
+        cube_verts = np.array([
+            [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [-0.5,  0.5, -0.5],
+            [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
+        ]) * spacing
+        cube_faces = np.array([
+            [0,1,2],[0,2,3], [4,5,6],[4,6,7],
+            [0,1,5],[0,5,4], [2,3,7],[2,7,6],
+            [1,2,6],[1,6,5], [3,0,4],[3,4,7],
+        ])  # 12 triangles per cube
+
+        all_x, all_y, all_z, all_i, all_j, all_k, all_fc = [], [], [], [], [], [], []
+        for idx, (center, fc) in enumerate(zip(voxel_electrode, face_colors_per_cube)):
+            verts = center + cube_verts
+            base = 8 * idx
+            all_x.extend(verts[:, 0]); all_y.extend(verts[:, 1]); all_z.extend(verts[:, 2])
+            for f in cube_faces:
+                all_i.append(base + f[0]); all_j.append(base + f[1]); all_k.append(base + f[2])
+                all_fc.append(fc)
+
+        fig_plotly = go.Figure(data=go.Mesh3d(
+            x=all_x, y=all_y, z=all_z,
+            i=all_i, j=all_j, k=all_k,
+            facecolor=all_fc,
+            flatshading=True,
+            showscale=False,
+        ))
+        fig_plotly.update_layout(
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+        fig_plotly.write_html(str(input_arguments['result_folder'] / f'{name_prefix}_phase_ap.html'))
+        fig_plotly.show()
+
     # save lat to simulation_results
     simulation_results['lat_electrode'] = lat_electrode
     np.savez(input_arguments['result_folder'] / file_name, **simulation_results)
@@ -218,7 +342,7 @@ if __name__ == "__main__":
         plt.close()
 
     # display simulation movie
-    do_flag = 1
+    do_flag = 0
     if do_flag == 1:
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
             # load simulation results
