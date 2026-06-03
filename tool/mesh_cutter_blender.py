@@ -32,9 +32,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import common
-import plotly.graph_objects as go
 import numpy as np
+import common
+
+import plotly.graph_objects as go
+import plotly.io as pio
+pio.renderers.default = "browser"
 
 debug_plot = 0
 if debug_plot == 1:
