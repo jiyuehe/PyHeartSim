@@ -184,50 +184,66 @@ if __name__ == "__main__":
         common.crop_image(fig_name)
 
     # plot phase map
-    ########## revise it using linear phase instead of hilbert
     plot_phase_map_flag = 1
     if plot_phase_map_flag == 1:
         from scipy.signal import hilbert, butter, filtfilt
         egm = electrogram_unipolar  # shape: (time, n_electrode)
 
-        # band-pass filter to make the signal oscillatory (required for Hilbert phase)
-        fs = 1000  # Hz, simulation sampling frequency
-        lowcut, highcut = 1.0, 40.0
-        b, a = butter(4, [lowcut / (fs / 2), highcut / (fs / 2)], btype='band')
-        egm_filtered = filtfilt(b, a, egm, axis=0)
+        # find peaks for each electrode and linearly interpolate phase between peaks
+        from scipy.signal import find_peaks
+        phase_linear = np.zeros_like(egm)
+        for ch in range(egm.shape[1]):
+            peaks, _ = find_peaks(egm[:, ch], distance=fs * 0.1)  # at least 100 ms between peaks
+            for i in range(len(peaks) - 1):
+                start, end = peaks[i], peaks[i + 1]
+                phase_linear[start:end, ch] = np.linspace(0, 1, end - start, endpoint=False)
 
-        # compute instantaneous phase via Hilbert transform on mean-centred signal
-        ap_centered = egm_filtered - np.mean(egm_filtered, axis=0)
-        analytic_signal = hilbert(ap_centered, axis=0)
-        instantaneous_phase = np.angle(analytic_signal)  # range [-pi, pi]
-        phase_normalized = (instantaneous_phase + np.pi) / (2 * np.pi)  # map to [0, 1]
+        phase_normalized = phase_linear  # already in [0, 1] range
 
         # plot phase at mid-simulation time
-        t_idx = egm_filtered.shape[0] // 2
+        t_idx = egm.shape[0] // 2
         phase_at_t = phase_normalized[t_idx, :]
 
-        fig_name = input_arguments['result_folder'] / f'{name_prefix}_phase_egm.png'
         geometry_flag_val = int(simulation_results['geometry_flag'])
         color = common.convert_value_to_red_blue(phase_at_t, 0.0, 1.0, -0.1)
 
-        unique_x = np.unique(voxel_electrode[:, 0])
-        spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
-        offset = spacing / 2.0
+        # interactive plotly phase map (cubes)
+        cmap = plt.cm.hsv
+        rgba = cmap(phase_at_t)  # shape: (n_electrode, 4)
+        face_colors_per_cube = [f'rgb({int(r*255)},{int(g*255)},{int(b*255)})' for r, g, b, _ in rgba]
 
-        plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.bar3d(
-            voxel_electrode[:, 0] - offset, voxel_electrode[:, 1] - offset, voxel_electrode[:, 2] - offset,
-            spacing, spacing, spacing,
-            color=color, shade=False, edgecolor='none', linewidth=0
+        cube_verts = np.array([
+            [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [-0.5,  0.5, -0.5],
+            [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
+        ])
+        cube_faces = np.array([
+            [0,1,2],[0,2,3], [4,5,6],[4,6,7],
+            [0,1,5],[0,5,4], [2,3,7],[2,7,6],
+            [1,2,6],[1,6,5], [3,0,4],[3,4,7],
+        ])  # 12 triangles per cube
+
+        all_x, all_y, all_z, all_i, all_j, all_k, all_fc = [], [], [], [], [], [], []
+        for idx, (center, fc) in enumerate(zip(voxel_electrode, face_colors_per_cube)):
+            verts = center + cube_verts
+            base = 8 * idx
+            all_x.extend(verts[:, 0]); all_y.extend(verts[:, 1]); all_z.extend(verts[:, 2])
+            for f in cube_faces:
+                all_i.append(base + f[0]); all_j.append(base + f[1]); all_k.append(base + f[2])
+                all_fc.append(fc)
+
+        fig_plotly = go.Figure(data=go.Mesh3d(
+            x=all_x, y=all_y, z=all_z,
+            i=all_i, j=all_j, k=all_k,
+            facecolor=all_fc,
+            flatshading=True,
+            showscale=False,
+        ))
+        fig_plotly.update_layout(
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
+            margin=dict(l=0, r=0, t=0, b=0)
         )
-        plt.axis('off')
-        ax.view_init(elev=70, azim=-70)
-        common.set_axes_equal(ax)
-        plt.tight_layout()
-        plt.savefig(fig_name, dpi=100)
-        plt.close()
-        common.crop_image(fig_name)
+        fig_plotly.write_html(str(input_arguments['result_folder'] / f'{name_prefix}_phase_egm.html'))
+        fig_plotly.show()
 
     # plot phase map from action potential
     if plot_phase_map_flag == 1:
@@ -242,32 +258,12 @@ if __name__ == "__main__":
         instantaneous_phase = np.angle(analytic_signal)  # range [-pi, pi]
         phase_normalized = (instantaneous_phase + np.pi) / (2 * np.pi)  # map to [0, 1]
 
-        # plot phase at mid-simulation time
+        # phase at mid-simulation time
         t_idx = ap_electrode.shape[0] // 2
         phase_at_t = phase_normalized[t_idx, :]
 
-        fig_name = input_arguments['result_folder'] / f'{name_prefix}_phase_ap.png'
         geometry_flag_val = int(simulation_results['geometry_flag'])
         color = common.convert_value_to_red_blue(phase_at_t, 0.0, 1.0, -0.1)
-
-        unique_x = np.unique(voxel_electrode[:, 0])
-        spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
-        offset = spacing / 2.0
-
-        plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.bar3d(
-            voxel_electrode[:, 0] - offset, voxel_electrode[:, 1] - offset, voxel_electrode[:, 2] - offset,
-            spacing, spacing, spacing,
-            color=color, shade=False, edgecolor='none', linewidth=0
-        )
-        plt.axis('off')
-        ax.view_init(elev=70, azim=-70)
-        common.set_axes_equal(ax)
-        plt.tight_layout()
-        plt.savefig(fig_name, dpi=100)
-        plt.close()
-        common.crop_image(fig_name)
 
         # interactive plotly phase map (cubes)
         cmap = plt.cm.hsv
@@ -277,7 +273,7 @@ if __name__ == "__main__":
         cube_verts = np.array([
             [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [-0.5,  0.5, -0.5],
             [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
-        ]) * spacing
+        ])
         cube_faces = np.array([
             [0,1,2],[0,2,3], [4,5,6],[4,6,7],
             [0,1,5],[0,5,4], [2,3,7],[2,7,6],
