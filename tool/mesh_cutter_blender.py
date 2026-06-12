@@ -33,14 +33,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
-import common
 
-import plotly.graph_objects as go
-import plotly.io as pio
-pio.renderers.default = "browser"
-
+ENABLE_COMMON_DEBUG_IMPORTS = False
 debug_plot = 0
+if ENABLE_COMMON_DEBUG_IMPORTS:
+    import common
+
 if debug_plot == 1:
+    if not ENABLE_COMMON_DEBUG_IMPORTS:
+        raise RuntimeError("Set ENABLE_COMMON_DEBUG_IMPORTS = True to use debug_plot with common.py")
+
+    import plotly.graph_objects as go
+    import plotly.io as pio
+
+    pio.renderers.default = "browser"
+
     file_dir = Path('/home/j/Desktop/hdd/share_folder/patient_data')
     mesh_name = '99_2-LaFAM_cartofinder_data'
     vertex, face = common.load_obj(file_dir, mesh_name+'_refined')
@@ -103,6 +110,7 @@ import bpy
 import bmesh
 import os
 import ast
+from math import radians
 from mathutils import Vector
 
 # --- CONFIGURATION ---
@@ -116,10 +124,15 @@ EXPORT_FILE_PATH = BASE_PATH / f"{name_prefix}_refined_cut.obj"
 CUTS_FILE_PATH = BASE_PATH / f"{name_prefix}_cuts.yaml"
 USE_SCRIPT_DIR_FALLBACK = True
 LOAD_CUTS = True
+SHOW_TIP_VERTEX_MARKERS = True
+AUTO_CREATE_VEIN_CUTTERS = True
 
-# Number of interactive cutters to create.
-N_CUT_CUBES = 4
-N_CUT_CYLINDERS = 1
+# Number of additional interactive cutters to create.
+N_EXTRA_CUT_CUBES = 0
+N_EXTRA_CUT_CYLINDERS = 1
+EXTRA_CYLINDER_DEFAULT_LOCATION = (38.672, -59.443, 6.6735)
+EXTRA_CYLINDER_DEFAULT_ROTATION_DEG = (84.724, -10.902, 35.284)
+EXTRA_CYLINDER_DEFAULT_SCALE = (13.928, 13.928, 40.965)
 
 # Cutter sizing, expressed as a fraction of average target dimension.
 CUBE_SCALE_FACTOR = 0.3
@@ -132,6 +145,18 @@ SPAWN_MARGIN_FACTOR = 0.20
 # Relative epsilon for plane-distance tests and bisect snapping.  Applied as a
 # fraction of the target mesh's average dimension so it scales with the model.
 BISECT_EPSILON_FACTOR = 1e-5
+TIP_MARKER_RADIUS_FACTOR = 0.015
+TIP_CLUSTER_DISTANCE = 25.0
+N_TIP_MARKERS = 4
+VEIN_CUT_OFFSET_MM = 10.0
+VEIN_CUT_PLANE_WINDOW_MM = 4.0
+VEIN_CUT_RADIUS_MARGIN_MM = 2.0
+VEIN_CUT_RADIUS_SCALE = 1.15
+VEIN_CUT_RADIUS_PERCENTILE = 98.0
+VEIN_CUT_CYLINDER_VERTICES = 64
+VEIN_CUT_DEPTH_MARGIN_MM = 6.0
+VEIN_CUT_MIN_RADIUS_MM = 6.0
+VEIN_CUT_MIN_DEPTH_MM = 12.0
 
 class MESH_OT_KnifeCutter(bpy.types.Operator):
     """Press K to toggle Cut Mode, S to save cuts, E to Export, ESC to cancel."""
@@ -358,7 +383,10 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
 
     def _create_cutters(self, context, dim, avg):
         self.cutters = []
-        total = N_CUT_CUBES + N_CUT_CYLINDERS
+        if AUTO_CREATE_VEIN_CUTTERS:
+            self._create_vein_cutters(context)
+
+        total = N_EXTRA_CUT_CUBES + N_EXTRA_CUT_CYLINDERS
         if total <= 0:
             return
 
@@ -369,26 +397,365 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         clearance = avg * SPAWN_MARGIN_FACTOR + max_extent
         directions = self._build_spawn_directions(total)
 
-        for i in range(N_CUT_CUBES):
+        for i in range(N_EXTRA_CUT_CUBES):
             pos = self._outside_location_from_direction(directions[i], dim, clearance)
             bpy.ops.mesh.primitive_cube_add(size=1, location=pos)
             c = context.active_object
-            c.name = f"Cut_Cube_{i + 1}"
+            c.name = f"Cut_Cube_Extra_{i + 1}"
             c.scale = (cube_scale, cube_scale, cube_scale)
             c.display_type = 'WIRE'
             c.parent = self.target
             self.cutters.append(c)
 
-        for i in range(N_CUT_CYLINDERS):
-            idx = N_CUT_CUBES + i
+        for i in range(N_EXTRA_CUT_CYLINDERS):
+            idx = N_EXTRA_CUT_CUBES + i
             pos = self._outside_location_from_direction(directions[idx], dim, clearance)
             bpy.ops.mesh.primitive_cylinder_add(radius=1, depth=1, location=pos)
             c = context.active_object
-            c.name = f"Cut_Cylinder_{i + 1}"
-            c.scale = (cyl_radius, cyl_radius, cyl_depth)
+            c.name = f"Cut_Cylinder_Extra_{i + 1}"
+            if i == 0:
+                c.location = EXTRA_CYLINDER_DEFAULT_LOCATION
+                c.rotation_mode = 'XYZ'
+                c.rotation_euler = tuple(radians(angle) for angle in EXTRA_CYLINDER_DEFAULT_ROTATION_DEG)
+                c.scale = EXTRA_CYLINDER_DEFAULT_SCALE
+            else:
+                c.scale = (cyl_radius, cyl_radius, cyl_depth)
             c.display_type = 'WIRE'
             c.parent = self.target
             self.cutters.append(c)
+
+    def _build_neighbor_vertices_ids(self):
+        neighbor_sets = [set() for _ in self.target.data.vertices]
+        for edge in self.target.data.edges:
+            v0, v1 = edge.vertices
+            neighbor_sets[v0].add(v1)
+            neighbor_sets[v1].add(v0)
+
+        return [np.asarray(sorted(neighbors), dtype=int) for neighbors in neighbor_sets]
+
+    def _cluster_tip_candidate_ids(self, candidate_ids, vertex_to_com_distance, vertices):
+        if candidate_ids.size == 0:
+            return np.asarray([], dtype=int)
+
+        parents = list(range(len(candidate_ids)))
+
+        def find(index):
+            while parents[index] != index:
+                parents[index] = parents[parents[index]]
+                index = parents[index]
+            return index
+
+        def union(left, right):
+            left_root = find(left)
+            right_root = find(right)
+            if left_root != right_root:
+                parents[right_root] = left_root
+
+        candidate_vertices = vertices[candidate_ids]
+        for left in range(len(candidate_ids)):
+            deltas = candidate_vertices[left + 1:] - candidate_vertices[left]
+            close_offsets = np.where(np.linalg.norm(deltas, axis=1) <= TIP_CLUSTER_DISTANCE)[0]
+            for offset in close_offsets:
+                union(left, left + 1 + int(offset))
+
+        clusters = {}
+        for local_index, candidate_id in enumerate(candidate_ids):
+            clusters.setdefault(find(local_index), []).append(int(candidate_id))
+
+        tip_ids = []
+        for cluster_member_ids in clusters.values():
+            cluster_member_ids = np.asarray(cluster_member_ids, dtype=int)
+            tip_ids.append(int(cluster_member_ids[np.argmax(vertex_to_com_distance[cluster_member_ids])]))
+
+        return np.asarray(tip_ids, dtype=int)
+
+    def _identify_tip_regions(self):
+        vertices = np.asarray([vert.co[:] for vert in self.target.data.vertices], dtype=float)
+        if len(vertices) == 0:
+            return None
+
+        center_of_mass = np.mean(vertices, axis=0)
+        vertex_to_com_distance = np.linalg.norm(vertices - center_of_mass, axis=1)
+        neighbor_vertices_ids = self._build_neighbor_vertices_ids()
+
+        highest_vertex_id_of_each_trail = np.zeros(len(vertices), dtype=int)
+        for vertex_id in range(len(vertices)):
+            current = vertex_id
+            while True:
+                neighbors = neighbor_vertices_ids[current]
+                if neighbors.size == 0:
+                    break
+
+                neighbor_distances = vertex_to_com_distance[neighbors]
+                next_vertex_id = int(neighbors[np.argmax(neighbor_distances)])
+                if vertex_to_com_distance[next_vertex_id] > vertex_to_com_distance[current]:
+                    current = next_vertex_id
+                else:
+                    break
+
+            highest_vertex_id_of_each_trail[vertex_id] = current
+
+        highest_vertex_ids = np.unique(highest_vertex_id_of_each_trail)
+        tip_vertex_ids = self._cluster_tip_candidate_ids(
+            highest_vertex_ids,
+            vertex_to_com_distance,
+            vertices,
+        )
+        if tip_vertex_ids.size == 0:
+            return None
+
+        vertex_labels = highest_vertex_id_of_each_trail.copy()
+        for highest_vertex_id in highest_vertex_ids:
+            cluster_tip_candidates = tip_vertex_ids[
+                np.linalg.norm(vertices[tip_vertex_ids] - vertices[highest_vertex_id], axis=1) <= TIP_CLUSTER_DISTANCE
+            ]
+            if cluster_tip_candidates.size == 0:
+                continue
+
+            candidate_distances = vertex_to_com_distance[cluster_tip_candidates]
+            tip_vertex_id = int(cluster_tip_candidates[np.argmax(candidate_distances)])
+            vertex_labels[vertex_labels == highest_vertex_id] = tip_vertex_id
+
+        top_tip_count = min(N_TIP_MARKERS, len(tip_vertex_ids))
+        top_tip_order = np.argsort(vertex_to_com_distance[tip_vertex_ids])[-top_tip_count:]
+        top_tip_vertex_ids = tip_vertex_ids[top_tip_order]
+        return {
+            'center_of_mass': center_of_mass,
+            'vertices': vertices,
+            'vertex_to_com_distance': vertex_to_com_distance,
+            'vertex_labels': vertex_labels,
+            'tip_vertex_ids': top_tip_vertex_ids,
+        }
+
+    def _estimate_vein_cutter_dimensions(self, tip_vertex_id, tip_region):
+        vertices = tip_region['vertices']
+        center_of_mass = tip_region['center_of_mass']
+        vertex_labels = tip_region['vertex_labels']
+
+        tip_vertex = vertices[tip_vertex_id]
+        inward_direction = center_of_mass - tip_vertex
+        inward_norm = np.linalg.norm(inward_direction)
+        if inward_norm == 0:
+            return None
+
+        inward_direction /= inward_norm
+        plane_point = tip_vertex + inward_direction * VEIN_CUT_OFFSET_MM
+
+        region_vertices = vertices[vertex_labels == tip_vertex_id]
+        if len(region_vertices) == 0:
+            return None
+
+        cut_center = plane_point
+        ring_radius = self._find_cut_ring_radius(plane_point, inward_direction)
+
+        relative = region_vertices - plane_point
+        signed_distances = relative @ inward_direction
+
+        if ring_radius is not None:
+            cut_center = ring_radius['center']
+            radius = ring_radius['radius'] * VEIN_CUT_RADIUS_SCALE + VEIN_CUT_RADIUS_MARGIN_MM
+        else:
+            plane_band = np.abs(signed_distances) <= VEIN_CUT_PLANE_WINDOW_MM
+            band_vertices = region_vertices[plane_band]
+            if len(band_vertices) < 3:
+                band_vertices = region_vertices[signed_distances <= VEIN_CUT_PLANE_WINDOW_MM]
+            if len(band_vertices) == 0:
+                band_vertices = region_vertices
+
+            band_relative = band_vertices - plane_point
+            band_parallel = np.outer(band_relative @ inward_direction, inward_direction)
+            band_perpendicular = band_relative - band_parallel
+            band_radius = np.max(np.linalg.norm(band_perpendicular, axis=1))
+
+            outward_region_vertices = region_vertices[signed_distances <= VEIN_CUT_PLANE_WINDOW_MM]
+            if len(outward_region_vertices) == 0:
+                outward_region_vertices = region_vertices
+
+            outward_relative = outward_region_vertices - plane_point
+            outward_parallel = np.outer(outward_relative @ inward_direction, inward_direction)
+            outward_perpendicular = outward_relative - outward_parallel
+            outward_radii = np.linalg.norm(outward_perpendicular, axis=1)
+            region_radius = np.percentile(outward_radii, VEIN_CUT_RADIUS_PERCENTILE)
+
+            radius = max(band_radius, region_radius) * VEIN_CUT_RADIUS_SCALE + VEIN_CUT_RADIUS_MARGIN_MM
+        radius = max(radius, VEIN_CUT_MIN_RADIUS_MM)
+
+        signed_distances_from_cut_center = (region_vertices - cut_center) @ inward_direction
+        outward_distances = -signed_distances_from_cut_center[signed_distances_from_cut_center < 0]
+        if outward_distances.size == 0:
+            outward_depth = VEIN_CUT_MIN_DEPTH_MM
+        else:
+            outward_depth = np.max(outward_distances) + VEIN_CUT_DEPTH_MARGIN_MM
+            outward_depth = max(outward_depth, VEIN_CUT_MIN_DEPTH_MM)
+
+        return {
+            'plane_point': cut_center,
+            'inward_direction': inward_direction,
+            'radius': float(radius),
+            'depth': float(outward_depth),
+        }
+
+    def _get_plane_intersection_point_id(self, point_by_key, points, parents, key, point):
+        if key in point_by_key:
+            return point_by_key[key]
+
+        point_id = len(points)
+        point_by_key[key] = point_id
+        points.append(point)
+        parents.append(point_id)
+        return point_id
+
+    def _find_parent(self, parents, index):
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def _union_parents(self, parents, left, right):
+        left_root = self._find_parent(parents, left)
+        right_root = self._find_parent(parents, right)
+        if left_root != right_root:
+            parents[right_root] = left_root
+
+    def _find_cut_ring_radius(self, plane_point, plane_normal):
+        mesh = self.target.data
+        vertices = np.asarray([vert.co[:] for vert in mesh.vertices], dtype=float)
+        signed_distances = (vertices - plane_point) @ plane_normal
+        eps = max(self._bisect_eps or 0.0, 1e-8)
+
+        point_by_key = {}
+        points = []
+        parents = []
+
+        for poly in mesh.polygons:
+            poly_vertex_ids = list(poly.vertices)
+            poly_point_ids = []
+            for index, v0 in enumerate(poly_vertex_ids):
+                v1 = poly_vertex_ids[(index + 1) % len(poly_vertex_ids)]
+                d0 = signed_distances[v0]
+                d1 = signed_distances[v1]
+
+                if abs(d0) <= eps:
+                    point_id = self._get_plane_intersection_point_id(
+                        point_by_key, points, parents, ('v', int(v0)), vertices[v0]
+                    )
+                    poly_point_ids.append(point_id)
+                    continue
+
+                if abs(d1) <= eps:
+                    point_id = self._get_plane_intersection_point_id(
+                        point_by_key, points, parents, ('v', int(v1)), vertices[v1]
+                    )
+                    poly_point_ids.append(point_id)
+                    continue
+
+                if d0 * d1 > 0:
+                    continue
+
+                t = d0 / (d0 - d1)
+                point = vertices[v0] + t * (vertices[v1] - vertices[v0])
+                edge_key = ('e', min(int(v0), int(v1)), max(int(v0), int(v1)))
+                point_id = self._get_plane_intersection_point_id(
+                    point_by_key, points, parents, edge_key, point
+                )
+                poly_point_ids.append(point_id)
+
+            poly_point_ids = list(dict.fromkeys(poly_point_ids))
+            if len(poly_point_ids) < 2:
+                continue
+
+            first_point_id = poly_point_ids[0]
+            for point_id in poly_point_ids[1:]:
+                self._union_parents(parents, first_point_id, point_id)
+
+        if not points:
+            return None
+
+        components = {}
+        for point_id, point in enumerate(points):
+            root = self._find_parent(parents, point_id)
+            components.setdefault(root, []).append(point)
+
+        best_points = None
+        best_distance = None
+        for component_points in components.values():
+            if len(component_points) < 3:
+                continue
+
+            component_points = np.asarray(component_points, dtype=float)
+            closest_distance = np.min(np.linalg.norm(component_points - plane_point, axis=1))
+            if best_distance is None or closest_distance < best_distance:
+                best_distance = closest_distance
+                best_points = component_points
+
+        if best_points is None:
+            return None
+
+        center = np.mean(best_points, axis=0)
+        relative = best_points - center
+        parallel = np.outer(relative @ plane_normal, plane_normal)
+        perpendicular = relative - parallel
+        radius = np.max(np.linalg.norm(perpendicular, axis=1))
+        return {'center': center, 'radius': float(radius)}
+
+    def _create_vein_cutters(self, context):
+        tip_region = self._identify_tip_regions()
+        if tip_region is None:
+            return
+
+        for index, tip_vertex_id in enumerate(tip_region['tip_vertex_ids'], start=1):
+            cutter_dims = self._estimate_vein_cutter_dimensions(int(tip_vertex_id), tip_region)
+            if cutter_dims is None:
+                continue
+
+            center = cutter_dims['plane_point'] - cutter_dims['inward_direction'] * (cutter_dims['depth'] * 0.5)
+            bpy.ops.mesh.primitive_cylinder_add(
+                vertices=VEIN_CUT_CYLINDER_VERTICES,
+                radius=1,
+                depth=1,
+                location=tuple(center),
+            )
+            cutter = context.active_object
+            cutter.name = f"Cut_Vein_{index}"
+            cutter.scale = (
+                cutter_dims['radius'],
+                cutter_dims['radius'],
+                cutter_dims['depth'],
+            )
+            cutter.rotation_mode = 'QUATERNION'
+            cutter.rotation_quaternion = Vector(cutter_dims['inward_direction']).to_track_quat('Z', 'Y')
+            cutter.rotation_mode = 'XYZ'
+            cutter.display_type = 'WIRE'
+            cutter.parent = self.target
+            self.cutters.append(cutter)
+
+    def _ensure_tip_marker_material(self):
+        material = bpy.data.materials.get("TipVertexMarker")
+        if material is None:
+            material = bpy.data.materials.new(name="TipVertexMarker")
+
+        material.diffuse_color = (1.0, 0.0, 0.0, 1.0)
+        return material
+
+    def _create_tip_vertex_markers(self, context, avg):
+        if not SHOW_TIP_VERTEX_MARKERS:
+            return
+
+        tip_region = self._identify_tip_regions()
+        if tip_region is None:
+            return
+
+        marker_material = self._ensure_tip_marker_material()
+        marker_radius = avg * TIP_MARKER_RADIUS_FACTOR
+
+        for index, vertex_index in enumerate(tip_region['tip_vertex_ids'], start=1):
+            marker_location = self.target.matrix_world @ self.target.data.vertices[int(vertex_index)].co
+
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=marker_radius, location=marker_location)
+            marker = context.active_object
+            marker.name = f"Tip_Vertex_{index}"
+            marker.data.materials.clear()
+            marker.data.materials.append(marker_material)
 
     # ------------------------------------------------------------------
     # Original mesh snapshot
@@ -598,6 +965,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         self._bisect_eps = avg * BISECT_EPSILON_FACTOR
 
         self._create_cutters(context, dim, avg)
+        self._create_tip_vertex_markers(context, avg)
         if LOAD_CUTS and os.path.exists(self.resolve_path(CUTS_FILE_PATH)):
             self.load_cut_transforms()
 
