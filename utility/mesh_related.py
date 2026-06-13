@@ -139,7 +139,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         vertex_labels[trail] = trail[-1]
 
     # cluster the highest_vertex based on their spatial proximity
-    distanceThreshold = 25  # unit: mm
+    distanceThreshold = 23 # unit: mm
     pairwise_distances = distance.pdist(highest_vertex) # condensed distance matrix
     Z = linkage(pairwise_distances, method='single')
     cluster_labels = fcluster(Z, t=distanceThreshold, criterion='distance')
@@ -154,11 +154,6 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         vertex_labels[np.isin(vertex_labels, cluster_member_ids)] = tip_vertex_id
 
     tip_vertex_ids = np.unique(vertex_labels)
-
-    # find the 4 tip vertices with the largest distance to center of mass
-    tip_vertex_distances = vertex_to_COM_distance[tip_vertex_ids]
-    top_4_tip_vertex_ids = tip_vertex_ids[np.argsort(tip_vertex_distances)[-4:]]
-    top_4_tip_vertex = vertex[top_4_tip_vertex_ids, :]
 
     debug_plot = 0
     if debug_plot == 1: # show all the regions
@@ -179,6 +174,23 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         fig.update_layout(scene=dict(aspectmode='data'))
         fig.show() # opens in browser
 
+    # find the 4 tip vertices with the largest distance to center of mass
+    tip_vertex_distances = vertex_to_COM_distance[tip_vertex_ids]
+    top_4_tip_vertex_ids = tip_vertex_ids[np.argsort(tip_vertex_distances)[-4:]]
+    top_4_tip_vertex = vertex[top_4_tip_vertex_ids, :]
+    # NOTE: these 4 tips are most likely the 4 pulmonary vein tips
+
+    # the rest of the tips
+    other_tip_vertex_ids = tip_vertex_ids[np.argsort(tip_vertex_distances)[:-4]]
+    
+    # region size of the rest of the tips
+    other_region_size = [np.sum(vertex_labels == tip_id) for tip_id in other_tip_vertex_ids]
+    
+    # find the tip with thelargest region among the rest of the tips
+    largest_region_tip_id = other_tip_vertex_ids[np.argmax(other_region_size)]
+    largest_region_tip_vertex = vertex[largest_region_tip_id, :]
+    # NOTE: this tip is most likely the mitral valve tip
+    
     debug_plot = 0
     if debug_plot == 1: # show the regions of the 4 tip vertices
         # build face list for Mesh3d
@@ -210,6 +222,13 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
                 marker=dict(size=8, color='red'),
             ),
 
+            # largest region tip vertex as a large blue dot
+            go.Scatter3d(
+                x=[largest_region_tip_vertex[0]], y=[largest_region_tip_vertex[1]], z=[largest_region_tip_vertex[2]],
+                mode='markers',
+                marker=dict(size=8, color='blue'),
+            ),
+
             # center of mass as a black dot
             go.Scatter3d(
                 x=[center_of_mass[0]], y=[center_of_mass[1]], z=[center_of_mass[2]],
@@ -219,9 +238,9 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
 
             # lines from each tip vertex to the center of mass
             go.Scatter3d(
-                x=np.stack([top_4_tip_vertex[:, 0], np.full(4, center_of_mass[0]), np.full(4, None)], axis=1).ravel(),
-                y=np.stack([top_4_tip_vertex[:, 1], np.full(4, center_of_mass[1]), np.full(4, None)], axis=1).ravel(),
-                z=np.stack([top_4_tip_vertex[:, 2], np.full(4, center_of_mass[2]), np.full(4, None)], axis=1).ravel(),
+                x=np.stack([np.concatenate([top_4_tip_vertex[:, 0], [largest_region_tip_vertex[0]]]), np.full(5, center_of_mass[0]), np.full(5, None)], axis=1).ravel(),
+                y=np.stack([np.concatenate([top_4_tip_vertex[:, 1], [largest_region_tip_vertex[1]]]), np.full(5, center_of_mass[1]), np.full(5, None)], axis=1).ravel(),
+                z=np.stack([np.concatenate([top_4_tip_vertex[:, 2], [largest_region_tip_vertex[2]]]), np.full(5, center_of_mass[2]), np.full(5, None)], axis=1).ravel(),
                 mode='lines',
                 line=dict(color='black', width=3),
             ),
@@ -229,6 +248,4 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         fig.update_layout(scene=dict(aspectmode='data'))
         fig.show() # opens in browser
 
-    return center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_labels
-
-
+    return center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, largest_region_tip_vertex, largest_region_tip_id, vertex_labels

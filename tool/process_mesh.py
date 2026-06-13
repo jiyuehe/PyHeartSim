@@ -182,11 +182,12 @@ if do_flag == 1:
         neighbor_vertices_ids = utility.mesh_related.find_neighbor_vertices(n_vertices, face)
 
         # identify the tip of the pulmonary veins
-        center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, vertex_cluster_labels = utility.mesh_related.identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids)
+        center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, largest_region_tip_vertex, largest_region_tip_id, vertex_cluster_labels = utility.mesh_related.identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids)
 
         # write the tip vertex and the center of massto a text file
+        vertices_to_write = np.concatenate([top_4_tip_vertex, largest_region_tip_vertex[None, :], center_of_mass[None, :]], axis=0)
         tip_vertex_path = directory['data'] / f'{name_prefix}_tip_vertex.txt'
-        np.savetxt(tip_vertex_path, top_4_tip_vertex, fmt='%.6f')
+        np.savetxt(tip_vertex_path, vertices_to_write, fmt='%.6f')
 
 #%%
 # cut holes: cut the mitral valve, pulmonary veins, etc
