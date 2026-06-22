@@ -53,11 +53,11 @@ if debug_plot == 1:
     mesh_name = '99_2-LaFAM_cartofinder_data'
     vertex, face = common.load_obj(file_dir, mesh_name+'_refined')
 
-    # load the 4 pulmonery vein tip vertices
-    vertices = np.array([list(map(float, i.split())) for i in open(file_dir / f'{mesh_name}_tip_vertex.txt').read().splitlines()])
-
-    tip_vertex = vertices[0:5,:] # 4 pulmonary vein tips + 1 mitral valve tip
-    center_of_mass = vertices[5,:]
+    # Tip detection is performed directly from the loaded mesh by
+    # MESH_OT_KnifeCutter._identify_tip_regions(); no *_tip_vertex.txt file is
+    # required for automatic cutter placement.
+    tip_vertex = np.empty((0, 3))
+    center_of_mass = np.mean(vertex, axis=0)
 
     # build face list for Mesh3d
     fi, fj, fk = face[:, 0], face[:, 1], face[:, 2]
@@ -81,7 +81,7 @@ if debug_plot == 1:
             line=dict(color='gray', width=1),
         ),
 
-        # top tip vertices as large red dots
+        # detected tip vertices as large red dots, when populated for debugging
         go.Scatter3d(
             x=tip_vertex[:, 0], y=tip_vertex[:, 1], z=tip_vertex[:, 2],
             mode='markers',
@@ -97,9 +97,9 @@ if debug_plot == 1:
 
         # lines from each tip vertex to the center of mass
         go.Scatter3d(
-            x=np.stack([tip_vertex[:, 0], np.full(5, center_of_mass[0]), np.full(5, None)], axis=1).ravel(),
-            y=np.stack([tip_vertex[:, 1], np.full(5, center_of_mass[1]), np.full(5, None)], axis=1).ravel(),
-            z=np.stack([tip_vertex[:, 2], np.full(5, center_of_mass[2]), np.full(5, None)], axis=1).ravel(),
+            x=np.stack([tip_vertex[:, 0], np.full(len(tip_vertex), center_of_mass[0]), np.full(len(tip_vertex), None)], axis=1).ravel(),
+            y=np.stack([tip_vertex[:, 1], np.full(len(tip_vertex), center_of_mass[1]), np.full(len(tip_vertex), None)], axis=1).ravel(),
+            z=np.stack([tip_vertex[:, 2], np.full(len(tip_vertex), center_of_mass[2]), np.full(len(tip_vertex), None)], axis=1).ravel(),
             mode='lines',
             line=dict(color='black', width=3),
         ),
@@ -131,7 +131,7 @@ AUTO_CREATE_VEIN_CUTTERS = True
 
 # Number of additional interactive cutters to create.
 N_EXTRA_CUT_CUBES = 0
-N_EXTRA_CUT_CYLINDERS = 1
+N_EXTRA_CUT_CYLINDERS = 0
 EXTRA_CYLINDER_DEFAULT_LOCATION = (38.672, -59.443, 6.6735)
 EXTRA_CYLINDER_DEFAULT_ROTATION_DEG = (84.724, -10.902, 35.284)
 EXTRA_CYLINDER_DEFAULT_SCALE = (13.928, 13.928, 40.965)
@@ -149,7 +149,7 @@ SPAWN_MARGIN_FACTOR = 0.20
 BISECT_EPSILON_FACTOR = 1e-5
 TIP_MARKER_RADIUS_FACTOR = 0.015
 TIP_CLUSTER_DISTANCE = 25.0
-N_TIP_MARKERS = 4
+N_PULMONARY_VEIN_TIPS = 4
 VEIN_CUT_OFFSET_MM = 10.0
 VEIN_CUT_PLANE_WINDOW_MM = 4.0
 VEIN_CUT_RADIUS_MARGIN_MM = 2.0
@@ -159,6 +159,7 @@ VEIN_CUT_CYLINDER_VERTICES = 64
 VEIN_CUT_DEPTH_MARGIN_MM = 6.0
 VEIN_CUT_MIN_RADIUS_MM = 6.0
 VEIN_CUT_MIN_DEPTH_MM = 12.0
+MITRAL_CUT_OFFSET_MM = 10.0
 
 class MESH_OT_KnifeCutter(bpy.types.Operator):
     """Press K to toggle Cut Mode, S to save cuts, E to Export, ESC to cancel."""
@@ -518,15 +519,27 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             tip_vertex_id = int(cluster_tip_candidates[np.argmax(candidate_distances)])
             vertex_labels[vertex_labels == highest_vertex_id] = tip_vertex_id
 
-        top_tip_count = min(N_TIP_MARKERS, len(tip_vertex_ids))
-        top_tip_order = np.argsort(vertex_to_com_distance[tip_vertex_ids])[-top_tip_count:]
-        top_tip_vertex_ids = tip_vertex_ids[top_tip_order]
+        distance_order = np.argsort(vertex_to_com_distance[tip_vertex_ids])
+        pulmonary_tip_count = min(N_PULMONARY_VEIN_TIPS, len(tip_vertex_ids))
+        pulmonary_tip_vertex_ids = tip_vertex_ids[distance_order[-pulmonary_tip_count:]]
+
+        mitral_tip_vertex_id = None
+        other_tip_vertex_ids = tip_vertex_ids[distance_order[:-pulmonary_tip_count]]
+        if other_tip_vertex_ids.size > 0:
+            other_region_sizes = [
+                np.sum(vertex_labels == tip_vertex_id)
+                for tip_vertex_id in other_tip_vertex_ids
+            ]
+            mitral_tip_vertex_id = int(other_tip_vertex_ids[np.argmax(other_region_sizes)])
+
         return {
             'center_of_mass': center_of_mass,
             'vertices': vertices,
             'vertex_to_com_distance': vertex_to_com_distance,
             'vertex_labels': vertex_labels,
-            'tip_vertex_ids': top_tip_vertex_ids,
+            'tip_vertex_ids': pulmonary_tip_vertex_ids,
+            'pulmonary_tip_vertex_ids': pulmonary_tip_vertex_ids,
+            'mitral_tip_vertex_id': mitral_tip_vertex_id,
         }
 
     def _estimate_vein_cutter_dimensions(self, tip_vertex_id, tip_region):
@@ -595,6 +608,36 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             'inward_direction': inward_direction,
             'radius': float(radius),
             'depth': float(outward_depth),
+        }
+
+    def _estimate_mitral_cutter_dimensions(self, tip_region):
+        mitral_tip_vertex_id = tip_region['mitral_tip_vertex_id']
+        if mitral_tip_vertex_id is None:
+            return None
+
+        vertices = tip_region['vertices']
+        center_of_mass = tip_region['center_of_mass']
+        vertex_labels = tip_region['vertex_labels']
+
+        tip_vertex = vertices[mitral_tip_vertex_id]
+        outward_direction = tip_vertex - center_of_mass
+        outward_norm = np.linalg.norm(outward_direction)
+        if outward_norm == 0:
+            return None
+
+        outward_direction /= outward_norm
+        inward_direction = -outward_direction
+        plane_point = tip_vertex + inward_direction * MITRAL_CUT_OFFSET_MM
+
+        region_vertices = vertices[vertex_labels == mitral_tip_vertex_id]
+        if len(region_vertices) == 0:
+            return None
+
+        return {
+            'plane_point': plane_point,
+            'outward_direction': outward_direction,
+            'radius': float(EXTRA_CYLINDER_DEFAULT_SCALE[0]),
+            'depth': float(EXTRA_CYLINDER_DEFAULT_SCALE[2]),
         }
 
     def _get_plane_intersection_point_id(self, point_by_key, points, parents, key, point):
@@ -705,7 +748,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         if tip_region is None:
             return
 
-        for index, tip_vertex_id in enumerate(tip_region['tip_vertex_ids'], start=1):
+        for index, tip_vertex_id in enumerate(tip_region['pulmonary_tip_vertex_ids'], start=1):
             cutter_dims = self._estimate_vein_cutter_dimensions(int(tip_vertex_id), tip_region)
             if cutter_dims is None:
                 continue
@@ -731,12 +774,37 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             cutter.parent = self.target
             self.cutters.append(cutter)
 
-    def _ensure_tip_marker_material(self):
-        material = bpy.data.materials.get("TipVertexMarker")
-        if material is None:
-            material = bpy.data.materials.new(name="TipVertexMarker")
+        mitral_dims = self._estimate_mitral_cutter_dimensions(tip_region)
+        if mitral_dims is None:
+            return
 
-        material.diffuse_color = (1.0, 0.0, 0.0, 1.0)
+        center = mitral_dims['plane_point'] + mitral_dims['outward_direction'] * (mitral_dims['depth'] * 0.5)
+        bpy.ops.mesh.primitive_cylinder_add(
+            vertices=VEIN_CUT_CYLINDER_VERTICES,
+            radius=1,
+            depth=1,
+            location=tuple(center),
+        )
+        cutter = context.active_object
+        cutter.name = "Cut_Mitral_Valve"
+        cutter.scale = (
+            mitral_dims['radius'],
+            mitral_dims['radius'],
+            mitral_dims['depth'],
+        )
+        cutter.rotation_mode = 'QUATERNION'
+        cutter.rotation_quaternion = Vector(mitral_dims['outward_direction']).to_track_quat('Z', 'Y')
+        cutter.rotation_mode = 'XYZ'
+        cutter.display_type = 'WIRE'
+        cutter.parent = self.target
+        self.cutters.append(cutter)
+
+    def _ensure_tip_marker_material(self, name, color):
+        material = bpy.data.materials.get(name)
+        if material is None:
+            material = bpy.data.materials.new(name=name)
+
+        material.diffuse_color = color
         return material
 
     def _create_tip_vertex_markers(self, context, avg):
@@ -747,17 +815,35 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         if tip_region is None:
             return
 
-        marker_material = self._ensure_tip_marker_material()
+        pulmonary_marker_material = self._ensure_tip_marker_material(
+            "PulmonaryVeinTipMarker",
+            (1.0, 0.0, 0.0, 1.0),
+        )
+        mitral_marker_material = self._ensure_tip_marker_material(
+            "MitralValveTipMarker",
+            (0.0, 0.25, 1.0, 1.0),
+        )
         marker_radius = avg * TIP_MARKER_RADIUS_FACTOR
 
-        for index, vertex_index in enumerate(tip_region['tip_vertex_ids'], start=1):
+        for index, vertex_index in enumerate(tip_region['pulmonary_tip_vertex_ids'], start=1):
             marker_location = self.target.matrix_world @ self.target.data.vertices[int(vertex_index)].co
 
             bpy.ops.mesh.primitive_uv_sphere_add(radius=marker_radius, location=marker_location)
             marker = context.active_object
-            marker.name = f"Tip_Vertex_{index}"
+            marker.name = f"Pulmonary_Vein_Tip_{index}"
             marker.data.materials.clear()
-            marker.data.materials.append(marker_material)
+            marker.data.materials.append(pulmonary_marker_material)
+
+        mitral_tip_vertex_id = tip_region['mitral_tip_vertex_id']
+        if mitral_tip_vertex_id is None:
+            return
+
+        marker_location = self.target.matrix_world @ self.target.data.vertices[int(mitral_tip_vertex_id)].co
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=marker_radius, location=marker_location)
+        marker = context.active_object
+        marker.name = "Mitral_Valve_Tip"
+        marker.data.materials.clear()
+        marker.data.materials.append(mitral_marker_material)
 
     # ------------------------------------------------------------------
     # Original mesh snapshot
