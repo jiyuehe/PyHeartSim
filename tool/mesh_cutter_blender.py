@@ -27,6 +27,11 @@
 # NOTE: This approach assumes each cutter is a *convex* mesh.  Non-convex
 # cutters will produce unexpected results.
 
+# Instructions for use
+# --------------------
+# Press k to toggle Cut Mode
+# Press s to save the obj
+
 #%%
 import sys
 from pathlib import Path
