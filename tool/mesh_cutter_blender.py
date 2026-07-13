@@ -131,7 +131,7 @@ EXPORT_FILE_PATH = BASE_PATH / f"{name_prefix}_refined_cut.obj"
 CUTS_FILE_PATH = BASE_PATH / f"{name_prefix}_cuts.yaml"
 USE_SCRIPT_DIR_FALLBACK = True
 LOAD_CUTS = True
-SHOW_TIP_VERTEX_MARKERS = True
+SHOW_TIP_VERTEX_MARKERS = False # Set to True to visualize detected tip vertices as red spheres in the Blender scene.
 AUTO_CREATE_VEIN_CUTTERS = True
 
 # Number of additional interactive cutters to create.
