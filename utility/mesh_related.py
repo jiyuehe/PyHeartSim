@@ -88,7 +88,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         longest_trail_idx = np.argmax([len(trail) for trail in vertex_id_trail])
         trail = vertex_id_trail[longest_trail_idx]
 
-        vertex_color = np.ones((n_vertices, 3))
+        vertex_color = np.ones((n_vertices, 3)) * 0.7
         vertex_color[trail[-1], :] = [1, 0, 0] # final vertex in red
         for i in range(len(trail) - 1):
             vertex_color[trail[i], :] = [0, 0, 1] # trail vertices in blue
@@ -122,7 +122,12 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
                 marker=dict(size=2, color=vertex_color_str),
             ),
         ])
-        fig.update_layout(scene=dict(aspectmode='data'))
+        fig.update_layout(scene=dict(
+            aspectmode='data',
+            xaxis=dict(visible=False, showgrid=False, showbackground=False),
+            yaxis=dict(visible=False, showgrid=False, showbackground=False),
+            zaxis=dict(visible=False, showgrid=False, showbackground=False),
+        ))
         fig.show() # opens in browser
 
     # find the "highest" vertices
@@ -159,7 +164,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
     if debug_plot == 1: # show all the regions
         n_regions = len(tip_vertex_ids)
         cluster_colors = plt.colormaps['tab20'](np.linspace(0, 1, n_regions))
-        vertex_color = np.ones((n_vertices, 4))
+        vertex_color = np.ones((n_vertices, 4)) * 0.7
         for i in range(n_regions):
             vertex_color[vertex_labels == tip_vertex_ids[i], :] = cluster_colors[i]
 
@@ -171,7 +176,12 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
                 marker=dict(size=2, color=['rgba({},{},{},{})'.format(int(r*255), int(g*255), int(b*255), a) for r, g, b, a in vertex_color]),
             ),
         ])
-        fig.update_layout(scene=dict(aspectmode='data'))
+        fig.update_layout(scene=dict(
+            aspectmode='data',
+            xaxis=dict(visible=False, showgrid=False, showbackground=False),
+            yaxis=dict(visible=False, showgrid=False, showbackground=False),
+            zaxis=dict(visible=False, showgrid=False, showbackground=False),
+        ))
         fig.show() # opens in browser
 
     # find the 4 tip vertices with the largest distance to center of mass
@@ -245,7 +255,12 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
                 line=dict(color='black', width=3),
             ),
         ])
-        fig.update_layout(scene=dict(aspectmode='data'))
+        fig.update_layout(scene=dict(
+            aspectmode='data',
+            xaxis=dict(visible=False, showgrid=False, showbackground=False),
+            yaxis=dict(visible=False, showgrid=False, showbackground=False),
+            zaxis=dict(visible=False, showgrid=False, showbackground=False),
+        ))
         fig.show() # opens in browser
 
     return center_of_mass, top_4_tip_vertex, top_4_tip_vertex_ids, largest_region_tip_vertex, largest_region_tip_id, vertex_labels
