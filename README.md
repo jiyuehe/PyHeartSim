@@ -49,6 +49,7 @@ Patient left atrium rotor simulation:
 # More demonstrations
 Patient left atrium focal sources simulation:  
 <img src="example/left_atrium_focal.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_reentry.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
 
 Patient left atrium fibrillation simulation:  
