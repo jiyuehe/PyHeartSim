@@ -1,6 +1,7 @@
 # Demonstration
-Patient left atrium rotor simulation:  
+Patient left atrium rotor and macro-reentry simulation:  
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
+<img src="example/left_atrium_reentry.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
 # Highlights
@@ -49,7 +50,6 @@ Patient left atrium rotor simulation:
 # More demonstrations
 Patient left atrium focal sources simulation:  
 <img src="example/left_atrium_focal.gif" alt="Demo" width="400" />  
-<img src="example/left_atrium_reentry.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
 
 Patient left atrium fibrillation simulation:  
