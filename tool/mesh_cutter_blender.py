@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+#s
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -30,7 +30,7 @@
 # Instructions for use
 # --------------------
 # Press k to toggle Cut Mode
-# Press s to save the obj
+# Press s to save the .yaml cut file and the cut .obj file
 
 #%%
 import sys
@@ -40,9 +40,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 
 #%%
+name_prefix = '111_6-LA'
+
+#%%
+debug_plot = 0
 
 ENABLE_COMMON_DEBUG_IMPORTS = False
-debug_plot = 0
 if ENABLE_COMMON_DEBUG_IMPORTS:
     import common
 
@@ -55,8 +58,7 @@ if debug_plot == 1:
     pio.renderers.default = "browser"
 
     file_dir = Path('/home/j/Desktop/hdd/share_folder/patient_data')
-    mesh_name = '99_2-LaFAM_cartofinder_data'
-    vertex, face = common.load_obj(file_dir, mesh_name+'_refined')
+    vertex, face = common.load_obj(file_dir, '111_6-LA_refined')
 
     # Tip detection is performed directly from the loaded mesh by
     # MESH_OT_KnifeCutter._identify_tip_regions(); no *_tip_vertex.txt file is
@@ -121,8 +123,6 @@ from math import radians
 from mathutils import Vector
 
 # --- CONFIGURATION ---
-name_prefix = '99_2-LaFAM_cartofinder_data'
-
 BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")
 

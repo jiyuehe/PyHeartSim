@@ -29,7 +29,7 @@ import configuration
 # directory folder
 directory = configuration.directory_setup()
 
-mesh_id = 99
+mesh_id = 111
 
 # grab all atrium mesh file names
 mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
@@ -78,7 +78,6 @@ if do_flag == 1: # load the mesh and save as figure
             ax.set_axis_off()
             common.set_axes_equal(ax)
 
-            
             plt.savefig(str(save_path), dpi=100)
             plt.close(fig)
 
