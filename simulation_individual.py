@@ -184,7 +184,7 @@ if __name__ == "__main__":
         common.crop_image(fig_name)
 
     # plot phase map
-    plot_phase_map_flag = 1
+    plot_phase_map_flag = 0
     if plot_phase_map_flag == 1:
         from scipy.signal import hilbert, butter, filtfilt
         egm = electrogram_unipolar  # shape: (time, n_electrode)
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     print(f'mean conduction velocity: {conduction_velocity_mean:.2f} mm/ms')
 
     # plot some action potentials and electrograms
-    do_flag = 1
+    do_flag = 0
     if do_flag == 1: 
         # load simulation results
         simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
@@ -344,7 +344,7 @@ if __name__ == "__main__":
             # load simulation results
             simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
 
-            save_movie_flag = 1 # 1: save movie. 0: do not save movie
+            save_movie_flag = 0 # 1: save movie. 0: do not save movie
             starting_time = 0 # 0 # ms
             ending_time = [] # ms. []: till the end. or specify a value
 
