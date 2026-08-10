@@ -95,7 +95,7 @@ def run_simulation(input_arguments):
 # If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
-    name_prefix = configuration.mesh_name(111) # get mesh name prefix
+    name_prefix = configuration.mesh_name(0) # get mesh name prefix
 
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
@@ -193,7 +193,7 @@ if __name__ == "__main__":
         from scipy.signal import find_peaks
         phase_linear = np.zeros_like(egm)
         for ch in range(egm.shape[1]):
-            peaks, _ = find_peaks(egm[:, ch], distance=fs * 0.1)  # at least 100 ms between peaks
+            peaks, _ = find_peaks(egm[:, ch], distance=1000 * 0.1)  # at least 100 ms between peaks
             for i in range(len(peaks) - 1):
                 start, end = peaks[i], peaks[i + 1]
                 phase_linear[start:end, ch] = np.linspace(0, 1, end - start, endpoint=False)
@@ -338,7 +338,7 @@ if __name__ == "__main__":
         plt.close()
 
     # display simulation movie
-    do_flag = 0
+    do_flag = 1
     if do_flag == 1:
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
             # load simulation results
