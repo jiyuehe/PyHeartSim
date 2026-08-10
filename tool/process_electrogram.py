@@ -50,7 +50,7 @@ directory['result'].mkdir(exist_ok=True)
 half_window_size = 500//2 # number of time points before and after the 2000 ms mark
 
 # load data
-name_prefix = configuration.mesh_name(102)
+name_prefix = configuration.mesh_name(111)
 
 data = np.load(directory['data_carto'] / f'{name_prefix}_carto_data.npz', allow_pickle=True)
 carto_data = {k: data[k] for k in data.files}
