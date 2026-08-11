@@ -13,10 +13,11 @@ body { overflow: hidden; font-family: Arial, sans-serif; background: #ffffff; }
 
 /* toolbar */
 #toolbar {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    z-index: 20; display: flex; gap: 10px; align-items: center;
+    position: absolute; top: 0; left: 0; right: 0;
+    z-index: 20; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
     background: rgba(255,255,255,0.95); padding: 8px 16px;
-    border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    width: 100%; justify-content: flex-start;
 }
 #toolbar label { font-size: 13px; font-weight: bold; }
 #toolbar input, #toolbar select { font-size: 13px; }
@@ -30,11 +31,11 @@ body { overflow: hidden; font-family: Arial, sans-serif; background: #ffffff; }
 .btn-clear:hover { background: #da190b; }
 .btn-undo  { background: #2196F3; color: white; }
 .btn-undo:hover  { background: #1976D2; }
-.separator { width: 1px; height: 24px; background: #ccc; }
+.separator { display: none; }
 
 /* mode indicator */
 #mode-indicator {
-    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
     z-index: 20; padding: 6px 16px; border-radius: 6px;
     font-size: 14px; font-weight: bold; transition: all 0.2s;
 }

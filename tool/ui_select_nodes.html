@@ -19,15 +19,26 @@
             <option value="4">4</option>
         </select>
         <div class="separator"></div>
+        <label>Selection:</label>
+        <select id="selection-mode">
+            <option value="region" selected>Region</option>
+            <option value="line">Line</option>
+        </select>
+        <div class="separator"></div>
         <label>Depth&nbsp;%:</label>
         <input type="range" id="depth-threshold" min="1" max="100" value="15" style="width:80px;">
         <span id="depth-value">15%</span>
         <div class="separator"></div>
+        <div id="line-width-group" style="display:flex; gap:10px; align-items:center; flex-wrap:nowrap;">
+            <label>Line&nbsp;width:</label>
+            <input type="range" id="line-width" min="2" max="60" value="14" style="width:80px;">
+            <span id="line-width-value">14px</span>
+            <div class="separator"></div>
+        </div>
         <button class="btn-undo" id="btn-undo" title="Undo last selection">Undo</button>
         <button class="btn-clear" id="btn-clear" title="Clear all flags">Clear All</button>
         <button class="btn-save" id="btn-save" title="Save flags to file">Save</button>
         <div class="separator"></div>
-        <span id="node-count" style="font-size:12px; color:#666;"></span>
     </div>
 
     <div id="mode-indicator" class="mode-rotate" style="display:none;">
@@ -35,7 +46,7 @@
     </div>
 
     <div id="instructions" style="display:none;">
-        Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Select: Shift + Left drag
+        Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Region: Shift + Drag &nbsp;|&nbsp; Line: choose Line mode + Shift + Drag
     </div>
 
     <div id="output-panel" style="display:none;">
@@ -71,8 +82,12 @@
         let faceCount = 0;
         let undoStack = [];
         const MAX_UNDO = 20;
-        let isLassoing = false;
-        let lassoPoints = [];
+        let LINE_SELECTION_MAX_DISTANCE_PIXELS = 5;
+        let isSelecting = false;
+        let isShiftPressed = false;
+        let selectionPoints = [];
+        let selectionMode = 'region';
+        let meshAdjacency = null;
 
         // ---- color map for displayed node flags ----
         const COLOR_MAP = [
@@ -129,6 +144,7 @@
                 ? new Uint32Array(data.faces)
                 : new Uint16Array(data.faces);
             nodeFlags = new Int32Array(data.flags);
+            buildMeshAdjacency();
 
             // center geometry at origin for proper rotation
             let cx = 0, cy = 0, cz = 0;
@@ -232,8 +248,6 @@
         function updateNodeCount() {
             let flagged = 0;
             for (let i = 0; i < nodeCount; i++) if (nodeFlags[i] > 0) flagged++;
-            document.getElementById('node-count').textContent =
-                nodeCount + ' vertices, ' + faceCount + ' faces | ' + flagged + ' flagged';
             updateOutputPanel();
         }
 
@@ -304,26 +318,50 @@
             setTimeout(function() { el.style.display = 'none'; }, duration);
         }
 
-        // ---- lasso drawing ----
-        function drawLasso() {
-            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-            if (lassoPoints.length < 2) return;
-            lassoCtx.beginPath();
-            lassoCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
-            for (let i = 1; i < lassoPoints.length; i++) {
-                lassoCtx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+        function updateModeIndicator() {
+            const ind = document.getElementById('mode-indicator');
+            if (selectionMode === 'line' && isSelecting) {
+                ind.textContent = 'Line Select Mode \u2014 Shift + Drag to Select';
+                ind.className = 'mode-select';
+                return;
             }
-            lassoCtx.closePath();
+            if (selectionMode === 'line' && isShiftPressed) {
+                ind.textContent = 'Line Select Ready \u2014 Shift + Drag to Select';
+                ind.className = 'mode-select';
+                return;
+            }
+            if (isSelecting) {
+                ind.textContent = 'Select Mode \u2014 Shift + Drag to Select';
+                ind.className = 'mode-select';
+                return;
+            }
+            ind.textContent = 'Rotate Mode \u2014 Hold Shift to Select';
+            ind.className = 'mode-rotate';
+        }
+
+        // ---- selection drawing ----
+        function drawSelectionOverlay() {
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            if (selectionPoints.length < 2) return;
+            lassoCtx.beginPath();
+            lassoCtx.moveTo(selectionPoints[0].x, selectionPoints[0].y);
+            for (let i = 1; i < selectionPoints.length; i++) {
+                lassoCtx.lineTo(selectionPoints[i].x, selectionPoints[i].y);
+            }
             lassoCtx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
             lassoCtx.lineWidth = 2;
             lassoCtx.stroke();
-            lassoCtx.fillStyle = 'rgba(255, 255, 0, 0.1)';
-            lassoCtx.fill();
+
+            if (selectionMode === 'region' && selectionPoints.length >= 3) {
+                lassoCtx.closePath();
+                lassoCtx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+                lassoCtx.fill();
+            }
         }
 
-        function clearLasso() {
+        function clearSelectionOverlay() {
             lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-            lassoPoints = [];
+            selectionPoints = [];
         }
 
         // ---- point-in-polygon (ray casting algorithm) ----
@@ -340,19 +378,189 @@
             return inside;
         }
 
-        // ---- perform selection on lasso release ----
-        function performSelection() {
-            if (lassoPoints.length < 3) return;
+        function buildMeshAdjacency() {
+            const neighbors = Array.from({ length: nodeCount }, () => new Set());
 
-            const flagValue = parseInt(document.getElementById('flag-value').value);
-            const depthPercent = parseInt(document.getElementById('depth-threshold').value);
+            for (let i = 0; i < faceIndices.length; i += 3) {
+                const a = faceIndices[i];
+                const b = faceIndices[i + 1];
+                const c = faceIndices[i + 2];
+
+                neighbors[a].add(b); neighbors[a].add(c);
+                neighbors[b].add(a); neighbors[b].add(c);
+                neighbors[c].add(a); neighbors[c].add(b);
+            }
+
+            meshAdjacency = neighbors.map((s) => Array.from(s));
+        }
+
+        function samplePolyline(points, stepPixels) {
+            if (points.length === 0) return [];
+
+            const samples = [points[0]];
+            for (let i = 1; i < points.length; i++) {
+                const a = points[i - 1];
+                const b = points[i];
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 1e-6) continue;
+
+                const steps = Math.max(1, Math.ceil(distance / stepPixels));
+                for (let s = 1; s <= steps; s++) {
+                    const t = s / steps;
+                    samples.push({
+                        x: a.x + dx * t,
+                        y: a.y + dy * t,
+                    });
+                }
+            }
+
+            return samples;
+        }
+
+        function simplifyStrokePoints(points, minSpacingPixels) {
+            if (points.length === 0) return [];
+
+            const simplified = [points[0]];
+            let last = points[0];
+
+            for (let i = 1; i < points.length; i++) {
+                const p = points[i];
+                const dx = p.x - last.x;
+                const dy = p.y - last.y;
+                if (dx * dx + dy * dy >= minSpacingPixels * minSpacingPixels) {
+                    simplified.push(p);
+                    last = p;
+                }
+            }
+
+            const tail = points[points.length - 1];
+            const end = simplified[simplified.length - 1];
+            if (tail.x !== end.x || tail.y !== end.y) {
+                simplified.push(tail);
+            }
+
+            return simplified;
+        }
+
+        function nearestVertexIndexAtPoint(px, py, screenX, screenY, depths, maxDistancePixels = LINE_SELECTION_MAX_DISTANCE_PIXELS) {
+            let nearestIndex = -1;
+            let nearestDistSquared = Infinity;
+            let nearestDepth = Infinity;
+            const maxDistanceSquared = maxDistancePixels * maxDistancePixels;
+
+            for (let i = 0; i < nodeCount; i++) {
+                const dx = screenX[i] - px;
+                const dy = screenY[i] - py;
+                const distSquared = dx * dx + dy * dy;
+
+                if (distSquared > maxDistanceSquared) continue;
+
+                if (distSquared + 1e-6 < nearestDistSquared) {
+                    nearestDistSquared = distSquared;
+                    nearestDepth = depths[i];
+                    nearestIndex = i;
+                } else if (Math.abs(distSquared - nearestDistSquared) <= 1e-6 && depths[i] < nearestDepth) {
+                    nearestDepth = depths[i];
+                    nearestIndex = i;
+                }
+            }
+
+            return nearestIndex;
+        }
+
+        function buildLineAnchorIndices(sampledPoints, screenX, screenY, depths, minAnchorSpacingPixels) {
+            const anchors = [];
+            let lastAnchor = -1;
+            let lastAnchorX = 0;
+            let lastAnchorY = 0;
+            const minSpacingSquared = minAnchorSpacingPixels * minAnchorSpacingPixels;
+
+            for (const p of sampledPoints) {
+                const nearestIndex = nearestVertexIndexAtPoint(
+                    p.x, p.y, screenX, screenY, depths, LINE_SELECTION_MAX_DISTANCE_PIXELS
+                );
+                if (nearestIndex < 0 || nearestIndex === lastAnchor) continue;
+
+                const x = screenX[nearestIndex];
+                const y = screenY[nearestIndex];
+                if (anchors.length > 0) {
+                    const dx = x - lastAnchorX;
+                    const dy = y - lastAnchorY;
+                    if (dx * dx + dy * dy < minSpacingSquared) {
+                        continue;
+                    }
+                }
+
+                anchors.push(nearestIndex);
+                lastAnchor = nearestIndex;
+                lastAnchorX = x;
+                lastAnchorY = y;
+            }
+
+            // Keep line selection as an open polyline: do not close end back to start.
+            if (anchors.length > 2 && anchors[anchors.length - 1] === anchors[0]) {
+                anchors.pop();
+            }
+
+            return anchors;
+        }
+
+        function shortestPathOnMesh(start, end) {
+            if (start === end) return [start];
+            if (!meshAdjacency) return [start, end];
+
+            const startNeighbors = meshAdjacency[start] || [];
+            for (const n of startNeighbors) {
+                if (n === end) return [start, end];
+            }
+
+            const visited = new Uint8Array(nodeCount);
+            const previous = new Int32Array(nodeCount);
+            previous.fill(-1);
+
+            const queue = new Int32Array(nodeCount);
+            let head = 0;
+            let tail = 0;
+
+            queue[tail++] = start;
+            visited[start] = 1;
+
+            while (head < tail && !visited[end]) {
+                const current = queue[head++];
+                const neighbors = meshAdjacency[current] || [];
+
+                for (const next of neighbors) {
+                    if (visited[next]) continue;
+                    visited[next] = 1;
+                    previous[next] = current;
+                    queue[tail++] = next;
+                    if (next === end) break;
+                }
+            }
+
+            if (!visited[end]) return [start, end];
+
+            const reversedPath = [];
+            let node = end;
+            while (node !== -1) {
+                reversedPath.push(node);
+                if (node === start) break;
+                node = previous[node];
+            }
+
+            reversedPath.reverse();
+            return reversedPath;
+        }
+
+        function projectNodesToScreen() {
             const w = renderer.domElement.clientWidth;
             const h = renderer.domElement.clientHeight;
-
-            // project all points to screen coordinates
             const screenX = new Float32Array(nodeCount);
             const screenY = new Float32Array(nodeCount);
-            const depths  = new Float32Array(nodeCount);
+            const depths = new Float32Array(nodeCount);
             const vec = new THREE.Vector3();
 
             for (let i = 0; i < nodeCount; i++) {
@@ -360,12 +568,38 @@
                 vec.project(camera);
                 screenX[i] = (vec.x + 1) / 2 * w;
                 screenY[i] = (-vec.y + 1) / 2 * h;
-                depths[i]  = vec.z;
+                depths[i] = vec.z;
             }
+
+            return { screenX, screenY, depths };
+        }
+
+        function applyDepthFilter(candidateIndices, depths, depthPercent) {
+            if (candidateIndices.length === 0) return [];
+
+            let minDepth = Infinity;
+            let maxDepth = -Infinity;
+            for (const i of candidateIndices) {
+                if (depths[i] < minDepth) minDepth = depths[i];
+                if (depths[i] > maxDepth) maxDepth = depths[i];
+            }
+
+            const depthRange = maxDepth - minDepth;
+            const threshold = depthRange * (depthPercent / 100);
+            return candidateIndices.filter((i) => depths[i] - minDepth <= threshold + 1e-6);
+        }
+
+        // ---- perform region selection on release ----
+        function performRegionSelection() {
+            if (selectionPoints.length < 3) return;
+
+            const flagValue = parseInt(document.getElementById('flag-value').value);
+            const depthPercent = parseInt(document.getElementById('depth-threshold').value);
+            const { screenX, screenY, depths } = projectNodesToScreen();
 
             // lasso bounding box for quick rejection
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (const p of lassoPoints) {
+            for (const p of selectionPoints) {
                 if (p.x < minX) minX = p.x;
                 if (p.x > maxX) maxX = p.x;
                 if (p.y < minY) minY = p.y;
@@ -377,90 +611,137 @@
             for (let i = 0; i < nodeCount; i++) {
                 if (screenX[i] < minX || screenX[i] > maxX ||
                     screenY[i] < minY || screenY[i] > maxY) continue;
-                if (pointInPolygon(screenX[i], screenY[i], lassoPoints)) {
+                if (pointInPolygon(screenX[i], screenY[i], selectionPoints)) {
                     insideIndices.push(i);
                 }
             }
 
             if (insideIndices.length === 0) return;
 
-            // depth filtering: keep only front-facing nodes
-            let minDepth = Infinity, maxDepth = -Infinity;
-            for (const i of insideIndices) {
-                if (depths[i] < minDepth) minDepth = depths[i];
-                if (depths[i] > maxDepth) maxDepth = depths[i];
-            }
-            const depthRange = maxDepth - minDepth;
-            const threshold = depthRange * (depthPercent / 100);
+            const selectedIndices = applyDepthFilter(insideIndices, depths, depthPercent);
+            if (selectedIndices.length === 0) return;
 
             pushUndo();
 
-            let count = 0;
-            for (const i of insideIndices) {
-                if (depths[i] - minDepth <= threshold + 1e-6) {
-                    nodeFlags[i] = flagValue;
-                    count++;
-                }
+            for (const i of selectedIndices) {
+                nodeFlags[i] = flagValue;
             }
 
             updateColors();
             updateNodeCount();
-            showStatus('Selected ' + count + ' nodes with flag ' + flagValue);
+            showStatus('Selected ' + selectedIndices.length + ' nodes with flag ' + flagValue);
+        }
+
+        // ---- perform line selection on release ----
+        function performLineSelection() {
+            if (selectionPoints.length < 2) return;
+
+            const flagValue = parseInt(document.getElementById('flag-value').value);
+            const depthPercent = parseInt(document.getElementById('depth-threshold').value);
+            const { screenX, screenY, depths } = projectNodesToScreen();
+
+            // Sample the stroke densely so every part of the drawn path is covered.
+            const simplifiedStroke = simplifyStrokePoints(selectionPoints, 4);
+            const sampledPoints = samplePolyline(simplifiedStroke, 4);
+
+            // Collect every mesh node within the snap radius of any stroke sample point.
+            // This avoids BFS path-finding on mesh topology which causes chaotic results
+            // when two anchor nodes are topologically far apart despite being close on screen.
+            const snapRadiusSq = LINE_SELECTION_MAX_DISTANCE_PIXELS * LINE_SELECTION_MAX_DISTANCE_PIXELS;
+            const selectedSet = new Set();
+
+            for (const p of sampledPoints) {
+                for (let i = 0; i < nodeCount; i++) {
+                    const dx = screenX[i] - p.x;
+                    const dy = screenY[i] - p.y;
+                    if (dx * dx + dy * dy <= snapRadiusSq) {
+                        selectedSet.add(i);
+                    }
+                }
+            }
+
+            if (selectedSet.size === 0) return;
+
+            // Apply depth filter to avoid selecting back-face nodes.
+            const candidateIndices = Array.from(selectedSet);
+            const finalIndices = applyDepthFilter(candidateIndices, depths, depthPercent);
+            if (finalIndices.length === 0) return;
+
+            pushUndo();
+
+            for (const i of finalIndices) {
+                nodeFlags[i] = flagValue;
+            }
+
+            updateColors();
+            updateNodeCount();
+            showStatus('Selected ' + finalIndices.length + ' nodes along line with flag ' + flagValue);
+        }
+
+        function performSelection() {
+            if (selectionMode === 'line') {
+                performLineSelection();
+                return;
+            }
+            performRegionSelection();
         }
 
         // ---- event handlers ----
         const canvas = renderer.domElement;
 
+        document.getElementById('selection-mode').addEventListener('change', function(e) {
+            selectionMode = e.target.value;
+            updateModeIndicator();
+        });
+
         // shift key state for mode indicator
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Shift') {
-                const ind = document.getElementById('mode-indicator');
-                ind.textContent = 'Select Mode \u2014 Shift + Drag to Select';
-                ind.className = 'mode-select';
+                isShiftPressed = true;
+                updateModeIndicator();
             }
         });
 
         document.addEventListener('keyup', function(e) {
-            if (e.key === 'Shift' && !isLassoing) {
-                const ind = document.getElementById('mode-indicator');
-                ind.textContent = 'Rotate Mode \u2014 Hold Shift to Select';
-                ind.className = 'mode-rotate';
+            if (e.key === 'Shift') {
+                isShiftPressed = false;
+                updateModeIndicator();
             }
         });
 
         canvas.addEventListener('mousedown', function(e) {
-            if (e.button === 0 && e.shiftKey) {
+            const shouldStartRegionSelection = selectionMode === 'region' && e.button === 0 && e.shiftKey;
+            const shouldStartLineSelection = selectionMode === 'line' && e.button === 0 && e.shiftKey;
+
+            if (shouldStartRegionSelection || shouldStartLineSelection) {
                 e.preventDefault();
-                isLassoing = true;
+                isSelecting = true;
                 controls.enabled = false;
                 canvas.style.cursor = 'crosshair';
-                lassoPoints = [{ x: e.clientX, y: e.clientY }];
+                selectionPoints = [{ x: e.clientX, y: e.clientY }];
+                updateModeIndicator();
             }
         });
 
         canvas.addEventListener('mousemove', function(e) {
-            if (isLassoing) {
-                lassoPoints.push({ x: e.clientX, y: e.clientY });
-                drawLasso();
+            if (isSelecting) {
+                selectionPoints.push({ x: e.clientX, y: e.clientY });
+                drawSelectionOverlay();
             }
         });
 
         canvas.addEventListener('mouseup', function(e) {
-            if (isLassoing && e.button === 0) {
-                isLassoing = false;
+            if (isSelecting && e.button === 0) {
+                isSelecting = false;
                 controls.enabled = true;
                 canvas.style.cursor = 'default';
 
-                if (lassoPoints.length >= 3) {
+                if (selectionPoints.length >= 2) {
                     performSelection();
                 }
-                clearLasso();
+                clearSelectionOverlay();
 
-                if (!e.shiftKey) {
-                    const ind = document.getElementById('mode-indicator');
-                    ind.textContent = 'Rotate Mode \u2014 Hold Shift to Select';
-                    ind.className = 'mode-rotate';
-                }
+                updateModeIndicator();
             }
         });
 
@@ -501,6 +782,11 @@
             document.getElementById('depth-value').textContent = e.target.value + '%';
         });
 
+        document.getElementById('line-width').addEventListener('input', function(e) {
+            LINE_SELECTION_MAX_DISTANCE_PIXELS = parseInt(e.target.value);
+            document.getElementById('line-width-value').textContent = e.target.value + 'px';
+        });
+
         // ---- window resize ----
         window.addEventListener('resize', function() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -518,6 +804,7 @@
         }
 
         // ---- start ----
+        updateModeIndicator();
         init();
     </script>
 </body>
