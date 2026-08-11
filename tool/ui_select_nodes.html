@@ -21,18 +21,18 @@
         <div class="separator"></div>
         <label>Selection:</label>
         <select id="selection-mode">
-            <option value="region" selected>Region</option>
-            <option value="line">Line</option>
+            <option value="region">Region</option>
+            <option value="line" selected>Line</option>
         </select>
         <div class="separator"></div>
         <label>Depth&nbsp;%:</label>
-        <input type="range" id="depth-threshold" min="1" max="100" value="15" style="width:80px;">
-        <span id="depth-value">15%</span>
+        <input type="range" id="depth-threshold" min="1" max="100" value="40" style="width:80px;">
+        <span id="depth-value">40%</span>
         <div class="separator"></div>
         <div id="line-width-group" style="display:flex; gap:10px; align-items:center; flex-wrap:nowrap;">
             <label>Line&nbsp;width:</label>
-            <input type="range" id="line-width" min="2" max="60" value="14" style="width:80px;">
-            <span id="line-width-value">14px</span>
+            <input type="range" id="line-width" min="2" max="60" value="10" style="width:80px;">
+            <span id="line-width-value">10px</span>
             <div class="separator"></div>
         </div>
         <button class="btn-undo" id="btn-undo" title="Undo last selection">Undo</button>
@@ -82,11 +82,11 @@
         let faceCount = 0;
         let undoStack = [];
         const MAX_UNDO = 20;
-        let LINE_SELECTION_MAX_DISTANCE_PIXELS = 5;
+        let LINE_SELECTION_MAX_DISTANCE_PIXELS = parseInt(document.getElementById('line-width').value);
         let isSelecting = false;
         let isShiftPressed = false;
         let selectionPoints = [];
-        let selectionMode = 'region';
+        let selectionMode = 'line';
         let meshAdjacency = null;
 
         // ---- color map for displayed node flags ----
@@ -253,8 +253,17 @@
 
         // ---- output panel ----
         const FLAG_LABELS = { 1: 'Flag 1 (S1)', 2: 'Flag 2 (S2)', 3: 'Flag 3', 4: 'Flag 4' };
-        const FLAG_COLORS = { 1: '#ff0000', 2: '#ff00ff', 3: '#000000', 4: '#ff00ff' };
         let outputPanelCollapsed = false;
+        const flagSectionCollapsed = {};
+
+        function toggleFlagSection(k) {
+            flagSectionCollapsed[k] = !flagSectionCollapsed[k];
+            const body = document.getElementById('flag-body-' + k);
+            const arrow = document.getElementById('flag-arrow-' + k);
+            if (body) body.style.display = flagSectionCollapsed[k] ? 'none' : 'block';
+            if (arrow) arrow.innerHTML = flagSectionCollapsed[k] ? '&#9654;' : '&#9660;';
+        }
+        window.toggleFlagSection = toggleFlagSection;
 
         function toggleOutputPanel() {
             outputPanelCollapsed = !outputPanelCollapsed;
@@ -263,6 +272,7 @@
             document.getElementById('output-panel-toggle').innerHTML =
                 outputPanelCollapsed ? '&#9654;' : '&#9660;';
         }
+        window.toggleOutputPanel = toggleOutputPanel;
 
         function updateOutputPanel() {
             const body = document.getElementById('output-panel-body');
@@ -279,16 +289,14 @@
             const keys = Object.keys(FLAG_LABELS).map(Number);
             for (const k of keys) {
                 const label = FLAG_LABELS[k] || ('Flag ' + k);
-                const color = FLAG_COLORS[k] || '#555';
                 const indices = groups[k];
+                const isCollapsed = flagSectionCollapsed[k];
                 html += '<div class="flag-section">';
-                html += '<div class="flag-section-title" style="color:' + color + ';">' +
-                    label + '</div>';
-                if (indices && indices.length > 0) {
-                    html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
-                } else {
-                    html += '<div class="flag-section-content empty">none</div>';
-                }
+                html += '<div class="flag-section-title" onclick="toggleFlagSection(' + k + ')">' +
+                    '<span id="flag-arrow-' + k + '">' + (isCollapsed ? '&#9654;' : '&#9660;') + '</span> ' + label + '</div>';
+                html += '<div class="flag-section-content' + ((!indices || indices.length === 0) ? ' empty' : '') + '" id="flag-body-' + k + '" style="display:' + (isCollapsed ? 'none' : 'block') + '">';
+                html += (indices && indices.length > 0) ? indices.join(', ') : 'none';
+                html += '</div>';
                 html += '</div>';
             }
 
@@ -296,9 +304,11 @@
             for (const k of Object.keys(groups).map(Number).sort()) {
                 if (k >= 1 && k <= 4) continue;
                 const indices = groups[k];
+                const isCollapsedK = flagSectionCollapsed[k];
                 html += '<div class="flag-section">';
-                html += '<div class="flag-section-title" style="color:#555;">Flag ' + k + '</div>';
-                html += '<div class="flag-section-content">' + indices.join(', ') + '</div>';
+                html += '<div class="flag-section-title" onclick="toggleFlagSection(' + k + ')">' +
+                    '<span id="flag-arrow-' + k + '">' + (isCollapsedK ? '&#9654;' : '&#9660;') + '</span> Flag ' + k + '</div>';
+                html += '<div class="flag-section-content" id="flag-body-' + k + '" style="display:' + (isCollapsedK ? 'none' : 'block') + '">' + indices.join(', ') + '</div>';
                 html += '</div>';
             }
 
