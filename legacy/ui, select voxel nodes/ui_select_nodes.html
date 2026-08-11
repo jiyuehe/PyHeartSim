@@ -65,30 +65,25 @@
 
         // ---- state ----
         let nodePositions = null; // Float32Array (centered for display)
-        let faceIndices = null;   // Uint16Array or Uint32Array triangle indices
         let nodeFlags = null;     // Int32Array
         let nodeCount = 0;
-        let faceCount = 0;
         let undoStack = [];
         const MAX_UNDO = 20;
         let isLassoing = false;
         let lassoPoints = [];
 
-        // ---- color map for displayed node flags ----
+        // ---- color map (matches matplotlib version) ----
         const COLOR_MAP = [
-            new THREE.Color(1.0, 1.0, 1.0),  // 0: white
-            new THREE.Color(1.0, 0.0, 0.0),  // 1: red
-            new THREE.Color(1.0, 0.0, 1.0),  // 2: magenta
-            new THREE.Color(0.0, 0.0, 0.0),  // 3: black
-            new THREE.Color(0.0, 1.0, 0.0),  // 4: green
+            new THREE.Color(0.5, 0.5, 0.5),  // 0: grey
+            new THREE.Color(0.0, 0.0, 1.0),  // 1: blue  (S1)
+            new THREE.Color(1.0, 0.0, 0.0),  // 2: red   (S2)
+            new THREE.Color(1.0, 0.65, 0.0), // 3: orange
+            new THREE.Color(1.0, 0.0, 1.0),  // 4: magenta
         ];
 
         function getFlagColor(flag) {
             if (flag === 0) return COLOR_MAP[0];
-            if (flag === 1) return COLOR_MAP[1];
-            if (flag === 2) return COLOR_MAP[2];
-            if (flag === 3) return COLOR_MAP[3];
-            return COLOR_MAP[4];
+            return COLOR_MAP[((flag - 1) % 4) + 1];
         }
 
         // ---- Three.js setup ----
@@ -114,7 +109,7 @@
         lassoCanvas.width = window.innerWidth;
         lassoCanvas.height = window.innerHeight;
 
-        let geometry, material, mesh, colorsAttribute;
+        let geometry, material, points, colorsAttribute;
 
         // ---- fetch data and initialize ----
         async function init() {
@@ -122,12 +117,7 @@
             const data = await resp.json();
 
             nodeCount = data.count;
-            faceCount = data.face_count;
             nodePositions = new Float32Array(data.positions);
-            const useUint32 = nodeCount > 65535;
-            faceIndices = useUint32
-                ? new Uint32Array(data.faces)
-                : new Uint16Array(data.faces);
             nodeFlags = new Int32Array(data.flags);
 
             // center geometry at origin for proper rotation
@@ -155,49 +145,30 @@
                 if (r > maxR) maxR = r;
             }
 
-            // build indexed triangular mesh
+            // build point cloud
             geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
-            geometry.setIndex(new THREE.BufferAttribute(faceIndices, 1));
-            geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(nodeCount * 3).fill(1), 3));
 
-            geometry.computeVertexNormals();
+            const colors = new Float32Array(nodeCount * 3);
+            for (let i = 0; i < nodeCount; i++) {
+                const c = getFlagColor(nodeFlags[i]);
+                colors[i * 3] = c.r;
+                colors[i * 3 + 1] = c.g;
+                colors[i * 3 + 2] = c.b;
+            }
+            colorsAttribute = new THREE.BufferAttribute(colors, 3);
+            geometry.setAttribute('color', colorsAttribute);
 
-            material = new THREE.MeshBasicMaterial({
+            material = new THREE.PointsMaterial({
+                size: 4,
+                sizeAttenuation: false,
                 vertexColors: true,
-                color: 0xffffff,
-                side: THREE.DoubleSide,
-                polygonOffset: true,
-                polygonOffsetFactor: 1.0,
-                polygonOffsetUnits: 1.0,
-                transparent: true,
-                opacity: 1,
                 depthWrite: true,
                 depthTest: true,
             });
 
-            mesh = new THREE.Mesh(geometry, material);
-            mesh.renderOrder = 1;
-            scene.add(mesh);
-
-            updateColors();
-
-            const wireMaterial = new THREE.MeshBasicMaterial({
-                color: 0x666666,
-                wireframe: true,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 1,
-            });
-            const wireMesh = new THREE.Mesh(geometry, wireMaterial);
-            wireMesh.renderOrder = 2;
-            scene.add(wireMesh);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(ambientLight);
-            scene.add(directionalLight);
+            points = new THREE.Points(geometry, material);
+            scene.add(points);
 
             // camera
             camera.position.set(0, 0, maxR * 2.5);
@@ -216,30 +187,27 @@
         }
 
         function updateColors() {
-            if (!geometry || !geometry.attributes.color) return;
-
-            const colorAttr = geometry.attributes.color.array;
+            const arr = colorsAttribute.array;
             for (let i = 0; i < nodeCount; i++) {
-                const color = getFlagColor(nodeFlags[i]);
-                const idx = i * 3;
-                colorAttr[idx] = color.r;
-                colorAttr[idx + 1] = color.g;
-                colorAttr[idx + 2] = color.b;
+                const c = getFlagColor(nodeFlags[i]);
+                arr[i * 3] = c.r;
+                arr[i * 3 + 1] = c.g;
+                arr[i * 3 + 2] = c.b;
             }
-            geometry.attributes.color.needsUpdate = true;
+            colorsAttribute.needsUpdate = true;
         }
 
         function updateNodeCount() {
             let flagged = 0;
             for (let i = 0; i < nodeCount; i++) if (nodeFlags[i] > 0) flagged++;
             document.getElementById('node-count').textContent =
-                nodeCount + ' vertices, ' + faceCount + ' faces | ' + flagged + ' flagged';
+                nodeCount + ' nodes | ' + flagged + ' flagged';
             updateOutputPanel();
         }
 
         // ---- output panel ----
         const FLAG_LABELS = { 1: 'Flag 1 (S1)', 2: 'Flag 2 (S2)', 3: 'Flag 3', 4: 'Flag 4' };
-        const FLAG_COLORS = { 1: '#ff0000', 2: '#ff00ff', 3: '#000000', 4: '#ff00ff' };
+        const FLAG_COLORS = { 1: '#1565C0', 2: '#c62828', 3: '#e65100', 4: '#9C27B0' };
         let outputPanelCollapsed = false;
 
         function toggleOutputPanel() {

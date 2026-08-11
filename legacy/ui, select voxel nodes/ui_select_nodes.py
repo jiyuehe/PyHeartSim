@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#%%
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -24,7 +23,6 @@ import numpy as np
 from flask import Flask, render_template, send_from_directory, jsonify, request
 import configuration
 
-#%%
 _tool_dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder=_tool_dir)
 
@@ -42,9 +40,7 @@ name_prefix = configuration.mesh_name(0)
 file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
-
-node = geometry_data['vertex'] # triangular mesh vertices xyz coordinates
-face = geometry_data['face'] # triangular mesh faces vertex indices
+node = geometry_data['voxel']
 
 flag_file = directory['result'] / f'{name_prefix}_node_flag.npy'
 if os.path.exists(flag_file):
@@ -60,8 +56,6 @@ def index():
 def get_nodes():
     return jsonify({
         'positions': node.flatten().tolist(),
-        'faces': face.flatten().tolist(),
-        'face_count': len(face),
         'flags': node_flag.tolist(),
         'count': len(node)
     })
