@@ -110,7 +110,34 @@ if __name__ == "__main__":
     
     ##############################
     file_path = '/home/j/Desktop/ssd/git/PyHeartSim/result/0_1-la1 78 240_node_flag.npy'
-    node_flag = np.load(file_path)
+    vertex_flag = np.load(file_path) # this is the vertex flag
+    # assign the vertex_flag to the corresponding nodes within a distance threshold
+    node = geometry_data['voxel']
+    node_flag = np.zeros(node.shape[0], dtype=int)
+    distance_threshold = 2 # mm
+    for i, v_flag in enumerate(vertex_flag):
+        if v_flag != 0:
+            vertex_coord = geometry_data['vertex'][i]
+            distances = np.linalg.norm(node - vertex_coord, axis=1)
+            node_flag[distances <= distance_threshold] = v_flag
+
+    debug_plot = 0
+    if debug_plot == 1:
+        # show the nodes with node flags. flag 0 in gray, flag 1 in red, flag 2 in meganta, flag 3 in black, flag 4 in green
+        color_map = {0: 'lightgray', 1: 'red', 2: 'magenta', 3: 'black', 4: 'green'}
+        fig = go.Figure()
+        for flag, color in color_map.items():
+            mask = node_flag == flag
+            if np.any(mask):
+                fig.add_trace(go.Scatter3d(
+                    x=node[mask, 0], y=node[mask, 1], z=node[mask, 2],
+                    mode='markers',
+                    marker=dict(size=2, color=color),
+                    name=f'flag {flag}'
+                ))
+        fig.update_layout(scene=dict(dragmode='orbit'))
+        fig.show()
+    
     s1 = np.where(node_flag == 1)[0]
     ##############################
 
