@@ -371,7 +371,7 @@ if __name__ == "__main__":
             # load simulation results
             simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
 
-            save_movie_flag = 0 # 1: save movie. 0: do not save movie
+            save_movie_flag = 1 # 1: save movie. 0: do not save movie
             starting_time = 0 # 0 # ms
             ending_time = [] # ms. []: till the end. or specify a value
 
