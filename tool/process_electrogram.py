@@ -229,33 +229,39 @@ if debug_plot == 1:
     plt.close()
 
 #%%
-# assign electrogram to each voxel3mm
-clinical_electrogram_unipolar_original = np.zeros((voxel3mm.shape[0], electrogram_unipolar.shape[1]))
-clinical_electrogram_bipolar_original = np.zeros((voxel3mm.shape[0], electrogram_bipolar.shape[1]))
-clinical_electrogram_unipolar_refined = np.zeros((voxel3mm.shape[0], electrogram_unipolar.shape[1]))
-clinical_electrogram_bipolar_refined = np.zeros((voxel3mm.shape[0], electrogram_bipolar.shape[1]))
-clinical_electrogram_reference = np.zeros((voxel3mm.shape[0], electrogram_unipolar_original.shape[1]))
-for voxel_id in range(voxel3mm.shape[0]):
-    # find electrodes mapped to this voxel
-    indices = np.where(voxel3mm_id_of_electrode == voxel_id)[0]
+clinical_electrogram_unipolar_original = electrogram_unipolar_original
+clinical_electrogram_bipolar_original = electrogram_bipolar_original
+clinical_electrogram_unipolar_refined = electrogram_unipolar_original
+clinical_electrogram_bipolar_refined = electrogram_bipolar_original
+clinical_electrogram_reference = electrogram_reference_original
 
-    if len(indices) == 1:
-        # if only one electrode mapped to this voxel, use its electrogram
-        idx = indices[0]
-        clinical_electrogram_unipolar_original[voxel_id, :] = electrogram_unipolar_original[idx, :]
-        clinical_electrogram_bipolar_original[voxel_id, :] = electrogram_bipolar_original[idx, :]
-        clinical_electrogram_unipolar_refined[voxel_id, :] = electrogram_unipolar[idx, :]
-        clinical_electrogram_bipolar_refined[voxel_id, :] = electrogram_bipolar[idx, :]
-        clinical_electrogram_reference[voxel_id, :] = electrogram_reference_original[idx, :]
-    elif len(indices) > 1:
-        # if multiple electrodes mapped to this voxel, use the one with the largest bipolar peak-to-peak amplitude
-        peak_to_peak_amplitudes = np.ptp(electrogram_bipolar_original[indices, :], axis=1) # peak-to-peak amplitude for each electrode mapped to this voxel
-        max_index = np.argmax(peak_to_peak_amplitudes)
-        clinical_electrogram_unipolar_original[voxel_id, :] = electrogram_unipolar_original[indices[max_index], :]
-        clinical_electrogram_bipolar_original[voxel_id, :] = electrogram_bipolar_original[indices[max_index], :]
-        clinical_electrogram_unipolar_refined[voxel_id, :] = electrogram_unipolar[indices[max_index], :]
-        clinical_electrogram_bipolar_refined[voxel_id, :] = electrogram_bipolar[indices[max_index], :]
-        clinical_electrogram_reference[voxel_id, :] = electrogram_reference_original[indices[max_index], :]
+# # assign electrogram to each voxel3mm
+# clinical_electrogram_unipolar_original = np.zeros((voxel3mm.shape[0], electrogram_unipolar.shape[1]))
+# clinical_electrogram_bipolar_original = np.zeros((voxel3mm.shape[0], electrogram_bipolar.shape[1]))
+# clinical_electrogram_unipolar_refined = np.zeros((voxel3mm.shape[0], electrogram_unipolar.shape[1]))
+# clinical_electrogram_bipolar_refined = np.zeros((voxel3mm.shape[0], electrogram_bipolar.shape[1]))
+# clinical_electrogram_reference = np.zeros((voxel3mm.shape[0], electrogram_unipolar_original.shape[1]))
+# for voxel_id in range(voxel3mm.shape[0]):
+#     # find electrodes mapped to this voxel
+#     indices = np.where(voxel3mm_id_of_electrode == voxel_id)[0]
+
+#     if len(indices) == 1:
+#         # if only one electrode mapped to this voxel, use its electrogram
+#         idx = indices[0]
+#         clinical_electrogram_unipolar_original[voxel_id, :] = electrogram_unipolar_original[idx, :]
+#         clinical_electrogram_bipolar_original[voxel_id, :] = electrogram_bipolar_original[idx, :]
+#         clinical_electrogram_unipolar_refined[voxel_id, :] = electrogram_unipolar[idx, :]
+#         clinical_electrogram_bipolar_refined[voxel_id, :] = electrogram_bipolar[idx, :]
+#         clinical_electrogram_reference[voxel_id, :] = electrogram_reference_original[idx, :]
+#     elif len(indices) > 1:
+#         # if multiple electrodes mapped to this voxel, use the one with the largest bipolar peak-to-peak amplitude
+#         peak_to_peak_amplitudes = np.ptp(electrogram_bipolar_original[indices, :], axis=1) # peak-to-peak amplitude for each electrode mapped to this voxel
+#         max_index = np.argmax(peak_to_peak_amplitudes)
+#         clinical_electrogram_unipolar_original[voxel_id, :] = electrogram_unipolar_original[indices[max_index], :]
+#         clinical_electrogram_bipolar_original[voxel_id, :] = electrogram_bipolar_original[indices[max_index], :]
+#         clinical_electrogram_unipolar_refined[voxel_id, :] = electrogram_unipolar[indices[max_index], :]
+#         clinical_electrogram_bipolar_refined[voxel_id, :] = electrogram_bipolar[indices[max_index], :]
+#         clinical_electrogram_reference[voxel_id, :] = electrogram_reference_original[indices[max_index], :]
 
 #%%
 # sometimes the electrogram has high frequency noise such as 60 Hz noise from power supply etc, apply a moving average smoothing to remove them

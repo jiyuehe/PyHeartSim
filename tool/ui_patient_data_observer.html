@@ -60,6 +60,7 @@
         let appData = null;
         let startIdx = 0;
         let electrodesPerPage = 10;
+        let electrogramRequestId = 0;
         
         // Load data on page load
         async function loadData() {
@@ -72,6 +73,22 @@
             initializeSlider();
             render3DPlot();
             renderElectrogram();
+        }
+
+        async function fetchElectrogramData(electrodeIds, isRefined) {
+            const response = await fetch('/api/electrograms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    electrode_ids: electrodeIds,
+                    is_refined: isRefined
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || `HTTP ${response.status}`);
+            }
+            return payload;
         }
         
         function computeColors(activation) {
@@ -268,17 +285,41 @@
             }
         }
 
-        function renderElectrogram(electrodeIds) {
+        async function renderElectrogram(electrodeIds) {
             if (!electrodeIds) {
                 const endIdx = Math.min(startIdx + electrodesPerPage, appData.n_electrodes);
                 electrodeIds = Array.from({ length: endIdx - startIdx }, (_, i) => startIdx + i);
             }
+
+            const requestId = ++electrogramRequestId;
             const isRefined = document.getElementById('toggleRefined').checked;
-            const egmUniData = isRefined ? appData.egm_uni_refined : appData.egm_uni_original;
-            const egmBiData = isRefined ? null : appData.egm_bi_original;
             const activationUni = appData.activation_uni;
             const shiftSpacing = 4;
-            const egmRefData = appData.egm_ref;
+
+            let electrogramData;
+            try {
+                electrogramData = await fetchElectrogramData(electrodeIds, isRefined);
+            } catch (err) {
+                if (requestId !== electrogramRequestId) {
+                    return;
+                }
+                Plotly.newPlot('plot_electrograms', [], {
+                    title: { text: `Failed to load electrograms: ${err.message}`, font: { size: 12 } },
+                    margin: { l: 60, r: 20, t: 40, b: 40 }
+                }, {
+                    responsive: true
+                });
+                renderCombinedInputs(electrodeIds);
+                return;
+            }
+
+            if (requestId !== electrogramRequestId) {
+                return;
+            }
+
+            const egmUniData = electrogramData.egm_uni || [];
+            const egmBiData = electrogramData.egm_bi;
+            const egmRefData = electrogramData.egm_ref || [];
             const traces = [];
             const yTickVals = [];
             const yTickText = [];
@@ -287,8 +328,8 @@
 
             for (let i = 0; i < electrodeIds.length; i++) {
                 const eId = electrodeIds[i];
-                const egmUni = egmUniData[eId];
-                const egmBi = egmBiData ? egmBiData[eId] : null;
+                const egmUni = egmUniData[i];
+                const egmBi = egmBiData ? egmBiData[i] : null;
                 if (!Array.isArray(egmUni) || egmUni.length === 0) {
                     continue;
                 }
@@ -300,8 +341,8 @@
                 minY = Math.min(minY, ...egmUniShifted, ...(egmBiShifted || egmUniShifted));
                 maxY = Math.max(maxY, ...egmUniShifted, ...(egmBiShifted || egmUniShifted));
 
-                if (egmRefData && Array.isArray(egmRefData[eId]) && egmRefData[eId].length > 0) {
-                    const egmRef = egmRefData[eId];
+                if (Array.isArray(egmRefData[i]) && egmRefData[i].length > 0) {
+                    const egmRef = egmRefData[i];
                     const egmRefShifted = egmRef.map(val => val + i * shiftSpacing);
                     traces.push({
                         type: 'scatter',
@@ -547,7 +588,6 @@
             });
             const cleanData = await cleanResponse.json();
             if (cleanData.status === 'ok') {
-                appData.egm_uni_refined = cleanData.egm_uni_refined;
                 renderElectrogram();
             }
 
@@ -562,7 +602,13 @@
         });
         
         // Initialize
-        loadData();
+        loadData().catch(err => {
+            const meshDiv = document.getElementById('mesh_and_electrode');
+            const egmDiv = document.getElementById('plot_electrograms');
+            meshDiv.textContent = `Failed to load data: ${err.message}`;
+            egmDiv.textContent = 'See error above.';
+            console.error(err);
+        });
     </script>
 </body>
 </html>

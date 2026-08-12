@@ -49,7 +49,7 @@ data_store = {
     'name_prefix': name_prefix,
     'clinical_data': clinical_data,
     'node_positions': clinical_data['voxel3mm'],
-    'electrode_positions': clinical_data['voxel3mm'],
+    'electrode_positions': clinical_data['electrode_positions'],
     'egm_uni_original': clinical_data['clinical_electrogram_unipolar_original'],
     'egm_uni_refined': clinical_data['clinical_electrogram_unipolar_refined'],
     'egm_bi_original': clinical_data['clinical_electrogram_bipolar_original'],
@@ -64,23 +64,47 @@ def index():
 
 @app.route('/api/data')
 def get_data():
-    # convert numpy arrays to lists for JSON
+    # Keep initial payload lightweight; electrograms are fetched on demand.
     data = {
         'name_prefix': data_store['name_prefix'],
         'node_positions': data_store['node_positions'].tolist(),
         'electrode_positions': data_store['electrode_positions'].tolist(),
         'clinical_electrogram_woi_start': int(data_store['clinical_data']['clinical_electrogram_woi_start']),
         'clinical_electrogram_woi_end': int(data_store['clinical_data']['clinical_electrogram_woi_end']),
-        'egm_uni_original': data_store['egm_uni_original'].tolist(),
-        'egm_uni_refined': data_store['egm_uni_refined'].tolist(),
-        'egm_bi_original': data_store['egm_bi_original'].tolist(),
-        'egm_ref': data_store['egm_ref'].tolist(),
         'activation_uni': data_store['activation_uni'].tolist(),
         'activation_bi': data_store['activation_bi'].tolist(),
         'n_electrodes': len(data_store['electrode_positions'])
     }
         
     return jsonify(data)
+
+
+@app.route('/api/electrograms', methods=['POST'])
+def get_electrograms():
+    payload = request.get_json(silent=True) or {}
+    electrode_ids = payload.get('electrode_ids') or []
+    is_refined = bool(payload.get('is_refined', False))
+
+    try:
+        electrode_ids = [int(e_id) for e_id in electrode_ids]
+    except (TypeError, ValueError):
+        return jsonify({'error': 'electrode_ids must be a list of integers'}), 400
+
+    n_electrodes = len(data_store['electrode_positions'])
+    if any((e_id < 0 or e_id >= n_electrodes) for e_id in electrode_ids):
+        return jsonify({'error': 'electrode_ids contains out-of-range index'}), 400
+
+    egm_uni = data_store['egm_uni_refined'] if is_refined else data_store['egm_uni_original']
+    egm_bi = None if is_refined else data_store['egm_bi_original']
+    egm_ref = data_store['egm_ref']
+
+    response = {
+        'electrode_ids': electrode_ids,
+        'egm_uni': [egm_uni[e_id].tolist() for e_id in electrode_ids],
+        'egm_bi': None if egm_bi is None else [egm_bi[e_id].tolist() for e_id in electrode_ids],
+        'egm_ref': [egm_ref[e_id].tolist() for e_id in electrode_ids],
+    }
+    return jsonify(response)
 
 @app.route('/api/save', methods=['POST'])
 def save_activation_times():
@@ -141,10 +165,7 @@ def clean_electrogram():
     
     print("Cleaned electrograms.")
 
-    return jsonify({
-        'status': 'ok',
-        'egm_uni_refined': egm_uni_refined.tolist(),
-    })
+    return jsonify({'status': 'ok'})
 
 #%%
 if __name__ == '__main__':
