@@ -48,7 +48,7 @@ data_store = {
     'directory': directory,
     'name_prefix': name_prefix,
     'clinical_data': clinical_data,
-    'node_positions': clinical_data['voxel3mm'],
+    'node_positions': clinical_data['vertex_original'],
     'electrode_positions': clinical_data['electrode_positions'],
     'egm_uni_original': clinical_data['clinical_electrogram_unipolar_original'],
     'egm_uni_refined': clinical_data['clinical_electrogram_unipolar_refined'],
