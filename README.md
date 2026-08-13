@@ -1,3 +1,6 @@
+# PyHeartSim: Python Heart Simulator
+<img src="example/logo_PyHeartSim.png" alt="logo" width="100" />  
+
 # Demonstration
 Patient left atrium rotor and macro-reentry simulation:  
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
