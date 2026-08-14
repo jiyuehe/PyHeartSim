@@ -19,7 +19,7 @@ def find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data):
     n_voxel = voxel.shape[0]
 
     # find a voxel that is at a certain distance from s1
-    d_threshold_1 = 15 # mm
+    d_threshold_1 = 12 # mm
     d_threshold_2 = d_threshold_1 + 20 # mm
     d = np.sqrt(np.sum((voxel - voxel[s1, :])**2, axis=1))
     candidate_s2 = np.where((d >= d_threshold_1) & (d <= d_threshold_2))[0]
@@ -71,6 +71,31 @@ def find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data):
         s2 = s2_pacing_voxel_id # s2 pacing voxel id
     else:
         s2 = candidate_s2 # s2 pacing voxel id
+
+    # plot the s1 and s2 pacing locations
+    debug_plot = 0
+    if debug_plot == 1:
+        import plotly.graph_objects as go
+
+        fig = go.Figure([
+            go.Scatter3d(
+                x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
+                mode='markers', name='Heart voxels',
+                marker=dict(color='lightgray', size=1),
+            ),
+            go.Scatter3d(
+                x=np.atleast_1d(voxel[s1, 0]), y=np.atleast_1d(voxel[s1, 1]), z=np.atleast_1d(voxel[s1, 2]),
+                mode='markers', name='S1 pacing location',
+                marker=dict(color='red', size=5),
+            ),
+            go.Scatter3d(
+                x=np.atleast_1d(voxel[s2, 0]), y=np.atleast_1d(voxel[s2, 1]), z=np.atleast_1d(voxel[s2, 2]),
+                mode='markers', name='S2 pacing location',
+                marker=dict(color='blue', size=5),
+            ),
+        ])
+        fig.update_layout(title='S1 and S2 Pacing Locations')
+        fig.show(renderer='browser')
 
     return s2
 

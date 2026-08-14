@@ -184,7 +184,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
         # 1: rotor
         # 2: fibrillation (starts with a rotor, then becomes fibrillation)
         # 3: for debugging, manually assign s1 and s2 region 
-        # 4: 1 focal 1 cycle
+        # 4: 1 focal 1 pacing (can generate rotor/macro-reentry too dependin on the node_flag)
         # 5: 2 focal 2 locations 300ms apart
         # 6: 2 focal 2 locations 50ms apart
     }
@@ -196,8 +196,10 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
     # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
     if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
         params = dict(pacing_start_time=10, pacing_cycle_length=300, s1_t=0, s1_s2_delta_t=0)
-    elif simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
-        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=350)
+    elif simulation_parameters['arrhythmia_flag'] == 1: # rotor
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=250)
+    elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=290)
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging, manually assign s1 and s2 region
         params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=230)
     arrhythmia_parameters = {
@@ -216,7 +218,8 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
     elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
-        ms = dict(tau_in=0.3,  tau_out=12, tau_open=30, tau_close=80, v_gate=0.13)
+        ms = dict(tau_in=0.3,  tau_out=12, tau_open=80, tau_close=80, v_gate=0.13)
+        # ms = dict(tau_in=0.3,  tau_out=12, tau_open=30, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
     elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)

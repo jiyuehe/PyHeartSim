@@ -105,7 +105,7 @@ if __name__ == "__main__":
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
-    s1 = 8888 # s1 pacing voxel id
+    s1 = 12000 # s1 pacing voxel id
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     ##############################
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         fig.update_layout(scene=dict(dragmode='orbit'))
         fig.show()
     
-    s1 = np.where(node_flag == 1)[0]
+    s1 = np.where(node_flag == 1)[0] # need to comment this out for rotor/fibrillation simulation
     ##############################
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag)
@@ -339,7 +339,7 @@ if __name__ == "__main__":
     print(f'mean conduction velocity: {conduction_velocity_mean:.2f} mm/ms')
 
     # plot some action potentials and electrograms
-    do_flag = 0
+    do_flag = 1
     if do_flag == 1: 
         # load simulation results
         simulation_results = dict(np.load(input_arguments['result_folder'] / f'{name_prefix}_simulation_results.npz', allow_pickle=False))
