@@ -73,19 +73,7 @@ def save_flags():
     node_flag = np.array(data['flags'], dtype=int)
     np.save(flag_file, node_flag)
 
-    s1 = np.where(node_flag == 1)[0]
-    s2 = np.where(node_flag == 2)[0]
-    print(f"Saved node flags to '{name_prefix}_node_flag.npy'")
-    print(f's1_pacing_node_id ({len(s1)} nodes):')
-    print(','.join(map(str, s1)))
-    print(f's2_pacing_node_id ({len(s2)} nodes):')
-    print(','.join(map(str, s2)))
-
-    return jsonify({
-        'status': 'saved',
-        's1_count': len(s1),
-        's2_count': len(s2)
-    })
+    return jsonify({'status': 'saved'})
 
 if __name__ == '__main__':
     port = 5000

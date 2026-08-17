@@ -15,8 +15,8 @@
             <option value="0">0 (None)</option>
             <option value="1" selected>1 (S1)</option>
             <option value="2">2 (S2)</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
+            <option value="3">3 (Temporary Block)</option>
+            <option value="4">4 (Permanent Block)</option>
         </select>
         <div class="separator"></div>
         <label>Selection:</label>
@@ -94,8 +94,8 @@
             new THREE.Color(1.0, 1.0, 1.0),  // 0: white
             new THREE.Color(1.0, 0.0, 0.0),  // 1: red
             new THREE.Color(1.0, 0.0, 1.0),  // 2: magenta
-            new THREE.Color(0.0, 0.0, 0.0),  // 3: black
-            new THREE.Color(0.0, 1.0, 0.0),  // 4: green
+            new THREE.Color(0.4, 0.4, 0.4),  // 3: gray
+            new THREE.Color(0.0, 0.0, 0.0),  // 4: black
         ];
 
         function getFlagColor(flag) {
@@ -766,7 +766,7 @@
                 body: JSON.stringify({ flags: Array.from(nodeFlags) })
             });
             const result = await resp.json();
-            showStatus('Saved! S1: ' + result.s1_count + ' nodes, S2: ' + result.s2_count + ' nodes', 3000);
+            showStatus('Saved!', 3000);
         });
 
         document.getElementById('btn-clear').addEventListener('click', function() {

@@ -147,8 +147,7 @@ def build_diffusion_matrix_gpu(P_2d, neighbor_id_2d_2, Delta):
         D_coeff = P_2d[n, 20] / (4 * Delta**2)
         
         # Diagonal entry
-        diagonal_sum = -(P_2d[n, 0] + P_2d[n, 1] + P_2d[n, 2] + 
-                        P_2d[n, 3] + P_2d[n, 4] + P_2d[n, 5])
+        diagonal_sum = -(P_2d[n, 0] + P_2d[n, 1] + P_2d[n, 2] + P_2d[n, 3] + P_2d[n, 4] + P_2d[n, 5])
         row_indices.append(n)
         col_indices.append(n)
         data_values.append(D_coeff * diagonal_sum)
@@ -260,11 +259,9 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
     return u_next
 
 def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
-    ##############################
-    # for macro re-entry
     node_flag = arrhythmia_parameters['node_flag']
-    block_voxel_id = np.where(node_flag == 3)[0]
-    ##############################
+    temporary_block_voxel_id = np.where(node_flag == 3)[0] # temporary block for creating rotor or macro re-entry
+    permanent_block_voxel_id = np.where(node_flag == 4)[0] # dense scar that are non-conductive
 
     # geometry data
     neighbor_id_2d = geometry_data['neighbor_id_2d']
@@ -317,15 +314,15 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     I_gpu = cp_sparse.identity(n_voxel, format='csr', dtype=cp.float32)
     A_gpu_cached = I_gpu - (dt_float / 2.0) * L_matrix_gpu
 
-    # Pre-build blocked diffusion matrix (P_2d[:, 20] = 0 for block_voxel_id)
-    if len(block_voxel_id) > 0:
+    # Pre-build blocked diffusion matrix (P_2d[:, 20] = 0 for temporary_block_voxel_id)
+    if len(temporary_block_voxel_id) > 0:
         P_2d_blocked = P_2d.copy()
-        P_2d_blocked[block_voxel_id, 20] = 0.0
-        L_matrix_gpu_blocked = build_diffusion_matrix_gpu(P_2d_blocked, neighbor_id_2d_2, Delta_float)
-        A_gpu_cached_blocked = I_gpu - (dt_float / 2.0) * L_matrix_gpu_blocked
+        P_2d_blocked[temporary_block_voxel_id, 20] = 0.0
+        L_matrix_gpu_temporary_blocked = build_diffusion_matrix_gpu(P_2d_blocked, neighbor_id_2d_2, Delta_float)
+        A_gpu_cached_temporary_blocked = I_gpu - (dt_float / 2.0) * L_matrix_gpu_temporary_blocked
     else:
-        L_matrix_gpu_blocked = L_matrix_gpu
-        A_gpu_cached_blocked = A_gpu_cached
+        L_matrix_gpu_temporary_blocked = L_matrix_gpu
+        A_gpu_cached_temporary_blocked = A_gpu_cached
     
     # Allocate GPU memory for CUDA kernels (CuPy arrays for unified memory access)
     d_u_current = cp.zeros(n_voxel, dtype=cp.float32)
@@ -357,22 +354,17 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         
         model_time = model_time_step * dt
 
-        # ##############################
-        # for macro re-entry
+        # temporary block for creating rotor or macro re-entry
         if model_time >= 0 and model_time < 350 * dt:
-            active_L = L_matrix_gpu_blocked
-            active_A = A_gpu_cached_blocked
+            active_L = L_matrix_gpu_temporary_blocked
+            active_A = A_gpu_cached_temporary_blocked
         else:
             active_L = L_matrix_gpu
             active_A = A_gpu_cached
-        # ##############################
         
         # apply pacing - this is CPU-side since it has complex conditionals
         J_stim.fill(0.0)
-        J_stim = apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, 
-                             J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, 
-                             pacing_duration, s2_t,
-                             sim_u_voxel, sim_h_voxel, neighbor_id_2d)
+        J_stim = apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, sim_u_voxel, sim_h_voxel, neighbor_id_2d)
         
         # Transfer J_stim to GPU
         d_J_stim[:] = cp.asarray(J_stim)
