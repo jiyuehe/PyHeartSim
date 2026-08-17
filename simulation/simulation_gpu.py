@@ -307,16 +307,23 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     dt_float = np.float32(dt)
     Delta_float = np.float32(Delta)
     
-    # Build diffusion matrix on GPU (only once)
-    L_matrix_gpu = build_diffusion_matrix_gpu(P_2d, neighbor_id_2d_2, Delta_float)
+    # Permanent blocks are part of the baseline diffusion operator, so they
+    # remain non-conductive for the whole simulation.
+    P_2d_permanently_blocked = P_2d.copy()
+    P_2d_permanently_blocked[permanent_block_voxel_id, 20] = 0.0
+
+    # Build baseline diffusion matrix on GPU (only once).
+    L_matrix_gpu = build_diffusion_matrix_gpu(
+        P_2d_permanently_blocked, neighbor_id_2d_2, Delta_float
+    )
     
     # Pre-compute the Crank-Nicolson system matrix (I - dt/2 * L) - only once!
     I_gpu = cp_sparse.identity(n_voxel, format='csr', dtype=cp.float32)
     A_gpu_cached = I_gpu - (dt_float / 2.0) * L_matrix_gpu
 
-    # Pre-build blocked diffusion matrix (P_2d[:, 20] = 0 for temporary_block_voxel_id)
+    # Pre-build the temporary-block matrix on top of the permanent blocks.
     if len(temporary_block_voxel_id) > 0:
-        P_2d_blocked = P_2d.copy()
+        P_2d_blocked = P_2d_permanently_blocked.copy()
         P_2d_blocked[temporary_block_voxel_id, 20] = 0.0
         L_matrix_gpu_temporary_blocked = build_diffusion_matrix_gpu(P_2d_blocked, neighbor_id_2d_2, Delta_float)
         A_gpu_cached_temporary_blocked = I_gpu - (dt_float / 2.0) * L_matrix_gpu_temporary_blocked
