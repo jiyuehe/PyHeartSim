@@ -4,24 +4,24 @@
 # Demonstration
 Example simulations:  
 <table>
-  <tr>
+  <tr align="center" valign="middle">
     <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
     <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
     <td><img src="example/scar.gif" alt="Scar simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
   </tr>
-    <tr>
+    <tr align="center" valign="middle">
     <td><p>Macro reentry</p></td>
     <td><p>Rotor</p></td>
     <td><p>Complex scar distributions</p></td>
   </tr>
 
-  <tr>
+  <tr align="center" valign="middle">
     <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
     <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
     <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 150px; max-width: 100%; object-fit: contain;" /></td>
   </tr>
 
-  <tr>
+  <tr align="center" valign="middle">
     <td><p>Focal</p></td>
     <td><p>Fibrillation</p></td>
     <td><p>2D rotor</p></td>
@@ -30,14 +30,11 @@ Example simulations:
 
 Example action potentials and electrograms:  
 <table>
-  <tr>
+  <tr align="center" valign="middle">
     <td><img src="example/left_atrium_focal.png" alt="Demo" width="300" /></td>
     <td><img src="example/left_atrium_rotor.png" alt="Demo" width="300" /></td>
   </tr>
 </table>
-
-  
-  
 
 # Highlights
 - This is an electrophysiological heart simulator written in **Python**.  
