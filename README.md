@@ -2,11 +2,12 @@
 <img src="example/logo_PyHeartSim.png" alt="logo" width="100" />  
 
 # Demonstration
+Example simulations:  
 <table>
   <tr>
-    <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto;" /></td>
-    <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 300px; width: auto;" /></td>
-    <td><img src="example/scar.gif" alt="Scar simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto; max-width: none;" /></td>
+    <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 300px; width: auto; max-width: none;" /></td>
+    <td><img src="example/scar.gif" alt="Scar simulation" style="height: 300px; width: auto; max-width: none;" /></td>
   </tr>
     <tr>
     <td><p>Macro reentry</p></td>
@@ -15,9 +16,9 @@
   </tr>
 
   <tr>
-    <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 300px; width: auto;" /></td>
-    <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto;" /></td>
-    <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 300px; width: auto; max-width: none;" /></td>
+    <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto; max-width: none;" /></td>
+    <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 300px; width: auto; max-width: none;" /></td>
   </tr>
 
   <tr>
@@ -27,8 +28,16 @@
   </tr>
 </table>
 
-<img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
-<img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
+Example action potentials and electrograms:  
+<table>
+  <tr>
+    <td><img src="example/left_atrium_focal.png" alt="Demo" width="500" /></td>
+    <td><img src="example/left_atrium_rotor.png" alt="Demo" width="500" /></td>
+  </tr>
+</table>
+
+  
+  
 
 # Highlights
 - This is an electrophysiological heart simulator written in **Python**.  
