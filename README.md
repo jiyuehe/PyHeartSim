@@ -2,9 +2,10 @@
 <img src="example/logo_PyHeartSim.png" alt="logo" width="100" />  
 
 # Demonstration
-Patient left atrium rotor and macro-reentry simulation:  
+Rotor, macro-reentry, complex scar distribution simulations:  
 <img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_reentry.gif" alt="Demo" width="400" />  
+<img src="example/scar.gif" alt="Demo" width="400" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
 # Highlights
