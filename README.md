@@ -5,9 +5,9 @@
 Example simulations:  
 <table>
   <tr>
-    <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
-    <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
-    <td><img src="example/scar.gif" alt="Scar simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/scar.gif" alt="Scar simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
   </tr>
     <tr>
     <td><p>Macro reentry</p></td>
@@ -16,9 +16,9 @@ Example simulations:
   </tr>
 
   <tr>
-    <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
-    <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
-    <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 300px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
+    <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 100px; max-width: 100%; object-fit: contain;" /></td>
   </tr>
 
   <tr>
