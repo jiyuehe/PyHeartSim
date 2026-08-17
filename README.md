@@ -2,10 +2,32 @@
 <img src="example/logo_PyHeartSim.png" alt="logo" width="100" />  
 
 # Demonstration
-Rotor, macro-reentry, complex scar distribution simulations:  
-<img src="example/left_atrium_rotor.gif" alt="Demo" width="400" />  
-<img src="example/left_atrium_reentry.gif" alt="Demo" width="400" />  
-<img src="example/scar.gif" alt="Demo" width="400" />  
+<table>
+  <tr>
+    <td><img src="example/left_atrium_reentry.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/left_atrium_rotor.gif" alt="Rotor simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/scar.gif" alt="Scar simulation" style="height: 300px; width: auto;" /></td>
+  </tr>
+    <tr>
+    <td><p>Macro reentry</p></td>
+    <td><p>Rotor</p></td>
+    <td><p>Complex scar distributions</p></td>
+  </tr>
+
+  <tr>
+    <td><img src="example/left_atrium_focal.gif" alt="Rotor simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/left_atrium_fibrillation.gif" alt="Macro-reentry simulation" style="height: 300px; width: auto;" /></td>
+    <td><img src="example/2d_rotor.gif" alt="Scar simulation" style="height: 300px; width: auto;" /></td>
+  </tr>
+
+  <tr>
+    <td><p>Focal</p></td>
+    <td><p>Fibrillation</p></td>
+    <td><p>2D rotor</p></td>
+  </tr>
+</table>
+
+<img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
 <img src="example/left_atrium_rotor.png" alt="Demo" width="500" />  
 
 # Highlights
@@ -50,19 +72,6 @@ Rotor, macro-reentry, complex scar distribution simulations:
 - Jiyue He, Arkady Pertsov, Elizabeth Cherry, Flavio Fenton, Caroline Roney, Steven Niederer, Zirui Zang, Rahul Mangharam. (2023). Fiber Organization Has Little Effect on Electrical Activation Patterns During Focal Arrhythmias in the Left Atrium. IEEE Transactions on Biomedical Engineering, vol. 70, no. 5, pp. 1611-1621. doi: 10.1109/TBME.2022.3223063
 - Jiyue He, Arkady Pertsov, Rahul Mangharam. (2023). Real-time atrial tachycardia ablation guidance with a left atrium model. Heart Rhythm Society Abstract, volume 20, issue 5. doi: 10.1016/j.hrthm.2023.03.343
 - Jiyue He, Arkady Pertsov, Sanjay Dixit, Katie Walsh, Eric Toolan, Rahul Mangharam. (2021). Patient-specific heart model towards atrial fibrillation. Proceedings of the ACM/IEEE 12th International Conference on Cyber-Physical Systems, New York, NY, USA, pp. 33-43. doi: 10.1145/3450267.3450532
-
-# More demonstrations
-Patient left atrium focal sources simulation:  
-<img src="example/left_atrium_focal.gif" alt="Demo" width="400" />  
-<img src="example/left_atrium_focal.png" alt="Demo" width="500" />  
-
-Patient left atrium fibrillation simulation:  
-<img src="example/left_atrium_fibrillation.gif" alt="Demo" width="400" />  
-<img src="example/left_atrium_fibrillation.png" alt="Demo" width="500" />  
-
-2D rotor simulation:  
-<img src="example/2d_rotor.gif" alt="Demo" width="250" />  
-<img src="example/2d_rotor.png" alt="Demo" width="500" />  
 
 # Private notes for myself
 Mount from client  
