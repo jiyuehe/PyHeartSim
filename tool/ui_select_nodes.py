@@ -20,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import os
 import threading
 import webbrowser
+import time
+import subprocess
 import numpy as np
 from flask import Flask, render_template, send_from_directory, jsonify, request
 import configuration
@@ -37,9 +39,9 @@ directory = configuration.directory_setup()
 directory['result'] = directory['home'] / 'result'
 directory['result'].mkdir(exist_ok=True)
 
-name_prefix = configuration.mesh_name(0)
+name_prefix = configuration.mesh_name(103)
 
-file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
+file_path = directory['data'] / f'{name_prefix}_mesh.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 
@@ -76,8 +78,16 @@ def save_flags():
     return jsonify({'status': 'saved'})
 
 if __name__ == '__main__':
-    port = 5000
-    url = f'http://127.0.0.1:{port}'
-    print(f'Starting 3D Node Selection Tool at {url}')
-    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    app.run(host='127.0.0.1', port=port, debug=False)
+    # stop any stale server that is already listening on Flask's port.
+    stopped_port = subprocess.run(
+        ['fuser', '-k', '-TERM', '5000/tcp'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode == 0
+    if stopped_port:
+        time.sleep(0.5)
+
+    # open the patient data observer user interface
+    threading.Timer(1.0, webbrowser.open, args=['http://127.0.0.1:5000']).start() # runs webbrowser.open on a background thread after a 1-second delay, while the main thread proceeds to start Flask. The 1-second delay gives Flask time to start up before the browser tries to connect
+    app.run(debug=False, port=5000, host='0.0.0.0')
