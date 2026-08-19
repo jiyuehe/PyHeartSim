@@ -36,10 +36,10 @@ def serve_css():
 
 # load geometry data
 directory = configuration.directory_setup()
-directory['result'] = directory['home'] / 'result'
-directory['result'].mkdir(exist_ok=True)
+directory['result'] = directory['mesh_obj']
 
-name_prefix = configuration.mesh_name(103)
+name_prefixs = configuration.mesh_name()
+name_prefix = name_prefixs[0]
 
 file_path = directory['data'] / f'{name_prefix}_mesh.npz'
 data = np.load(file_path, allow_pickle=False)
@@ -78,9 +78,11 @@ def save_flags():
     return jsonify({'status': 'saved'})
 
 if __name__ == '__main__':
+    server_port = 5001
+    
     # stop any stale server that is already listening on Flask's port.
     stopped_port = subprocess.run(
-        ['fuser', '-k', '-TERM', '5000/tcp'],
+        ['fuser', '-k', '-TERM', f'{server_port}/tcp'],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -89,5 +91,6 @@ if __name__ == '__main__':
         time.sleep(0.5)
 
     # open the patient data observer user interface
-    threading.Timer(1.0, webbrowser.open, args=['http://127.0.0.1:5000']).start() # runs webbrowser.open on a background thread after a 1-second delay, while the main thread proceeds to start Flask. The 1-second delay gives Flask time to start up before the browser tries to connect
-    app.run(debug=False, port=5000, host='0.0.0.0')
+    threading.Timer(1.0, webbrowser.open, args=[f'http://127.0.0.1:{server_port}']).start() # runs webbrowser.open on a background thread after a 1-second delay, while the main thread proceeds to start Flask. The 1-second delay gives Flask time to start up before the browser tries to connect
+    app.run(debug=False, port=server_port, host='0.0.0.0')
+    

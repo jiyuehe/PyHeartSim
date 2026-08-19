@@ -95,13 +95,14 @@ def run_simulation(input_arguments):
 # If calling the run_simulation() function from another script, the following code block will be ignored.
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
-    name_prefix = configuration.mesh_name(0) # get mesh name prefix
+    name_prefixs = configuration.mesh_name()
+    name_prefix = name_prefixs[0]
 
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
     # load geometry data
-    file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
+    file_path = directory['data'] / f'{name_prefix}_mesh.npz'
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     ##############################
-    file_path = '/home/j/Desktop/ssd/git/PyHeartSim/result/0_1-la1 78 240_node_flag.npy'
+    file_path = '/home/j/Desktop/hdd/share_folder/carto3_files/mesh obj/103_5-2-1-1-3-Rp-ReLA CS REF 230_node_flag.npy'
     vertex_flag = np.load(file_path) # this is the vertex flag
     # assign the vertex_flag to the corresponding nodes within a distance threshold
     node = geometry_data['voxel']
