@@ -28,72 +28,44 @@ import configuration
 #%%
 # directory folder
 directory = configuration.directory_setup()
+name_prefixes = configuration.mesh_name()
 
-mesh_id = 111
-
-# grab all atrium mesh file names
-mesh_files = list(Path(directory['mesh_database']).glob('*.obj'))
-name_prefixes = [mesh_file.stem for mesh_file in mesh_files]
-name_prefixes = sorted(name_prefixes, key=lambda x: int(x.split('_')[0])) # sort by the number before the underscore
-
+# save the original mesh as png figure
 do_flag = 0
-if do_flag == 1: # load the mesh and save as figure
-    for name_prefix in name_prefixes:
-        # if the png does not exist
-        png_path = directory['mesh_database'] / f'{name_prefix}.png'
-        if not png_path.exists():
-            print(f'processing {name_prefix}')
+if do_flag == 1:
+    for n in range(len(name_prefixes)):
+        name_prefix = name_prefixes[n]
+        print(f'plot {name_prefix}')
 
-            vertex, face = common.load_obj(directory['mesh_database'], name_prefix)
+        vertex, face = common.load_obj(directory['mesh_obj'], name_prefix)
 
-            fig = plt.figure(figsize=(6, 6))
-            ax = fig.add_subplot(111, projection='3d')
-            poly = Poly3DCollection(
-                vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
-            )
-            ax.add_collection3d(poly)
-            ax.view_init(elev=70, azim=-70)
-            ax.set_axis_off()
-            common.set_axes_equal(ax)
+        fig = plt.figure(figsize=(20, 20))
+        ax = fig.add_subplot(111, projection='3d')
+        poly = Poly3DCollection(
+            vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+        )
+        ax.add_collection3d(poly)
+        ax.view_init(elev=70, azim=-70)
+        ax.set_axis_off()
+        common.set_axes_equal(ax)
 
-            plt.savefig(str(png_path), dpi=100)
-            plt.close(fig)
+        png_path = str(directory['mesh_obj'] / f'{name_prefix}.png')
+        plt.savefig(png_path, dpi=100)
+        plt.close(fig)
 
-            common.crop_image(png_path)
-
-        png_path = directory['data'] / f'{name_prefix}_refined_cut.obj'
-        save_path = directory['data'] / f'{name_prefix}_refined_cut.png'
-        if png_path.exists() and (not save_path.exists()):
-            print(f'processing {name_prefix}')
-
-            vertex, face = common.load_obj(directory['data'], name_prefix + '_refined_cut')
-
-            fig = plt.figure(figsize=(6, 6))
-            ax = fig.add_subplot(111, projection='3d')
-            poly = Poly3DCollection(
-                vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
-            )
-            ax.add_collection3d(poly)
-            ax.view_init(elev=70, azim=-70)
-            ax.set_axis_off()
-            common.set_axes_equal(ax)
-
-            plt.savefig(str(save_path), dpi=100)
-            plt.close(fig)
-
-            common.crop_image(save_path)
+        common.crop_image(png_path)
 
 #%%
 # automatically refine the mesh and save as figure
 do_flag = 0
 if do_flag == 1: 
-    for n in [mesh_id]:#range(len(name_prefixes)):
+    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
         name_prefix = name_prefixes[n]
         print(f'processing {name_prefix}')
 
         # automatically refine the mesh
-        input_mesh_path = directory['mesh_database'] / f'{name_prefix}.obj'
-        output_mesh_path = directory['data'] / f'{name_prefix}_refined.obj'
+        input_mesh_path = directory['mesh_obj'] / f'{name_prefix}.obj'
+        output_mesh_path = directory['mesh_obj'] / f'{name_prefix}_refined.obj'
         
         # NOTE:
         # key parameter for mesh refinement: tsdf_target_rest
@@ -125,9 +97,9 @@ if do_flag == 1:
 
         do_flag = 1
         if do_flag == 1:
-            vertex, face = common.load_obj(directory['data'], name_prefix + '_refined')
+            vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined')
 
-            fig = plt.figure(figsize=(6, 6))
+            fig = plt.figure(figsize=(20, 20))
             ax = fig.add_subplot(111, projection='3d')
             poly = Poly3DCollection(
                 vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
@@ -137,7 +109,7 @@ if do_flag == 1:
             ax.set_axis_off()
             common.set_axes_equal(ax)
 
-            png_path = str(directory['data'] / f'{name_prefix}_refined.png')
+            png_path = str(directory['mesh_obj'] / f'{name_prefix}_refined.png')
             plt.savefig(png_path, dpi=100)
             plt.close(fig)
 
@@ -158,15 +130,15 @@ if do_flag == 1:
 # automatically identify the tip of the pulmonary veins
 do_flag = 0
 if do_flag == 1:
-    for n in [mesh_id]:
+    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
         name_prefix = name_prefixes[n]
         print(f'processing {name_prefix}')
 
-        vertex, face = common.load_obj(directory['data'], name_prefix + '_refined')
+        vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined')
 
         do_flag = 0
         if do_flag == 1:
-            fig = plt.figure(figsize=(6, 6))
+            fig = plt.figure(figsize=(20, 20))
             ax = fig.add_subplot(111, projection='3d')
             poly = Poly3DCollection(
                 vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
@@ -185,7 +157,7 @@ if do_flag == 1:
 
         # write the tip vertex and the center of massto a text file
         vertices_to_write = np.concatenate([top_4_tip_vertex, largest_region_tip_vertex[None, :], center_of_mass[None, :]], axis=0)
-        tip_vertex_path = directory['data'] / f'{name_prefix}_tip_vertex.txt'
+        tip_vertex_path = directory['mesh_obj'] / f'{name_prefix}_tip_vertex.txt'
         np.savetxt(tip_vertex_path, vertices_to_write, fmt='%.6f')
 
 #%%
@@ -195,54 +167,80 @@ if do_flag == 1:
 # save the cut mesh as {name_prefix}_refined_cut.obj
 # (can also use software Meshlab to manually cut holes, but it is more convenient to use Blender)
 
+# save the cut mesh as png figure
+do_flag = 0
+if do_flag == 1:
+    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
+        name_prefix = name_prefixes[n]
+        print(f'processing {name_prefix}')
+
+        vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined_cut')
+
+        fig = plt.figure(figsize=(20, 20))
+        ax = fig.add_subplot(111, projection='3d')
+        poly = Poly3DCollection(
+            vertex[face], alpha=0.5, facecolor="white", edgecolor="gray", linewidth=0.1
+        )
+        ax.add_collection3d(poly)
+        ax.view_init(elev=70, azim=-70)
+        ax.set_axis_off()
+        common.set_axes_equal(ax)
+
+        png_path = str(directory['mesh_obj'] / f'{name_prefix}_refined_cut.png')
+        plt.savefig(png_path, dpi=100)
+        plt.close(fig)
+
+        common.crop_image(png_path)
+
 #%%
 # convert mesh to Cartesian voxels
-for n in [mesh_id]:#range(len(name_prefixes)):
-    name_prefix = name_prefixes[n]
-    print(f'processing {name_prefix}')
+do_flag = 0
+if do_flag == 1:
+    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
+        name_prefix = name_prefixes[n]
+        print(f'processing {name_prefix}')
 
-    # load the refined and holes cut .obj mesh
-    vertex, face = common.load_obj(directory['data'], name_prefix + '_refined_cut')
+        # load the refined and holes cut .obj mesh
+        vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined_cut')
 
-    # convert triangular mesh to cartesian nodes for heart simulation
-    Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
-    # NOTE: 
-    # Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
-    thickness = 2 # how many voxels across endocardium to epicardium
-    voxel = utility.voxelization.convert(vertex, face, Delta, thickness)
-    neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel) # for each voxel, find its neighbor voxels
+        # convert triangular mesh to cartesian nodes for heart simulation
+        Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
+        # NOTE: 
+        # Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
+        thickness = 2 # how many voxels across endocardium to epicardium
+        voxel = utility.voxelization.convert(vertex, face, Delta, thickness)
+        neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel) # for each voxel, find its neighbor voxels
 
-    # create voxels for the 3mm resolution mesh, for saving simulation data
-    Delta = 3 # voxel spacing, unit: mm
-    thickness = 2 # how many voxels across endocardium to epicardium
-    voxel2 = utility.voxelization.convert(vertex, face, Delta, thickness)
+        # create voxels for the 3mm resolution mesh, for saving simulation data
+        Delta = 3 # voxel spacing, unit: mm
+        thickness = 2 # how many voxels across endocardium to epicardium
+        voxel2 = utility.voxelization.convert(vertex, face, Delta, thickness)
 
-    voxel2_id_of_vertex, vertex_id_of_voxel2 = utility.voxelization.id_mapping_between_voxel_and_vertex(voxel2, vertex) # for each vertex, find its nearest voxel2 id
-    voxel2_id_of_vertex = np.unique(voxel2_id_of_vertex) # remove duplicates
-    voxel3mm = voxel2[voxel2_id_of_vertex, :]
+        voxel2_id_of_vertex, vertex_id_of_voxel2 = utility.voxelization.id_mapping_between_voxel_and_vertex(voxel2, vertex) # for each vertex, find its nearest voxel2 id
+        voxel2_id_of_vertex = np.unique(voxel2_id_of_vertex) # remove duplicates
+        voxel3mm = voxel2[voxel2_id_of_vertex, :]
 
-    tree = cKDTree(voxel)
-    _, voxel_id_of_voxel3mm = tree.query(voxel3mm, k=1) # for each voxel3mm, find the voxel's (1mm spacing) id of the nearest voxel (1mm spacing)
+        tree = cKDTree(voxel)
+        _, voxel_id_of_voxel3mm = tree.query(voxel3mm, k=1) # for each voxel3mm, find the voxel's (1mm spacing) id of the nearest voxel (1mm spacing)
 
-    voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int) # rescale coordinates: 3mm spacing -> 1mm spacing (divide by Delta=3), so neighboring voxels are 1 unit apart, ready for use as indices
+        voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int) # rescale coordinates: 3mm spacing -> 1mm spacing (divide by Delta=3), so neighboring voxels are 1 unit apart, ready for use as indices
 
-    # save geometry data
-    vertex_original, face_original = common.load_obj(directory['mesh_database'], name_prefix)
+        # load the mesh npz
+        data = np.load(directory['mesh_npz'] / f'{name_prefix}_mesh.npz', allow_pickle=True)
+        mesh = {k: data[k] for k in data.files}
 
-    geometry = {}
-    geometry['vertex_original'] = vertex_original
-    geometry['face_original'] = face_original
-    geometry['vertex'] = vertex # high resolution mesh
-    geometry['face'] = face # high resolution mesh
-    geometry['Delta'] = Delta # voxel spacing, unit: mm
-    geometry['voxel'] = voxel
-    geometry['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
-    geometry['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
-    geometry['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
-    geometry['voxel_id_of_simulation_electrode'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
+        # save the processed mesh data
+        mesh['vertex'] = vertex # high resolution mesh
+        mesh['face'] = face # high resolution mesh
+        mesh['Delta'] = Delta # voxel spacing, unit: mm
+        mesh['voxel'] = voxel
+        mesh['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
+        mesh['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
+        mesh['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
+        mesh['voxel_id_of_simulation_electrode'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)
 
-    file_path = directory['data'] / (name_prefix + '_clinical_data.npz') # save as .npz, the most compatible format for different versions of Python and Numpy
-    np.savez(file_path, **geometry)
+        file_path = directory['mesh_npz'] / f'{name_prefix}_mesh.npz' # save as .npz, the most compatible format for different versions of Python and Numpy
+        np.savez(file_path, **mesh)
 
 print('done')
 #%%

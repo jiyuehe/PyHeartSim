@@ -30,7 +30,7 @@
 # Instructions for use
 # --------------------
 # Press k to toggle Cut Mode
-# Press s to save the .yaml cut file and the cut .obj file
+# Press e to save the .yaml cut file and the cut .obj file
 
 #%%
 import sys
@@ -38,83 +38,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
-
-#%%
-name_prefix = '111_6-LA'
-
-#%%
-debug_plot = 0
-
-ENABLE_COMMON_DEBUG_IMPORTS = False
-if ENABLE_COMMON_DEBUG_IMPORTS:
-    import common
-
-if debug_plot == 1:
-    if not ENABLE_COMMON_DEBUG_IMPORTS:
-        raise RuntimeError("Set ENABLE_COMMON_DEBUG_IMPORTS = True to use debug_plot with common.py")
-
-    import plotly.graph_objects as go
-    import plotly.io as pio
-    pio.renderers.default = "browser"
-
-    file_dir = Path('/home/j/Desktop/hdd/share_folder/patient_data')
-    vertex, face = common.load_obj(file_dir, '111_6-LA_refined')
-
-    # Tip detection is performed directly from the loaded mesh by
-    # MESH_OT_KnifeCutter._identify_tip_regions(); no *_tip_vertex.txt file is
-    # required for automatic cutter placement.
-    tip_vertex = np.empty((0, 3))
-    center_of_mass = np.mean(vertex, axis=0)
-
-    # build face list for Mesh3d
-    fi, fj, fk = face[:, 0], face[:, 1], face[:, 2]
-
-    fig = go.Figure(data=[
-        go.Mesh3d(
-            x=vertex[:, 0], y=vertex[:, 1], z=vertex[:, 2],
-            i=fi, j=fj, k=fk,
-            color='white', opacity=0.2,
-            lighting=dict(ambient=1.0, diffuse=0, specular=0, roughness=1, fresnel=0),
-            flatshading=True,
-        ),
-
-        # triangle edges: interleave [A, B, C, A, None] per triangle
-        go.Scatter3d(
-            x=np.stack([vertex[fi, 0], vertex[fj, 0], vertex[fk, 0], vertex[fi, 0], np.full(len(fi), None)], axis=1).ravel(),
-            y=np.stack([vertex[fi, 1], vertex[fj, 1], vertex[fk, 1], vertex[fi, 1], np.full(len(fi), None)], axis=1).ravel(),
-            z=np.stack([vertex[fi, 2], vertex[fj, 2], vertex[fk, 2], vertex[fi, 2], np.full(len(fi), None)], axis=1).ravel(),
-            mode='lines',
-            opacity=0.5,
-            line=dict(color='gray', width=1),
-        ),
-
-        # detected tip vertices as large red dots, when populated for debugging
-        go.Scatter3d(
-            x=tip_vertex[:, 0], y=tip_vertex[:, 1], z=tip_vertex[:, 2],
-            mode='markers',
-            marker=dict(size=8, color='red'),
-        ),
-
-        # center of mass as a black dot
-        go.Scatter3d(
-            x=[center_of_mass[0]], y=[center_of_mass[1]], z=[center_of_mass[2]],
-            mode='markers',
-            marker=dict(size=8, color='black'),
-        ),
-
-        # lines from each tip vertex to the center of mass
-        go.Scatter3d(
-            x=np.stack([tip_vertex[:, 0], np.full(len(tip_vertex), center_of_mass[0]), np.full(len(tip_vertex), None)], axis=1).ravel(),
-            y=np.stack([tip_vertex[:, 1], np.full(len(tip_vertex), center_of_mass[1]), np.full(len(tip_vertex), None)], axis=1).ravel(),
-            z=np.stack([tip_vertex[:, 2], np.full(len(tip_vertex), center_of_mass[2]), np.full(len(tip_vertex), None)], axis=1).ravel(),
-            mode='lines',
-            line=dict(color='black', width=3),
-        ),
-    ])
-    fig.update_layout(scene=dict(aspectmode='data'))
-    fig.show() # opens in browser
-
-#%%
 import bpy
 import bmesh
 import os
@@ -122,6 +45,10 @@ import ast
 from math import radians
 from mathutils import Vector
 
+#%%
+name_prefix = '112_6-LA CL 300'
+
+#%%
 # --- CONFIGURATION ---
 BASE_PATH = Path("//")
 #BASE_PATH = Path("/home/mason/Code/PyHeartSim/")

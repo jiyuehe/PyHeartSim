@@ -192,6 +192,8 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
 
     # the rest of the tips
     other_tip_vertex_ids = tip_vertex_ids[np.argsort(tip_vertex_distances)[:-4]]
+    if len(other_tip_vertex_ids) == 0:
+        other_tip_vertex_ids = np.array([top_4_tip_vertex_ids[-1]]) # if there are only 4 tips, then the last tip is considered as the rest of the tips
     
     # region size of the rest of the tips
     other_region_size = [np.sum(vertex_labels == tip_id) for tip_id in other_tip_vertex_ids]

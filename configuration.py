@@ -40,9 +40,8 @@ def directory_setup():
 
     return directory
 
-def mesh_name(mesh_id):
+def mesh_name():
     # atrial mesh .obj file name
-    
     name_prefixes = [
         '103_5-2-1-1-3-Rp-ReLA CS REF 230', # 0, flutter
         '104_2-LA fam', # 1, GOOD flutter reentry
@@ -55,9 +54,7 @@ def mesh_name(mesh_id):
         '112_6-LA CL 300' # 8, GOOD flutter reentry
     ]
 
-    name_prefix = name_prefixes[mesh_id]
-
-    return name_prefix
+    return name_prefixes
 
 def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
     if name_prefix == 'sheet':
