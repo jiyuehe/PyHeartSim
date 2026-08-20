@@ -87,7 +87,7 @@ VEIN_CUT_PLANE_WINDOW_MM = 4.0
 VEIN_CUT_RADIUS_MARGIN_MM = 2.0
 VEIN_CUT_RADIUS_SCALE = 1.15
 VEIN_CUT_RADIUS_PERCENTILE = 98.0
-VEIN_CUT_CYLINDER_VERTICES = 24
+VEIN_CUT_CYLINDER_VERTICES = 16
 VEIN_CUT_DEPTH_MARGIN_MM = 6.0
 VEIN_CUT_MIN_RADIUS_MM = 6.0
 VEIN_CUT_MIN_DEPTH_MM = 12.0
@@ -98,7 +98,6 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
     bl_idname = "mesh.knife_cutter"
     bl_label = "Interactive Knife Cutter"
 
-    _timer = None
     _active_session_id = 0
     _is_cutting = False
     target = None
@@ -1169,6 +1168,12 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             return {'CANCELLED'}
 
         if event.type == 'K' and event.value == 'PRESS':
+            print(
+                "RESTORING ORIGINAL MESH... PLEASE WAIT"
+                if self._is_cutting
+                else "CUTTING MESH... PLEASE WAIT",
+                flush=True,
+            )
             if not self.toggle_cuts():
                 return {'CANCELLED'}
 
@@ -1177,6 +1182,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                 return {'CANCELLED'}
 
         elif event.type == 'E' and event.value == 'PRESS':
+            print("SAVING AND EXPORTING MESH... PLEASE WAIT", flush=True)
             if not self.export_mesh(context):
                 return {'CANCELLED'}
 
