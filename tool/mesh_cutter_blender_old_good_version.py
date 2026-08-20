@@ -87,7 +87,7 @@ VEIN_CUT_PLANE_WINDOW_MM = 4.0
 VEIN_CUT_RADIUS_MARGIN_MM = 2.0
 VEIN_CUT_RADIUS_SCALE = 1.15
 VEIN_CUT_RADIUS_PERCENTILE = 98.0
-VEIN_CUT_CYLINDER_VERTICES = 24
+VEIN_CUT_CYLINDER_VERTICES = 64
 VEIN_CUT_DEPTH_MARGIN_MM = 6.0
 VEIN_CUT_MIN_RADIUS_MM = 6.0
 VEIN_CUT_MIN_DEPTH_MM = 12.0
@@ -109,7 +109,6 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
     _original_faces = None   # list[list[int]]
     _bisect_eps = None       # float – absolute epsilon for this model
     _session_id = None
-    _cached_cut_signature = None
 
     # ------------------------------------------------------------------
     # Object validity helpers
@@ -346,12 +345,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         for i in range(N_EXTRA_CUT_CYLINDERS):
             idx = N_EXTRA_CUT_CUBES + i
             pos = self._outside_location_from_direction(directions[idx], dim, clearance)
-            bpy.ops.mesh.primitive_cylinder_add(
-                vertices=VEIN_CUT_CYLINDER_VERTICES,
-                radius=1,
-                depth=1,
-                location=pos,
-            )
+            bpy.ops.mesh.primitive_cylinder_add(radius=1, depth=1, location=pos)
             c = context.active_object
             c.name = f"Cut_Cylinder_Extra_{i + 1}"
             if i == 0:
@@ -419,23 +413,12 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         vertex_to_com_distance = np.linalg.norm(vertices - center_of_mass, axis=1)
         neighbor_vertices_ids = self._build_neighbor_vertices_ids()
 
-        # Cache the end of each already visited uphill trail.  The previous
-        # implementation restarted the same walk from every vertex, which can
-        # become quadratic on long, gently tapered regions of a dense mesh.
-        highest_vertex_id_of_each_trail = np.full(len(vertices), -1, dtype=int)
+        highest_vertex_id_of_each_trail = np.zeros(len(vertices), dtype=int)
         for vertex_id in range(len(vertices)):
             current = vertex_id
-            trail = []
             while True:
-                cached_tip = highest_vertex_id_of_each_trail[current]
-                if cached_tip >= 0:
-                    highest_vertex_id = int(cached_tip)
-                    break
-
-                trail.append(current)
                 neighbors = neighbor_vertices_ids[current]
                 if neighbors.size == 0:
-                    highest_vertex_id = current
                     break
 
                 neighbor_distances = vertex_to_com_distance[neighbors]
@@ -443,11 +426,9 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                 if vertex_to_com_distance[next_vertex_id] > vertex_to_com_distance[current]:
                     current = next_vertex_id
                 else:
-                    highest_vertex_id = current
                     break
 
-            for trail_vertex_id in trail:
-                highest_vertex_id_of_each_trail[trail_vertex_id] = highest_vertex_id
+            highest_vertex_id_of_each_trail[vertex_id] = current
 
         highest_vertex_ids = np.unique(highest_vertex_id_of_each_trail)
         tip_vertex_ids = self._cluster_tip_candidate_ids(
@@ -848,18 +829,6 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
 
         return planes
 
-    def _current_cut_signature(self):
-        """Return the cutter transforms and geometry defining the result."""
-        return tuple(
-            (
-                cutter.name,
-                tuple(value for row in cutter.matrix_world for value in row),
-                tuple(tuple(vertex.co) for vertex in cutter.data.vertices),
-                tuple(tuple(polygon.vertices) for polygon in cutter.data.polygons),
-            )
-            for cutter in self._get_live_cutters()
-        )
-
     def _is_inside_planes(self, point, planes):
         """Return True if *point* is strictly inside (or on) all half-spaces.
 
@@ -914,6 +883,9 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                     e for e in result.get("geom_cut", [])
                     if isinstance(e, bmesh.types.BMEdge)
                 )
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
 
             # Step 2 – delete faces whose centroids lie inside this cutter.
             faces_to_delete = [
@@ -923,6 +895,9 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
 
             if faces_to_delete:
                 bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
 
             # Step 3 – dissolve bisect-created edges that are interior to kept
             # faces (2 face links = seam line, not hole boundary).
@@ -932,6 +907,9 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             ]
             if seam_edges:
                 bmesh.ops.dissolve_edges(bm, edges=seam_edges, use_verts=True)
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
 
             # Step 4 – remove vertices that are no longer part of any face.
             isolated_verts = [v for v in bm.verts if not v.link_faces]
@@ -1050,7 +1028,6 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             self.target.data.update()
 
             self._is_cutting = True
-            self._cached_cut_signature = self._current_cut_signature()
             print("MODE: CUTTING (Knife)")
         else:
             self._restore_original_mesh()
@@ -1073,19 +1050,13 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         # Build a fresh bmesh from the stored uncut snapshot.
         bm = bmesh.new()
         temp_mesh = bpy.data.meshes.new("_knife_export_temp")
-        can_reuse_preview = (
-            self._is_cutting
-            and self._cached_cut_signature == self._current_cut_signature()
+        temp_mesh.from_pydata(
+            self._original_verts, self._original_edges, self._original_faces
         )
-        if can_reuse_preview:
-            bm.from_mesh(self.target.data)
-        else:
-            temp_mesh.from_pydata(
-                self._original_verts, self._original_edges, self._original_faces
-            )
-            temp_mesh.update()
-            bm.from_mesh(temp_mesh)
-            self._apply_all_cuts_to_bm(bm)
+        temp_mesh.update()
+        bm.from_mesh(temp_mesh)
+
+        self._apply_all_cuts_to_bm(bm)
         self._prepare_export_bmesh(bm)
 
         bm.to_mesh(temp_mesh)
