@@ -1,4 +1,4 @@
-# Copyright 2026 Mason Manetta
+# Copyright 2026 Mason Manetta, Jiyue He
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 # -------------
 # Each cutter object (cube or cylinder) is a convex mesh.  Its outward-facing
 # face planes are extracted from the cutter's mesh data and transformed into the
-# target mesh's local space.  We then:
-#   1. Bisect the target bmesh along every plane (no geometry is removed yet;
-#      we just create new vertices/edges at each intersection).
-#   2. Delete every face whose centroid lies strictly inside the convex hull
-#      of the cutter planes.
-# Cuts are stored as a bmesh snapshot so toggling/restoring is a simple memcpy
-# rather than a modifier rebuild.
+# target mesh's local space.  Existing target faces whose centroids lie inside
+# the convex hull of those planes are deleted.  Faces are not split at the
+# cutter boundary, so the opening follows the target's existing edges and has a
+# deliberately saw-like outline.
 #
 # NOTE: This approach assumes each cutter is a *convex* mesh.  Non-convex
 # cutters will produce unexpected results.
@@ -820,7 +817,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         mesh.update()
 
     # ------------------------------------------------------------------
-    # Knife / plane-bisect cut engine
+    # Saw-like face-deletion cut engine
     # ------------------------------------------------------------------
 
     def _get_cutter_planes_in_target_local(self, cutter):
@@ -872,49 +869,18 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         return True
 
     def _apply_all_cuts_to_bm(self, bm):
-        """Apply every live cutter to the given bmesh in place.
+        """Delete existing faces whose centroids are inside each live cutter.
 
-        Algorithm per cutter
-        --------------------
-        1. Bisect the mesh along each cutter face plane (no geometry removed
-           yet).  This inserts new vertices/edges exactly where the mesh
-           surface crosses each cutter boundary, so every face after this step
-           lies entirely on one side of every plane.  The new edges created by
-           each bisect are tracked.
-        2. Delete faces whose centroids are inside the cutter's convex hull.
-        3. Dissolve bisect-created edges that are still manifold (2 face
-           neighbors) after the deletion step.  These are interior seam lines
-           on kept faces — visible as spurious wireframe lines — that carry no
-           geometric information and should be merged away.  Edges with only 1
-           face neighbor are the actual hole boundary and are preserved.
-        4. Remove isolated vertices left behind after face deletion.
+        Faces are not bisected at cutter boundaries.  The opening is therefore
+        made entirely from existing mesh edges and intentionally has a saw-like
+        outline.
         """
-        dist = self._bisect_eps
 
         for cutter in self._get_live_cutters():
             planes = self._get_cutter_planes_in_target_local(cutter)
             if not planes:
                 continue
 
-            # Step 1 – bisect along each plane, collecting newly created edges.
-            bisect_new_edges = set()
-            for plane_co, plane_no in planes:
-                geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
-                result = bmesh.ops.bisect_plane(
-                    bm,
-                    geom=geom,
-                    plane_co=plane_co,
-                    plane_no=plane_no,
-                    dist=dist,
-                    clear_inner=False,
-                    clear_outer=False,
-                )
-                bisect_new_edges.update(
-                    e for e in result.get("geom_cut", [])
-                    if isinstance(e, bmesh.types.BMEdge)
-                )
-
-            # Step 2 – delete faces whose centroids lie inside this cutter.
             faces_to_delete = [
                 f for f in bm.faces
                 if self._is_inside_planes(f.calc_center_median(), planes)
@@ -923,16 +889,6 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             if faces_to_delete:
                 bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
 
-            # Step 3 – dissolve bisect-created edges that are interior to kept
-            # faces (2 face links = seam line, not hole boundary).
-            seam_edges = [
-                e for e in bisect_new_edges
-                if e.is_valid and len(e.link_faces) == 2
-            ]
-            if seam_edges:
-                bmesh.ops.dissolve_edges(bm, edges=seam_edges, use_verts=True)
-
-            # Step 4 – remove vertices that are no longer part of any face.
             isolated_verts = [v for v in bm.verts if not v.link_faces]
             if isolated_verts:
                 bmesh.ops.delete(bm, geom=isolated_verts, context='VERTS')

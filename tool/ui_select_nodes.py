@@ -39,7 +39,7 @@ directory = configuration.directory_setup()
 directory['result'] = directory['mesh_obj']
 
 name_prefixs = configuration.mesh_name()
-name_prefix = name_prefixs[0]
+name_prefix = name_prefixs[8]
 
 file_path = directory['data'] / f'{name_prefix}_mesh.npz'
 data = np.load(file_path, allow_pickle=False)

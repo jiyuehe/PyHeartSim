@@ -96,7 +96,7 @@ def run_simulation(input_arguments):
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
     name_prefixs = configuration.mesh_name()
-    name_prefix = name_prefixs[0]
+    name_prefix = name_prefixs[8]
 
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
@@ -110,8 +110,10 @@ if __name__ == "__main__":
     s2 = [] # if simulate rotor, s2 will be automatically determined by the code
     
     ##############################
-    file_path = '/home/j/Desktop/hdd/share_folder/carto3_files/mesh obj/103_5-2-1-1-3-Rp-ReLA CS REF 230_node_flag.npy'
+    # load node_flag for simulation with designed tissue properties
+    file_path = directory['mesh_obj'] / f'{name_prefix}_node_flag.npy'
     vertex_flag = np.load(file_path) # this is the vertex flag
+
     # assign the vertex_flag to the corresponding nodes within a distance threshold
     node = geometry_data['voxel']
     node_flag = np.zeros(node.shape[0], dtype=int)
