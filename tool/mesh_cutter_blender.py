@@ -21,7 +21,7 @@
 # cutter boundary, so the opening follows the target's existing edges and has a
 # deliberately saw-like outline.
 #
-# NOTE: This approach assumes each cutter is a *convex* mesh.  Non-convex
+# NOTE: This approach assumes each cutter is a convex mesh.  Non-convex
 # cutters will produce unexpected results.
 
 # Instructions for use
@@ -868,32 +868,137 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
                 return False
         return True
 
-    def _apply_all_cuts_to_bm(self, bm):
-        """Delete existing faces whose centroids are inside each live cutter.
+    def _points_inside_planes(self, points, planes, chunk_size=65536):
+        """Return a mask identifying points inside a convex set of planes.
 
-        Faces are not bisected at cutter boundaries.  The opening is therefore
-        made entirely from existing mesh edges and intentionally has a saw-like
-        outline.
+        Work in chunks so dense meshes do not require a potentially large
+        ``point_count * plane_count`` temporary array.
         """
+        if len(points) == 0 or not planes:
+            return np.zeros(len(points), dtype=bool)
+
+        plane_points = np.asarray(
+            [tuple(plane_co) for plane_co, _plane_no in planes],
+            dtype=float,
+        )
+        plane_normals = np.asarray(
+            [tuple(plane_no) for _plane_co, plane_no in planes],
+            dtype=float,
+        )
+        plane_offsets = np.einsum(
+            'ij,ij->i', plane_points, plane_normals
+        )
+
+        inside = np.empty(len(points), dtype=bool)
+        for start in range(0, len(points), chunk_size):
+            stop = min(start + chunk_size, len(points))
+            signed_distances = (
+                points[start:stop] @ plane_normals.T - plane_offsets
+            )
+            inside[start:stop] = np.all(
+                signed_distances <= self._bisect_eps,
+                axis=1,
+            )
+
+        return inside
+
+    def _face_delete_mask(self, face_centers):
+        """Return the union of faces covered by all live cutters."""
+        delete_mask = np.zeros(len(face_centers), dtype=bool)
 
         for cutter in self._get_live_cutters():
             planes = self._get_cutter_planes_in_target_local(cutter)
             if not planes:
                 continue
 
-            faces_to_delete = [
-                f for f in bm.faces
-                if self._is_inside_planes(f.calc_center_median(), planes)
+            remaining_ids = np.flatnonzero(~delete_mask)
+            if remaining_ids.size == 0:
+                break
+
+            delete_mask[remaining_ids] = self._points_inside_planes(
+                face_centers[remaining_ids],
+                planes,
+            )
+
+        return delete_mask
+
+    def _build_cut_mesh_data(self):
+        """Filter the stored mesh arrays without constructing a BMesh."""
+        if not self._original_faces:
+            return [], [], []
+
+        vertices = np.asarray(
+            [tuple(vertex) for vertex in self._original_verts],
+            dtype=float,
+        )
+
+        face_width = len(self._original_faces[0])
+        uniform_faces = all(
+            len(face) == face_width for face in self._original_faces
+        )
+        face_indices = None
+        if uniform_faces:
+            face_indices = np.asarray(self._original_faces, dtype=np.int64)
+            face_centers = np.zeros((len(face_indices), 3), dtype=float)
+            for corner in range(face_width):
+                face_centers += vertices[face_indices[:, corner]]
+            face_centers /= face_width
+        else:
+            face_centers = np.asarray(
+                [
+                    np.mean(vertices[np.asarray(face, dtype=np.int64)], axis=0)
+                    for face in self._original_faces
+                ],
+                dtype=float,
+            )
+
+        keep_mask = ~self._face_delete_mask(face_centers)
+        if not np.any(keep_mask):
+            return [], [], []
+
+        if face_indices is not None:
+            kept_face_indices = face_indices[keep_mask]
+            used_vertex_ids = np.unique(kept_face_indices)
+        else:
+            kept_faces = [
+                face for face, keep in zip(self._original_faces, keep_mask)
+                if keep
+            ]
+            used_vertex_ids = np.unique(np.fromiter(
+                (vertex_id for face in kept_faces for vertex_id in face),
+                dtype=np.int64,
+            ))
+
+        old_to_new = np.full(len(self._original_verts), -1, dtype=np.int64)
+        old_to_new[used_vertex_ids] = np.arange(len(used_vertex_ids))
+
+        cut_vertices = [
+            self._original_verts[int(vertex_id)]
+            for vertex_id in used_vertex_ids
+        ]
+
+        if face_indices is not None:
+            cut_faces = old_to_new[kept_face_indices].tolist()
+        else:
+            cut_faces = [
+                [int(old_to_new[vertex_id]) for vertex_id in face]
+                for face in kept_faces
             ]
 
-            if faces_to_delete:
-                bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
+        cut_edges = [
+            (int(old_to_new[v0]), int(old_to_new[v1]))
+            for v0, v1 in self._original_edges
+            if old_to_new[v0] >= 0 and old_to_new[v1] >= 0
+        ]
 
-            isolated_verts = [v for v in bm.verts if not v.link_faces]
-            if isolated_verts:
-                bmesh.ops.delete(bm, geom=isolated_verts, context='VERTS')
+        return cut_vertices, cut_edges, cut_faces
 
-        bm.normal_update()
+    def _write_cut_mesh(self, mesh):
+        """Overwrite a mesh with the directly filtered saw-like result."""
+        vertices, edges, faces = self._build_cut_mesh_data()
+        mesh.clear_geometry()
+        mesh.from_pydata(vertices, edges, faces)
+        mesh.update()
 
     def _prepare_export_bmesh(self, bm):
         """Finalize the export mesh for the simulation OBJ pipeline.
@@ -994,15 +1099,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             return False
 
         if not self._is_cutting:
-            # Restore the original mesh, then apply all cuts.
-            self._restore_original_mesh()
-
-            bm = bmesh.new()
-            bm.from_mesh(self.target.data)
-            self._apply_all_cuts_to_bm(bm)
-            bm.to_mesh(self.target.data)
-            bm.free()
-            self.target.data.update()
+            self._write_cut_mesh(self.target.data)
 
             self._is_cutting = True
             self._cached_cut_signature = self._current_cut_signature()
@@ -1025,7 +1122,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         A temporary copy is used so the live target (and its child cutters) are
         never moved, avoiding modal-state corruption.
         """
-        # Build a fresh bmesh from the stored uncut snapshot.
+        # Build a fresh bmesh only for final export triangulation.
         bm = bmesh.new()
         temp_mesh = bpy.data.meshes.new("_knife_export_temp")
         can_reuse_preview = (
@@ -1035,12 +1132,10 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
         if can_reuse_preview:
             bm.from_mesh(self.target.data)
         else:
-            temp_mesh.from_pydata(
-                self._original_verts, self._original_edges, self._original_faces
-            )
+            vertices, edges, faces = self._build_cut_mesh_data()
+            temp_mesh.from_pydata(vertices, edges, faces)
             temp_mesh.update()
             bm.from_mesh(temp_mesh)
-            self._apply_all_cuts_to_bm(bm)
         self._prepare_export_bmesh(bm)
 
         bm.to_mesh(temp_mesh)
