@@ -43,7 +43,7 @@ from math import radians
 from mathutils import Vector
 
 #%%
-name_prefix = '112_6-LA CL 300'
+name_prefix = '103_5-2-1-1-3-Rp-ReLA CS REF 230'
 
 #%%
 # --- CONFIGURATION ---
