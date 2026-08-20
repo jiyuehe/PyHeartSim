@@ -57,6 +57,7 @@ USE_SCRIPT_DIR_FALLBACK = True
 LOAD_CUTS = True
 SHOW_TIP_VERTEX_MARKERS = False # Set to True to visualize detected tip vertices as red spheres in the Blender scene.
 AUTO_CREATE_VEIN_CUTTERS = True
+DEFAULT_TRANSFORM_ORIENTATION = 'LOCAL'
 
 # Number of additional interactive cutters to create.
 N_EXTRA_CUT_CUBES = 0
@@ -1072,6 +1073,7 @@ class MESH_OT_KnifeCutter(bpy.types.Operator):
             self.load_cut_transforms()
 
         context.view_layer.objects.active = self.target
+        context.scene.transform_orientation_slots[0].type = DEFAULT_TRANSFORM_ORIENTATION
 
         for window in context.window_manager.windows:
             for area in window.screen.areas:
