@@ -104,7 +104,7 @@
         let renderer = null;
         let camera = null;
         let activationAttribute = null;
-        let pointMaterial = null;
+        let voxelMaterial = null;
         let currentFrame = 0;
         let requestedFrame = 0;
         let requestSequence = 0;
@@ -219,11 +219,14 @@
             }
 
             const isFastMode = playbackMode.value === 'fast';
-            const intervalMilliseconds = isFastMode ? 10 : 1;
+            const intervalMilliseconds = 100;
+            const nextFastFrame = currentFrame < 9
+                ? 9
+                : 9 + (Math.floor((currentFrame - 9) / 10) + 1) * 10;
             const nextFrame = isFastMode
                 ? Math.min(
                     metadata.frame_count - 1,
-                    (Math.floor(currentFrame / 10) + 1) * 10
+                    nextFastFrame
                 )
                 : currentFrame + 1;
             const shown = await showFrame(nextFrame, !isFastMode);
@@ -252,7 +255,7 @@
             playbackTick();
         }
 
-        function createPointCloud(voxelPositions) {
+        function createVoxelCubes(voxelPositions) {
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -278,36 +281,49 @@
             }
             radius = Math.max(radius, 1);
 
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.BufferAttribute(voxelPositions, 3));
-            activationAttribute = new THREE.BufferAttribute(new Float32Array(metadata.voxel_count), 1);
+            const cubeSize = 1.01;
+            const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+            const geometry = new THREE.InstancedBufferGeometry();
+            geometry.setIndex(cubeGeometry.getIndex());
+            geometry.setAttribute('position', cubeGeometry.getAttribute('position'));
+            geometry.setAttribute('normal', cubeGeometry.getAttribute('normal'));
+            geometry.setAttribute(
+                'instancePosition',
+                new THREE.InstancedBufferAttribute(voxelPositions, 3)
+            );
+            activationAttribute = new THREE.InstancedBufferAttribute(
+                new Float32Array(metadata.voxel_count),
+                1
+            );
+            activationAttribute.setUsage(THREE.DynamicDrawUsage);
             geometry.setAttribute('activation', activationAttribute);
-            geometry.computeBoundingSphere();
+            geometry.instanceCount = metadata.voxel_count;
+            geometry.boundingSphere = new THREE.Sphere(
+                new THREE.Vector3(),
+                radius + Math.sqrt(3) * cubeSize * 0.5
+            );
 
-            pointMaterial = new THREE.ShaderMaterial({
+            voxelMaterial = new THREE.ShaderMaterial({
                 uniforms: {
                     dataMin: { value: metadata.data_min },
                     dataMax: { value: metadata.data_max },
-                    threshold: { value: metadata.activation_threshold },
-                    voxelSize: { value: 1.05 },
-                    viewportScale: { value: renderer.domElement.height * 0.5 }
+                    threshold: { value: metadata.activation_threshold }
                 },
                 vertexShader: `
+                    attribute vec3 instancePosition;
                     attribute float activation;
                     varying float value;
-                    uniform float voxelSize;
-                    uniform float viewportScale;
+                    varying vec3 viewNormal;
                     void main() {
                         value = activation;
-                        vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+                        viewNormal = normalize(normalMatrix * normal);
+                        vec4 viewPosition = modelViewMatrix * vec4(position + instancePosition, 1.0);
                         gl_Position = projectionMatrix * viewPosition;
-                        float perspectiveSize = voxelSize * viewportScale *
-                            projectionMatrix[1][1] / max(-viewPosition.z, 0.0001);
-                        gl_PointSize = max(perspectiveSize, 1.0);
                     }
                 `,
                 fragmentShader: `
                     varying float value;
+                    varying vec3 viewNormal;
                     uniform float dataMin;
                     uniform float dataMax;
                     uniform float threshold;
@@ -323,19 +339,30 @@
                         if (s < 3.0) return mix(c2, c3, s - 2.0);
                         return mix(c3, c4, s - 3.0);
                     }
+                    vec3 applySubtleLighting(vec3 baseColor) {
+                        // A broad camera-space key light changes luminance only,
+                        // keeping the activation hue meaningful.
+                        vec3 lightDirection = normalize(vec3(-0.35, 0.45, 0.82));
+                        float wrappedDiffuse = dot(normalize(viewNormal), lightDirection) * 0.5 + 0.5;
+                        float surfaceLight = mix(0.60, 1.10, wrappedDiffuse);
+                        return clamp(baseColor * surfaceLight, 0.0, 1.0);
+                    }
                     void main() {
+                        vec3 baseColor;
                         if (!(value > threshold)) {
-                            gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
-                            return;
+                            baseColor = vec3(0.5);
+                        } else {
+                            float normalized = clamp((value - dataMin) / max(dataMax - dataMin, 0.000001), 0.0, 1.0);
+                            baseColor = viridis(normalized);
                         }
-                        float normalized = clamp((value - dataMin) / max(dataMax - dataMin, 0.000001), 0.0, 1.0);
-                        gl_FragColor = vec4(viridis(normalized), 1.0);
+                        gl_FragColor = vec4(applySubtleLighting(baseColor), 1.0);
                     }
                 `,
                 depthTest: true,
                 depthWrite: true
             });
-            scene.add(new THREE.Points(geometry, pointMaterial));
+            const voxelMesh = new THREE.Mesh(geometry, voxelMaterial);
+            scene.add(voxelMesh);
 
             camera.position.set(radius * 0.15, radius * 0.25, radius * 2.45);
             camera.near = Math.max(radius / 1000, 0.01);
@@ -377,7 +404,7 @@
                 if (voxelBuffer.byteLength !== expected) {
                     throw new Error(`Voxel data contains ${voxelBuffer.byteLength} bytes; expected ${expected}.`);
                 }
-                createPointCloud(new Float32Array(voxelBuffer));
+                createVoxelCubes(new Float32Array(voxelBuffer));
                 setLoading('Loading first frame…');
                 if (!(await showFrame(0))) return;
                 timeSlider.disabled = false;
@@ -422,10 +449,6 @@
             camera.updateProjectionMatrix();
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
-            if (pointMaterial) {
-                pointMaterial.uniforms.viewportScale.value =
-                    renderer.domElement.height * 0.5;
-            }
         });
 
         initialize();
