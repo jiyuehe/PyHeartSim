@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activation Movie</title>
+    <link rel="stylesheet" href="/ui_movie.css">
+</head>
+<body>
+    <main id="viewer" aria-label="3D activation movie viewer">
+        <div id="canvas-container"></div>
+
+        <header id="title-panel">
+            <h1 id="movie-name">Activation movie</h1>
+            <div id="movie-summary">Loading simulation data…</div>
+        </header>
+
+        <aside id="legend" aria-label="Activation color scale">
+            <div class="legend-title">Action potential</div>
+            <div class="legend-row">
+                <span>0.13</span>
+                <div class="gradient" aria-hidden="true"></div>
+                <span>1.00</span>
+            </div>
+            <div class="inactive-key">
+                <span class="inactive-swatch" aria-hidden="true"></span>
+                Inactive ≤ 0.13
+            </div>
+        </aside>
+
+        <div id="interaction-help">
+            Drag to rotate <span>·</span> Scroll to zoom <span>·</span> Right-drag to pan
+        </div>
+
+        <section id="controls" aria-label="Movie controls">
+            <div class="button-row">
+                <button id="play-button" type="button" disabled>
+                    <span aria-hidden="true">▶</span> Play
+                </button>
+                <button id="pause-button" type="button" disabled>
+                    <span aria-hidden="true">Ⅱ</span> Pause
+                </button>
+                <div class="time-readout" aria-live="polite">
+                    <strong id="time-value">— ms</strong>
+                    <span id="frame-value">Frame — / —</span>
+                </div>
+                <label class="speed-control" for="playback-mode">
+                    Playback
+                    <select id="playback-mode" disabled>
+                        <option value="slow">Slow</option>
+                        <option value="fast" selected>Fast</option>
+                    </select>
+                </label>
+            </div>
+            <label class="slider-label" for="time-slider">Simulation time</label>
+            <input id="time-slider" type="range" min="0" max="0" step="1" value="0"
+                   disabled aria-label="Simulation time">
+            <div class="slider-bounds">
+                <span id="start-time">—</span>
+                <span id="end-time">—</span>
+            </div>
+        </section>
+
+        <div id="loading-panel" role="status">
+            <div class="spinner" aria-hidden="true"></div>
+            <div id="loading-message">Loading activation movie…</div>
+        </div>
+        <div id="error-panel" role="alert" hidden>
+            <strong>Unable to load the activation movie</strong>
+            <span id="error-message"></span>
+        </div>
+    </main>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const byId = (id) => document.getElementById(id);
+        const canvasContainer = byId('canvas-container');
+        const loadingPanel = byId('loading-panel');
+        const loadingMessage = byId('loading-message');
+        const errorPanel = byId('error-panel');
+        const errorMessage = byId('error-message');
+        const movieName = byId('movie-name');
+        const movieSummary = byId('movie-summary');
+        const timeSlider = byId('time-slider');
+        const timeValue = byId('time-value');
+        const frameValue = byId('frame-value');
+        const startTime = byId('start-time');
+        const endTime = byId('end-time');
+        const playButton = byId('play-button');
+        const pauseButton = byId('pause-button');
+        const playbackMode = byId('playback-mode');
+
+        let metadata = null;
+        let renderer = null;
+        let camera = null;
+        let activationAttribute = null;
+        let pointMaterial = null;
+        let currentFrame = 0;
+        let requestedFrame = 0;
+        let requestSequence = 0;
+        let sliderTimer = null;
+        let playbackTimer = null;
+        let isPlaying = false;
+        const frameCache = new Map();
+        const MAX_CACHED_FRAMES = 24;
+
+        function formatTime(value) {
+            if (!Number.isFinite(value)) return '—';
+            const rounded = Math.round(value * 1000) / 1000;
+            return `${rounded.toLocaleString(undefined, { maximumFractionDigits: 3 })} ms`;
+        }
+
+        function setLoading(message, visible = true) {
+            loadingMessage.textContent = message;
+            loadingPanel.hidden = !visible;
+        }
+
+        function showError(error) {
+            pausePlayback();
+            loadingPanel.hidden = true;
+            errorMessage.textContent = error instanceof Error ? error.message : String(error);
+            errorPanel.hidden = false;
+        }
+
+        async function fetchChecked(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                let detail = `${response.status} ${response.statusText}`;
+                try {
+                    const body = await response.json();
+                    if (body.error) detail = body.error;
+                } catch (_) {}
+                throw new Error(detail);
+            }
+            return response;
+        }
+
+        function cacheFrame(frameId, values) {
+            if (frameCache.has(frameId)) frameCache.delete(frameId);
+            frameCache.set(frameId, values);
+            while (frameCache.size > MAX_CACHED_FRAMES) {
+                frameCache.delete(frameCache.keys().next().value);
+            }
+        }
+
+        async function fetchFrame(frameId) {
+            if (frameCache.has(frameId)) {
+                const cached = frameCache.get(frameId);
+                frameCache.delete(frameId);
+                frameCache.set(frameId, cached);
+                return cached;
+            }
+            const response = await fetchChecked(`/api/frame/${frameId}`);
+            const buffer = await response.arrayBuffer();
+            const expected = metadata.voxel_count * Float32Array.BYTES_PER_ELEMENT;
+            if (buffer.byteLength !== expected) {
+                throw new Error(`Frame ${frameId} contains ${buffer.byteLength} bytes; expected ${expected}.`);
+            }
+            const values = new Float32Array(buffer);
+            cacheFrame(frameId, values);
+            return values;
+        }
+
+        function updateReadout(frameId) {
+            timeValue.textContent = formatTime(metadata.physical_time[frameId]);
+            frameValue.textContent = `Frame ${frameId + 1} / ${metadata.frame_count}`;
+            timeSlider.value = String(frameId);
+        }
+
+        async function showFrame(frameId, prefetch = true) {
+            const bounded = Math.max(0, Math.min(metadata.frame_count - 1, frameId));
+            requestedFrame = bounded;
+            const sequence = ++requestSequence;
+            try {
+                const values = await fetchFrame(bounded);
+                if (sequence !== requestSequence || bounded !== requestedFrame) return false;
+                activationAttribute.array.set(values);
+                activationAttribute.needsUpdate = true;
+                currentFrame = bounded;
+                updateReadout(bounded);
+                if (prefetch && bounded + 1 < metadata.frame_count) {
+                    fetchFrame(bounded + 1).catch(() => {});
+                }
+                return true;
+            } catch (error) {
+                showError(error);
+                return false;
+            }
+        }
+
+        function updatePlaybackButtons() {
+            playButton.disabled = !metadata || isPlaying;
+            pauseButton.disabled = !metadata || !isPlaying;
+        }
+
+        function pausePlayback() {
+            isPlaying = false;
+            if (playbackTimer !== null) clearTimeout(playbackTimer);
+            playbackTimer = null;
+            requestSequence += 1;
+            updatePlaybackButtons();
+        }
+
+        async function playbackTick() {
+            if (!isPlaying) return;
+            if (currentFrame >= metadata.frame_count - 1) {
+                pausePlayback();
+                return;
+            }
+
+            const isFastMode = playbackMode.value === 'fast';
+            const intervalMilliseconds = isFastMode ? 10 : 1;
+            const nextFrame = isFastMode
+                ? Math.min(
+                    metadata.frame_count - 1,
+                    (Math.floor(currentFrame / 10) + 1) * 10
+                )
+                : currentFrame + 1;
+            const shown = await showFrame(nextFrame, !isFastMode);
+            if (!isPlaying || !shown) return;
+
+            playbackTimer = window.setTimeout(
+                playbackTick,
+                intervalMilliseconds
+            );
+        }
+
+        function startPlayback() {
+            if (!metadata || isPlaying) return;
+            if (currentFrame >= metadata.frame_count - 1) {
+                showFrame(0).then((shown) => {
+                    if (shown) {
+                        isPlaying = true;
+                        updatePlaybackButtons();
+                        playbackTick();
+                    }
+                });
+                return;
+            }
+            isPlaying = true;
+            updatePlaybackButtons();
+            playbackTick();
+        }
+
+        function createPointCloud(voxelPositions) {
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0xffffff, 1);
+            canvasContainer.appendChild(renderer.domElement);
+
+            const scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100000);
+            const bounds = new THREE.Box3();
+            const point = new THREE.Vector3();
+            for (let i = 0; i < metadata.voxel_count; i++) {
+                point.fromArray(voxelPositions, i * 3);
+                bounds.expandByPoint(point);
+            }
+            const center = bounds.getCenter(new THREE.Vector3());
+            let radius = 0;
+            for (let i = 0; i < metadata.voxel_count; i++) {
+                const j = i * 3;
+                voxelPositions[j] -= center.x;
+                voxelPositions[j + 1] -= center.y;
+                voxelPositions[j + 2] -= center.z;
+                radius = Math.max(radius, Math.hypot(voxelPositions[j], voxelPositions[j + 1], voxelPositions[j + 2]));
+            }
+            radius = Math.max(radius, 1);
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(voxelPositions, 3));
+            activationAttribute = new THREE.BufferAttribute(new Float32Array(metadata.voxel_count), 1);
+            geometry.setAttribute('activation', activationAttribute);
+            geometry.computeBoundingSphere();
+
+            pointMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    dataMin: { value: metadata.data_min },
+                    dataMax: { value: metadata.data_max },
+                    threshold: { value: metadata.activation_threshold },
+                    voxelSize: { value: 1.05 },
+                    viewportScale: { value: renderer.domElement.height * 0.5 }
+                },
+                vertexShader: `
+                    attribute float activation;
+                    varying float value;
+                    uniform float voxelSize;
+                    uniform float viewportScale;
+                    void main() {
+                        value = activation;
+                        vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * viewPosition;
+                        float perspectiveSize = voxelSize * viewportScale *
+                            projectionMatrix[1][1] / max(-viewPosition.z, 0.0001);
+                        gl_PointSize = max(perspectiveSize, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying float value;
+                    uniform float dataMin;
+                    uniform float dataMax;
+                    uniform float threshold;
+                    vec3 viridis(float t) {
+                        const vec3 c0 = vec3(0.267, 0.005, 0.329);
+                        const vec3 c1 = vec3(0.230, 0.322, 0.546);
+                        const vec3 c2 = vec3(0.128, 0.567, 0.551);
+                        const vec3 c3 = vec3(0.369, 0.789, 0.383);
+                        const vec3 c4 = vec3(0.993, 0.906, 0.144);
+                        float s = clamp(t, 0.0, 1.0) * 4.0;
+                        if (s < 1.0) return mix(c0, c1, s);
+                        if (s < 2.0) return mix(c1, c2, s - 1.0);
+                        if (s < 3.0) return mix(c2, c3, s - 2.0);
+                        return mix(c3, c4, s - 3.0);
+                    }
+                    void main() {
+                        if (!(value > threshold)) {
+                            gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+                            return;
+                        }
+                        float normalized = clamp((value - dataMin) / max(dataMax - dataMin, 0.000001), 0.0, 1.0);
+                        gl_FragColor = vec4(viridis(normalized), 1.0);
+                    }
+                `,
+                depthTest: true,
+                depthWrite: true
+            });
+            scene.add(new THREE.Points(geometry, pointMaterial));
+
+            camera.position.set(radius * 0.15, radius * 0.25, radius * 2.45);
+            camera.near = Math.max(radius / 1000, 0.01);
+            camera.far = radius * 20;
+            camera.updateProjectionMatrix();
+            camera.lookAt(0, 0, 0);
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.rotateSpeed = 0.7;
+            controls.zoomSpeed = 0.9;
+            controls.panSpeed = 0.7;
+
+            function render() {
+                requestAnimationFrame(render);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            render();
+        }
+
+        async function initialize() {
+            try {
+                setLoading('Loading movie information…');
+                metadata = await (await fetchChecked('/api/metadata')).json();
+                if (metadata.frame_count < 1 || metadata.voxel_count < 1 ||
+                    metadata.physical_time.length !== metadata.frame_count) {
+                    throw new Error('The server returned inconsistent movie metadata.');
+                }
+                movieName.textContent = metadata.name;
+                movieSummary.textContent = `${metadata.voxel_count.toLocaleString()} voxels · ${metadata.frame_count.toLocaleString()} frames`;
+                timeSlider.max = String(metadata.frame_count - 1);
+                startTime.textContent = formatTime(metadata.physical_time[0]);
+                endTime.textContent = formatTime(metadata.physical_time.at(-1));
+
+                setLoading('Loading voxel geometry…');
+                const voxelBuffer = await (await fetchChecked('/api/voxels')).arrayBuffer();
+                const expected = metadata.voxel_count * 3 * Float32Array.BYTES_PER_ELEMENT;
+                if (voxelBuffer.byteLength !== expected) {
+                    throw new Error(`Voxel data contains ${voxelBuffer.byteLength} bytes; expected ${expected}.`);
+                }
+                createPointCloud(new Float32Array(voxelBuffer));
+                setLoading('Loading first frame…');
+                if (!(await showFrame(0))) return;
+                timeSlider.disabled = false;
+                playbackMode.disabled = false;
+                updatePlaybackButtons();
+                setLoading('', false);
+            } catch (error) {
+                showError(error);
+            }
+        }
+
+        timeSlider.addEventListener('input', () => {
+            pausePlayback();
+            const frameId = Number(timeSlider.value);
+            requestedFrame = frameId;
+            updateReadout(frameId);
+            if (sliderTimer !== null) clearTimeout(sliderTimer);
+            sliderTimer = window.setTimeout(() => showFrame(frameId), 25);
+        });
+        timeSlider.addEventListener('change', () => {
+            if (sliderTimer !== null) clearTimeout(sliderTimer);
+            sliderTimer = null;
+            showFrame(Number(timeSlider.value));
+        });
+        playButton.addEventListener('click', startPlayback);
+        pauseButton.addEventListener('click', pausePlayback);
+
+        window.addEventListener('keydown', (event) => {
+            if (!metadata || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
+            if (event.code === 'Space') {
+                event.preventDefault();
+                isPlaying ? pausePlayback() : startPlayback();
+            } else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+                event.preventDefault();
+                pausePlayback();
+                showFrame(currentFrame + (event.code === 'ArrowLeft' ? -1 : 1));
+            }
+        });
+        window.addEventListener('resize', () => {
+            if (!renderer || !camera) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (pointMaterial) {
+                pointMaterial.uniforms.viewportScale.value =
+                    renderer.domElement.height * 0.5;
+            }
+        });
+
+        initialize();
+    </script>
+</body>
+</html>
