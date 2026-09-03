@@ -17,7 +17,7 @@ from flask import Flask, Response, jsonify, render_template, send_from_directory
 
 TOOL_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = TOOL_DIR.parent
-RESULT_SUFFIX = "_simulation_results_2366.npz"
+RESULT_SUFFIX = "_simulation_results_2998.npz"
 MESH_SUFFIX = "_mesh.npz"
 
 

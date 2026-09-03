@@ -91,7 +91,7 @@ def run_simulation(input_arguments):
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
-        name_suffix = input_arguments['s1']
+        name_suffix = input_arguments['s1'][0] if isinstance(input_arguments['s1'], (list, np.ndarray)) else input_arguments['s1']
         np.savez(result_folder / f'{name_prefix}_simulation_results_{name_suffix}', **simulation_results)
 
 #%%
