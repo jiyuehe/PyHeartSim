@@ -21,20 +21,21 @@ import common
 import configuration
 
 #%% 
-mesh_id = the_next_one # 91 90 89 87 79
-name_prefix = configuration.mesh_name(mesh_id) # get mesh name prefix
+mesh_id = 0
+name_prefixes = configuration.mesh_name() # get mesh name prefix
+name_prefix = name_prefixes[mesh_id] # get mesh name prefix
 directory = configuration.directory_setup() # set up directories
 
-n_simulations = 1000
+n_simulations = 2
 save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
 plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
 
 # load geometry data
-file_path = directory['data'] / f'{name_prefix}_clinical_data.npz'
+file_path = directory['data'] / f'{name_prefix}_mesh.npz'
 data = np.load(file_path, allow_pickle=False)
 geometry_data = {k: data[k] for k in data.files}
 
-simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [])
+simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, [], [], [])
 
 simulation_parameters['save_action_potential_of_all_voxel_flag'] = 0
 

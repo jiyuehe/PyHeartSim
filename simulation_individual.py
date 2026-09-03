@@ -80,16 +80,19 @@ def run_simulation(input_arguments):
         if simulation_parameters['compute_electrogram_flag'] == 0:
             simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
         elif simulation_parameters['compute_electrogram_flag'] == 1:
+            simulation_results['action_potential_electrode'] = action_potential[:, voxel_id_of_simulation_electrode] # shape: (time, n_electrode)
             simulation_results['electrogram_unipolar'] = electrogram_unipolar
 
         if simulation_parameters['save_action_potential_of_all_voxel_flag'] == 1:
             simulation_results['action_potential'] = action_potential # shape: (time, n_voxel)
             simulation_results['h'] = h # shape: (time, n_voxel)
-            simulation_results['physical_time'] = physical_time
+
+        simulation_results['physical_time'] = physical_time
 
         # save simulation results
         name_prefix = input_arguments['name_prefix']
-        np.savez(result_folder / f'{name_prefix}_simulation_results', **simulation_results)
+        name_suffix = input_arguments['s1']
+        np.savez(result_folder / f'{name_prefix}_simulation_results_{name_suffix}', **simulation_results)
 
 #%%
 # If running this script directly, the following code block will be executed. 

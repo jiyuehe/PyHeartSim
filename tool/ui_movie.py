@@ -17,7 +17,7 @@ from flask import Flask, Response, jsonify, render_template, send_from_directory
 
 TOOL_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = TOOL_DIR.parent
-RESULT_SUFFIX = "_simulation_results.npz"
+RESULT_SUFFIX = "_simulation_results_2366.npz"
 MESH_SUFFIX = "_mesh.npz"
 
 
@@ -82,19 +82,19 @@ def load_movie_data(
         raise FileNotFoundError(f"Simulation result does not exist: {result_path}")
 
     with np.load(mesh_path, allow_pickle=False) as archive:
-        if "voxel" not in archive.files:
-            raise KeyError(f"{mesh_path} does not contain 'voxel'")
-        voxel = _float32(archive["voxel"])
+        if "voxel3mm_1mm_spacing" not in archive.files:
+            raise KeyError(f"{mesh_path} does not contain 'voxel3mm_1mm_spacing'")
+        voxel = _float32(archive["voxel3mm_1mm_spacing"])
 
     # NPZ members load lazily, so h and electrogram_unipolar remain unloaded.
     with np.load(result_path, allow_pickle=False) as archive:
-        missing = {"action_potential", "physical_time"}.difference(archive.files)
+        missing = {"action_potential_electrode", "physical_time"}.difference(archive.files)
         if missing:
             raise KeyError(
                 f"Missing {', '.join(sorted(missing))}. Run the simulation with "
                 "save_action_potential_of_all_voxel_flag = 1."
             )
-        action_potential = _float32(archive["action_potential"])
+        action_potential = _float32(archive["action_potential_electrode"])
         physical_time = _float32(archive["physical_time"])
 
     if voxel.ndim != 2 or voxel.shape[1] != 3:

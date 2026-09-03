@@ -129,7 +129,7 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
             'tau_open_voxel': np.ones(n_voxel) * ms['tau_open'], # determines the shape of action potential
             'tau_close_voxel': np.ones(n_voxel) * ms['tau_close'], # determines the shape of action potential
             'v_gate_voxel': np.ones(n_voxel) * ms['v_gate'], # gating variable threshold
-            'c_voxel': np.ones(n_voxel) * 6.0, # diffusion coefficient
+            'c_voxel': np.ones(n_voxel) * 7.0, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {

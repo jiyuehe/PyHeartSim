@@ -260,8 +260,11 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
 
 def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
     node_flag = arrhythmia_parameters['node_flag']
-    temporary_block_voxel_id = np.where(node_flag == 3)[0] # temporary block for creating rotor or macro re-entry
-    permanent_block_voxel_id = np.where(node_flag == 4)[0] # dense scar that are non-conductive
+    temporary_block_voxel_id = []
+    permanent_block_voxel_id = []
+    if len(node_flag) > 0:
+        temporary_block_voxel_id = np.where(node_flag == 3)[0] # temporary block for creating rotor or macro re-entry
+        permanent_block_voxel_id = np.where(node_flag == 4)[0] # dense scar that are non-conductive
 
     # geometry data
     neighbor_id_2d = geometry_data['neighbor_id_2d']
