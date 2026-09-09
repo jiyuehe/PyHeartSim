@@ -1,0 +1,12 @@
+numpy
+scipy
+numba
+matplotlib
+Pillow
+plotly
+scikit-learn
+pymeshlab
+pyvista
+trimesh
+scikit-image
+Flask
