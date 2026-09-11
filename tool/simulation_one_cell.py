@@ -31,7 +31,7 @@ script_dir = Path(script_dir)
 #%%
 directory = {}
 directory['home'] = script_dir
-directory['result'] = directory['home'] / 'result'
+directory['result'] = directory['home'].parent / 'result'
 directory['result'].mkdir(exist_ok=True)
 
 # simulation parameters
