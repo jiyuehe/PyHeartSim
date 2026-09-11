@@ -18,10 +18,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__)) # get the path of the cu
 os.chdir(script_dir) # change the working directory
 script_dir = Path(script_dir)
 
-import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
-import plotly.io as pio
-pio.renderers.default = "browser" # simulation result mesh display in internet browser
-
 import numpy as np
 import simulation
 
