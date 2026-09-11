@@ -38,17 +38,17 @@ def directory_setup():
 
 def mesh_name():
     # atrial mesh .obj file name
-    name_prefixes = [
-        '103_5-2-1-1-3-Rp-ReLA CS REF 230', # 0, flutter
-        '104_2-LA fam', # 1, GOOD flutter reentry
-        '105_3-LA FAM', # 2, flutter
-        '106_2-LA fam', # 3, flutter or focal?
-        '107_3-LA CL 270', # 4, GOOD flutter reentry, best
-        '109_3-LA FAM', # 5, GOOD flutter reentry, most dense
-        '110_1-LA FAM', # 6, GOOD flutter reentry
-        '111_6-LA', # 7, flutter or focal?
-        '112_6-LA CL 300' # 8, GOOD flutter reentry
-    ]
+    name_prefixes = {
+        103: '103_5-2-1-1-3-Rp-ReLA CS REF 230', # flutter
+        104: '104_2-LA fam', # flutter reentry
+        105: '105_3-LA FAM', # flutter
+        106: '106_2-LA fam', # flutter
+        107: '107_3-LA CL 270', # flutter reentry, best
+        109: '109_3-LA FAM', # flutter reentry, most dense
+        110: '110_1-LA FAM', # flutter reentry
+        111: '111_6-LA', # flutter
+        112: '112_6-LA CL 300' # flutter reentry
+    }
 
     return name_prefixes
 

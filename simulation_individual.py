@@ -100,7 +100,7 @@ def run_simulation(input_arguments):
 if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
     name_prefixs = configuration.mesh_name()
-    name_prefix = name_prefixs[8]
+    name_prefix = name_prefixs[112]
 
     save_result_flag = 1 # 1: save simulation results, 0: do not save simulation results
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
