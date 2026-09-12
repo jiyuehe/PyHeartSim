@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import threading
+import time
 import webbrowser
 from pathlib import Path
 
@@ -200,6 +202,47 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_viewer(
+    mesh_path: Path,
+    result_path: Path,
+    host: str = "127.0.0.1",
+    port: int = 5002,
+    open_browser: bool = True,
+) -> None:
+    """Start the movie viewer for explicit mesh and simulation-result paths."""
+    stopped_port = subprocess.run(
+        ["fuser", "-k", "-TERM", f"{port}/tcp"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode == 0
+    if stopped_port:
+        time.sleep(0.5)
+
+    mesh_path = Path(mesh_path).expanduser()
+    result_path = Path(result_path).expanduser()
+    app = create_app(mesh_path, result_path)
+    url_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    url = f"http://{url_host}:{port}"
+
+    print(f"Mesh:  {mesh_path.resolve()}")
+    print(f"Result: {result_path.resolve()}")
+    print(
+        f"Movie:  {app.config['FRAME_COUNT']} frames on "
+        f"{app.config['VOXEL_COUNT']} voxels"
+    )
+    print(f"Viewer: {url}")
+    if open_browser:
+        threading.Timer(1.0, webbrowser.open, args=[url]).start()
+    app.run(
+        debug=False,
+        host=host,
+        port=port,
+        threaded=True,
+        use_reloader=False,
+    )
+
+
 def main() -> None:
     arguments = parse_arguments()
     result_path = (
@@ -210,25 +253,12 @@ def main() -> None:
         if arguments.mesh
         else _default_mesh_path(result_path)
     )
-    app = create_app(mesh_path, result_path)
-    url_host = "127.0.0.1" if arguments.host in {"0.0.0.0", "::"} else arguments.host
-    url = f"http://{url_host}:{arguments.port}"
-
-    print(f"Mesh:  {mesh_path.resolve()}")
-    print(f"Result: {result_path.resolve()}")
-    print(
-        f"Movie:  {app.config['FRAME_COUNT']} frames on "
-        f"{app.config['VOXEL_COUNT']} voxels"
-    )
-    print(f"Viewer: {url}")
-    if not arguments.no_browser:
-        threading.Timer(1.0, webbrowser.open, args=[url]).start()
-    app.run(
-        debug=False,
+    run_viewer(
+        mesh_path=mesh_path,
+        result_path=result_path,
         host=arguments.host,
         port=arguments.port,
-        threaded=True,
-        use_reloader=False,
+        open_browser=not arguments.no_browser,
     )
 
 

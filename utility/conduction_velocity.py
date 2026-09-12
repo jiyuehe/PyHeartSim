@@ -20,11 +20,7 @@ from . import lat_map
 # normal conduction velocity of the left atrium is about 0.5 to 1.2 mm/ms in most healthy atrial tissue
 # atrial fibrillation is about ~0.8–1.0 mm/ms
 
-def compute(simulation_results, geometry_data):
-    # compute local activation time
-    electrogram_unipolar = simulation_results['electrogram_unipolar']
-    lat_electrode = lat_map.compute_electrode_lat(electrogram_unipolar)
-
+def compute(lat_electrode, geometry_data):
     voxel_id_of_simulation_electrode = geometry_data['voxel_id_of_simulation_electrode']
     xyz = geometry_data['voxel'][voxel_id_of_simulation_electrode, :] # coordinates of electrode voxels
     lat = lat_electrode

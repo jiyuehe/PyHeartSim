@@ -20,6 +20,11 @@ script_dir = Path(script_dir)
 
 import numpy as np
 import simulation
+import utility
+
+import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
+import plotly.io as pio
+pio.renderers.default = "browser" # simulation result mesh display in internet browser
 
 def directory_setup():
     # directory folder
@@ -52,7 +57,7 @@ def mesh_name():
 
     return name_prefixes
 
-def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
+def assign_simulation_parameters(directory, name_prefix, geometry_data):
     if name_prefix == 'sheet':
         geometry_flag = 0  # 2D
     else:
@@ -77,9 +82,56 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
         # 3: according to node_flag (can generate focal / rotor / macro-reentry flutter)
     }
 
-    # if simulate rotor or fibrillation, s2 will be automatically determined
+    if simulation_parameters['arrhythmia_flag'] == 3: # load node_flag for simulation with designed tissue properties
+        file_path = directory['mesh_obj'] / f'{name_prefix}_node_flag.npy'
+        vertex_flag = np.load(file_path)
+        node = geometry_data['voxel']
+        vertex = geometry_data['vertex']
+        face = geometry_data['face']
+        node_flag = utility.mesh_related.project_vertex_flag_to_node_flag(vertex, face, vertex_flag, node)
+
+        s1 = np.where(node_flag == 1)[0] # s1 pacing voxel id
+    else:
+        s1 = 12000 # s1 pacing voxel id
+
     if simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
         s2 = simulation.pacing.find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data)
+    else: 
+        s2 = []
+        node_flag = []
+
+    debug_plot = 0
+    if debug_plot == 1: 
+        # show pacing voxels
+        voxel = geometry_data['voxel']
+        traces = [
+            go.Scatter3d(
+                x=voxel[:, 0], y=voxel[:, 1], z=voxel[:, 2],
+                mode='markers',
+                marker=dict(size=2, color='lightgray', opacity=0.3),
+                name='voxels'
+            ),
+            go.Scatter3d(
+                x=[voxel[s1, 0]], y=[voxel[s1, 1]], z=[voxel[s1, 2]],
+                mode='markers',
+                marker=dict(size=6, color='blue'),
+                name='s1'
+            ),
+        ]
+        if str(s2) != '[]':
+            traces.append(go.Scatter3d(
+                x=voxel[s2, 0], y=voxel[s2, 1], z=voxel[s2, 2],
+                mode='markers',
+                marker=dict(size=6, color='red'),
+                name='s2'
+            ))
+        fig = go.Figure(data=traces)
+        fig.update_layout(
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
+            legend=dict(itemsizing='constant'),
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+        fig.show()
 
     if simulation_parameters['arrhythmia_flag'] in (0,): # focal (perpetual pacings at one location)
         params = dict(pacing_start_time=0, pacing_cycle_length=800, s1_t=0, s1_s2_delta_t=0) # s1_t, s1_s2_delta_t are not used

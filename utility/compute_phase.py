@@ -21,7 +21,7 @@ from scipy.signal import find_peaks # pip install scipy
 # focal arrhythmia, simple rotor arrhythmia.
 # It does not work well for fibrillation, because the action potential shapes are not consistant.
 
-def execute(ap, v_gate):
+def via_action_potential(ap, v_gate):
     # action poential phase. phase within the action potential shape
     # --------------------------------------------------
     a = np.where(ap > v_gate)[0]  # time index where ap > v_gate
