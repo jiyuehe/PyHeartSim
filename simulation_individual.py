@@ -142,7 +142,7 @@ if __name__ == "__main__":
         e_id = np.linspace(0, ap.shape[1] - 1, n_e_id, dtype=int)
 
         fig, axes = plt.subplots(
-            nrows=n_e_id, ncols=2, figsize=(6, 8), sharex='col', sharey=False
+            nrows=n_e_id, ncols=2, figsize=(12, 8), sharex='col', sharey=False
         )
 
         for i, eid in enumerate(e_id):

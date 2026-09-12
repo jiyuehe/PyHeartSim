@@ -72,10 +72,10 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
         'voxel_id_of_simulation_electrode': geometry_data['voxel_id_of_simulation_electrode'], # electrode locations for computing electrograms
-        't_final': 10000, # ms
+        't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 2,
+        'arrhythmia_flag': 3,
         # 0: focal (perpetual pacings at one location)
         # 1: rotor (via s1-s2 pacing)
         # 2: fibrillation (starts with a rotor via s1-s2 pacing, then becomes fibrillation)
@@ -138,8 +138,10 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
 
     if simulation_parameters['arrhythmia_flag'] in (0,): # focal (perpetual pacings at one location)
         params = dict(pacing_start_time=0, pacing_cycle_length=800, s1_t=0, s1_s2_delta_t=0) # s1_t, s1_s2_delta_t are not used
-    elif simulation_parameters['arrhythmia_flag'] in (1,2): # rotor (via s1-s2 pacing), fibriilation
+    elif simulation_parameters['arrhythmia_flag'] in (1,): # rotor (via s1-s2 pacing)
         params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=220) # pacing_cycle_length is not used
+    elif simulation_parameters['arrhythmia_flag'] in (2,): # fibriilation
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=280) # pacing_cycle_length is not used
     elif simulation_parameters['arrhythmia_flag'] == 3: # according to node_flag
         params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=0) # pacing_cycle_length, s1_t, s1_s2_delta_t are not used
     arrhythmia_parameters = {

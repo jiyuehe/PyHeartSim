@@ -159,7 +159,7 @@ def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, 
         if model_time >= f2_time and model_time <= f2_time + pacing_duration:
             J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
-    elif arrhythmia_flag in (1, 2):
+    if arrhythmia_flag in (1, 2, 3):
         if model_time >= s1_t and model_time <= s1_t + pacing_duration:
             J_stim[s1_pacing_voxel_id] = J_stim_magnitude
 

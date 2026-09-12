@@ -225,22 +225,21 @@ def build_diffusion_matrix_gpu(P_2d, neighbor_id_2d_2, Delta):
     return L_gpu.tocsr()
 
 def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gpu_cached, tol=1e-6):
-    """
-    Solve implicit diffusion step using Crank-Nicolson on GPU
+    # Solve implicit diffusion step using Crank-Nicolson on GPU
     
-    Solves: (I - dt/2 * L) * u_next = u_star + dt/2 * L * u_star
+    # Solves: (I - dt/2 * L) * u_next = u_star + dt/2 * L * u_star
     
-    Args:
-        u_star_gpu: CuPy array - voltage after reaction step
-        L_matrix_gpu: CuPy sparse CSR matrix - diffusion operator
-        dt: time step
-        method: 'cg' (Conjugate Gradient) or 'gmres'
-        A_gpu_cached: Pre-computed (I - dt/2 * L) matrix
-        tol: tolerance for iterative solvers
+    # Args:
+    #     u_star_gpu: CuPy array - voltage after reaction step
+    #     L_matrix_gpu: CuPy sparse CSR matrix - diffusion operator
+    #     dt: time step
+    #     method: 'cg' (Conjugate Gradient) or 'gmres'
+    #     A_gpu_cached: Pre-computed (I - dt/2 * L) matrix
+    #     tol: tolerance for iterative solvers
     
-    Returns:
-        u_next: CuPy array - voltage after diffusion step
-    """
+    # Returns:
+    #     u_next: CuPy array - voltage after diffusion step
+
     # Compute RHS: b = u_star + dt/2 * L * u_star
     b_gpu = u_star_gpu + (dt / 2.0) * (L_matrix_gpu @ u_star_gpu)
     
@@ -320,7 +319,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         P_2d_permanently_blocked, neighbor_id_2d_2, Delta_float
     )
     
-    # Pre-compute the Crank-Nicolson system matrix (I - dt/2 * L) - only once!
+    # Pre-compute the Crank-Nicolson system matrix (I - dt/2 * L) - only once
     I_gpu = cp_sparse.identity(n_voxel, format='csr', dtype=cp.float32)
     A_gpu_cached = I_gpu - (dt_float / 2.0) * L_matrix_gpu
 
