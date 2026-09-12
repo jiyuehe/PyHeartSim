@@ -105,7 +105,7 @@ def assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, ne
     s2_t = s1_t + arrhythmia_parameters['s1_s2_delta_t'] 
 
     s2_pacing_voxel_id = []
-    if arrhythmia_flag in (1, 2, 3, 4, 5, 6):
+    if arrhythmia_flag in (1, 2):
         s2_pacing_voxel_id = arrhythmia_parameters['s2_pacing_voxel_id'] 
 
     do_flag = 0
@@ -159,12 +159,12 @@ def apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, 
         if model_time >= f2_time and model_time <= f2_time + pacing_duration:
             J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
-    elif arrhythmia_flag in (1, 2, 3, 4):
+    elif arrhythmia_flag in (1, 2):
         if model_time >= s1_t and model_time <= s1_t + pacing_duration:
             J_stim[s1_pacing_voxel_id] = J_stim_magnitude
 
     # s2 pacing
-    if arrhythmia_flag in (1, 2, 3) and model_time >= s2_t and model_time <= s2_t + pacing_duration:
+    if arrhythmia_flag in (1, 2) and model_time >= s2_t and model_time <= s2_t + pacing_duration:
         J_stim[s2_pacing_voxel_id] = J_stim_magnitude
 
     return J_stim

@@ -75,12 +75,15 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
         't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 0,
+        'arrhythmia_flag': 1,
         # 0: focal (perpetual pacings at one location)
         # 1: rotor (via s1-s2 pacing)
         # 2: fibrillation (starts with a rotor via s1-s2 pacing, then becomes fibrillation)
         # 3: according to node_flag (can generate focal / rotor / macro-reentry flutter)
     }
+
+    s2 = []
+    node_flag = []
 
     if simulation_parameters['arrhythmia_flag'] == 3: # load node_flag for simulation with designed tissue properties
         file_path = directory['mesh_obj'] / f'{name_prefix}_node_flag.npy'
@@ -96,9 +99,6 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
 
     if simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
         s2 = simulation.pacing.find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data)
-    else: 
-        s2 = []
-        node_flag = []
 
     debug_plot = 0
     if debug_plot == 1: 
