@@ -52,17 +52,37 @@ def plot(voxel, lat_voxel, geometry_flag, fig_name):
     data_threshold = data_min-0.1 # a little small than data_min, so that places with value of data_min will have color
     color = common.convert_value_to_red_blue(data, data_min, data_max, data_threshold)
     
-    # Compute voxel spacing to size each cube so there are no gaps
-    unique_x = np.unique(voxel[:, 0])
-    spacing = float(np.min(np.diff(unique_x))) if len(unique_x) > 1 else 1.0
-    offset = spacing / 2.0
+    # Map the voxel centers to a filled grid.  ax.voxels only draws exposed
+    # faces, so adjacent cubes share a boundary instead of showing a gap.
+    axis_steps = [
+        np.diff(np.unique(voxel[:, axis]))
+        for axis in range(3)
+    ]
+    positive_steps = [steps[steps > 0] for steps in axis_steps if steps.size]
+    spacing = min(np.min(steps) for steps in positive_steps) if positive_steps else 1.0
+
+    origin = np.min(voxel, axis=0)
+    voxel_index = np.rint((voxel - origin) / spacing).astype(int)
+    grid_shape = tuple(np.max(voxel_index, axis=0) + 1)
+
+    filled = np.zeros(grid_shape, dtype=bool)
+    filled[tuple(voxel_index.T)] = True
+
+    rgba = np.column_stack((color, np.ones(len(color))))
+    facecolors = np.zeros(grid_shape + (4,), dtype=float)
+    facecolors[tuple(voxel_index.T)] = rgba
+
+    grid_x, grid_y, grid_z = np.indices(np.asarray(grid_shape) + 1, dtype=float)
+    grid_x = origin[0] + (grid_x - 0.5) * spacing
+    grid_y = origin[1] + (grid_y - 0.5) * spacing
+    grid_z = origin[2] + (grid_z - 0.5) * spacing
 
     plt.figure()
     ax = plt.axes(projection='3d')
-    ax.bar3d(
-        voxel[:, 0] - offset, voxel[:, 1] - offset, voxel[:, 2] - offset,
-        spacing, spacing, spacing,
-        color=color, shade=False, edgecolor='none', linewidth=0
+    ax.voxels(
+        grid_x, grid_y, grid_z, filled,
+        facecolors=facecolors, edgecolor='none', linewidth=0,
+        shade=False, antialiased=False,
     )
     plt.axis('off')
 
@@ -74,5 +94,5 @@ def plot(voxel, lat_voxel, geometry_flag, fig_name):
     common.set_axes_equal(ax)
     plt.tight_layout()
 
-    plt.savefig(fig_name, dpi=100)
+    plt.savefig(fig_name, dpi=300)
     plt.close()

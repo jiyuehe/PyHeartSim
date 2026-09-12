@@ -75,7 +75,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
         't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 1,
+        'arrhythmia_flag': 0,
         # 0: focal (perpetual pacings at one location)
         # 1: rotor (via s1-s2 pacing)
         # 2: fibrillation (starts with a rotor via s1-s2 pacing, then becomes fibrillation)
@@ -95,7 +95,10 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
 
         s1 = np.where(node_flag == 1)[0] # s1 pacing voxel id
     else:
-        s1 = 12000 # s1 pacing voxel id
+        vid = 21950 # can use ui_select_nodes.py to find out the vertex id
+        vertex_xyz = geometry_data['vertex'][vid,:]
+        node = geometry_data['voxel']
+        s1 = np.argmin(np.linalg.norm(node - vertex_xyz, axis=1)) # s1 pacing voxel id
 
     if simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
         s2 = simulation.pacing.find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data)

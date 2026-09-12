@@ -24,10 +24,6 @@ import common
 import configuration
 from pathlib import Path
 
-import plotly.graph_objects as go # pip install plotly, pip install --upgrade nbformat. For 3D interactive plot: triangular mesh, and activation movie
-import plotly.io as pio
-pio.renderers.default = "browser" # simulation result mesh display in internet browser
-
 #%%
 def run_simulation(input_arguments):
     result_folder = input_arguments['result_folder']
@@ -192,7 +188,7 @@ if __name__ == "__main__":
         v_gate = heart_model_parameters['v_gate_voxel'][geometry_data['voxel_id_of_simulation_electrode']]
         for i in range(n_electrode):
             ap = ap_electrode[:, i]
-            ap_phase_i, activation_phase_i = utility.compute_phase.via_action_potential(ap, v_gate[i])
+            ap_phase_i, activation_phase_i = utility.phase_map.compute_phase_via_action_potential(ap, v_gate[i])
             ap_phase.append(ap_phase_i)
             activation_phase.append(activation_phase_i)
 
@@ -209,46 +205,7 @@ if __name__ == "__main__":
         # phase at some time instance
         t_idx = phase_normalized.shape[0] // 2
         phase_at_t = phase_normalized[t_idx, :]
-
-        geometry_flag_val = int(simulation_results['geometry_flag'])
-        color = common.convert_value_to_red_blue(phase_at_t, 0.0, 1.0, -0.1)
-
-        # interactive plotly phase map (cubes)
-        cmap = plt.cm.hsv
-        rgba = cmap(phase_at_t)  # shape: (n_electrode, 4)
-        face_colors_per_cube = [f'rgb({int(r*255)},{int(g*255)},{int(b*255)})' for r, g, b, _ in rgba]
-
-        cube_verts = np.array([
-            [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [-0.5,  0.5, -0.5],
-            [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
-        ])
-        cube_faces = np.array([
-            [0,1,2],[0,2,3], [4,5,6],[4,6,7],
-            [0,1,5],[0,5,4], [2,3,7],[2,7,6],
-            [1,2,6],[1,6,5], [3,0,4],[3,4,7],
-        ])  # 12 triangles per cube
-
-        all_x, all_y, all_z, all_i, all_j, all_k, all_fc = [], [], [], [], [], [], []
-        for idx, (center, fc) in enumerate(zip(voxel_electrode, face_colors_per_cube)):
-            verts = center + cube_verts
-            base = 8 * idx
-            all_x.extend(verts[:, 0]); all_y.extend(verts[:, 1]); all_z.extend(verts[:, 2])
-            for f in cube_faces:
-                all_i.append(base + f[0]); all_j.append(base + f[1]); all_k.append(base + f[2])
-                all_fc.append(fc)
-
-        fig_plotly = go.Figure(data=go.Mesh3d(
-            x=all_x, y=all_y, z=all_z,
-            i=all_i, j=all_j, k=all_k,
-            facecolor=all_fc,
-            flatshading=True,
-            showscale=False,
-        ))
-        fig_plotly.update_layout(
-            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
-            margin=dict(l=0, r=0, t=0, b=0)
-        )
-        fig_plotly.show()
+        utility.phase_map.plot(phase_at_t, voxel_electrode)
 
     # display simulation movie
     ui_movie.run_viewer(

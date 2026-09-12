@@ -15,6 +15,6 @@
 from . import automatic_mesh_refinement
 from . import conduction_velocity
 from . import lat_map
-from . import compute_phase
+from . import phase_map
 from . import mesh_related
 from . import voxelization
