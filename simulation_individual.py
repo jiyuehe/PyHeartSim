@@ -15,7 +15,6 @@
 #%%
 import time
 import numpy as np # pip install numpy
-from scipy.spatial import cKDTree
 from numba import cuda # pip install numba
 import matplotlib.pyplot as plt # pip install matplotlib
 import simulation
@@ -110,70 +109,21 @@ if __name__ == "__main__":
     data = np.load(file_path, allow_pickle=False)
     geometry_data = {k: data[k] for k in data.files}
 
-    s1 = 12000 # s1 pacing voxel id
-    s2 = [] # if simulate rotor, s2 will be automatically determined by the code
-    
-    ##############################
     # load node_flag for simulation with designed tissue properties
     file_path = directory['mesh_obj'] / f'{name_prefix}_node_flag.npy'
-    vertex_flag = np.load(file_path) # this is the vertex flag
+    if file_path.is_file():
+        vertex_flag = np.load(file_path)
+        node = geometry_data['voxel']
+        vertex = geometry_data['vertex']
+        face = geometry_data['face']
+        node_flag = utility.mesh_related.project_vertex_flag_to_node_flag(vertex, face, vertex_flag, node)
 
-    # Assign each node the flag of the vertex whose surface-normal line passes closest to it. 
-    node = geometry_data['voxel']
-    vertex = geometry_data['vertex']
-    face = geometry_data['face']
-
-    # Compute area-weighted vertex normals from the adjacent triangles.
-    triangle_normal = np.cross(
-        vertex[face[:, 1]] - vertex[face[:, 0]],
-        vertex[face[:, 2]] - vertex[face[:, 0]]
-    )
-    vertex_normal = np.zeros_like(vertex, dtype=float)
-    for corner in range(3):
-        np.add.at(vertex_normal, face[:, corner], triangle_normal)
-    normal_length = np.linalg.norm(vertex_normal, axis=1, keepdims=True)
-    vertex_normal /= np.maximum(normal_length, 1e-12)
-
-    # Search several nearby vertices because the closest normal line does not
-    # necessarily belong to the closest vertex in Euclidean distance.
-    number_of_candidates = min(16, vertex.shape[0])
-    vertex_tree = cKDTree(vertex)
-    _, candidate_vertex_ids = vertex_tree.query(node, k=number_of_candidates)
-    if number_of_candidates == 1:
-        candidate_vertex_ids = candidate_vertex_ids[:, None]
-
-    candidate_vertex = vertex[candidate_vertex_ids]
-    candidate_normal = vertex_normal[candidate_vertex_ids]
-    offset = node[:, None, :] - candidate_vertex
-    normal_distance = np.sum(offset * candidate_normal, axis=2)
-    tangential_offset = offset - normal_distance[:, :, None] * candidate_normal
-    tangential_distance_squared = np.sum(tangential_offset**2, axis=2)
-
-    best_candidate = np.argmin(tangential_distance_squared, axis=1)
-    associated_vertex_id = candidate_vertex_ids[
-        np.arange(node.shape[0]), best_candidate
-    ]
-    node_flag = vertex_flag[associated_vertex_id].astype(int)
-
-    debug_plot = 0
-    if debug_plot == 1:
-        # show the nodes with node flags. flag 0 in gray, flag 1 in red, flag 2 in meganta, flag 3 in black, flag 4 in green
-        color_map = {0: 'lightgray', 1: 'red', 2: 'magenta', 3: 'gray', 4: 'black'}
-        fig = go.Figure()
-        for flag, color in color_map.items():
-            mask = node_flag == flag
-            if np.any(mask):
-                fig.add_trace(go.Scatter3d(
-                    x=node[mask, 0], y=node[mask, 1], z=node[mask, 2],
-                    mode='markers',
-                    marker=dict(size=2, color=color),
-                    name=f'flag {flag}'
-                ))
-        fig.update_layout(scene=dict(dragmode='orbit'))
-        fig.show()
-    
-    s1 = np.where(node_flag == 1)[0] # need to comment this out for rotor/fibrillation simulation
-    ##############################
+        s1 = np.where(node_flag == 1)[0] # need to comment this out for rotor/fibrillation simulation
+    else:
+        node_flag = []
+        s1 = 12000 # s1 pacing voxel id
+        
+    s2 = [] # for simulating rotor via s1-s2 pacing, s2 will be automatically determined
 
     simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag)
 

@@ -31,22 +31,22 @@ def directory_setup():
     directory['result'] = Path('/home/j/Desktop/hdd/share_folder/simulation_results')
 
     # create the folder if it does not exist
-    directory['result'].mkdir(exist_ok=True)
     directory['data'].mkdir(exist_ok=True)
-
+    directory['result'].mkdir(exist_ok=True)
+    
     return directory
 
 def mesh_name():
     # atrial mesh .obj file name
     name_prefixes = {
-        103: '103_5-2-1-1-3-Rp-ReLA CS REF 230', # flutter
+        103: '103_5-2-1-1-3-Rp-ReLA CS REF 230', # flutter reentry
         104: '104_2-LA fam', # flutter reentry
-        105: '105_3-LA FAM', # flutter
-        106: '106_2-LA fam', # flutter
+        105: '105_3-LA FAM', # flutter reentry
+        106: '106_2-LA fam', # flutter reentry
         107: '107_3-LA CL 270', # flutter reentry, best
         109: '109_3-LA FAM', # flutter reentry, most dense
         110: '110_1-LA FAM', # flutter reentry
-        111: '111_6-LA', # flutter
+        111: '111_6-LA', # flutter reentry
         112: '112_6-LA CL 300' # flutter reentry
     }
 
@@ -70,29 +70,23 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
         't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 4,
-        # 0: focal (multiple cycles)
-        # 1: rotor
-        # 2: fibrillation (starts with a rotor, then becomes fibrillation)
-        # 3: for debugging, manually assign s1 and s2 region 
-        # 4: 1 focal 1 pacing (can generate rotor/macro-reentry too dependin on the node_flag)
-        # 5: 2 focal 2 locations 300ms apart
-        # 6: 2 focal 2 locations 50ms apart
+        'arrhythmia_flag': 0,
+        # 0: focal (perpetual pacings at one location)
+        # 1: rotor (via s1-s2 pacing)
+        # 2: fibrillation (starts with a rotor via s1-s2 pacing, then becomes fibrillation)
+        # 3: according to node_flag (can generate focal / rotor / macro-reentry flutter)
     }
 
     # if simulate rotor or fibrillation, s2 will be automatically determined
     if simulation_parameters['arrhythmia_flag'] in (1, 2): # rotor or fibrillation
         s2 = simulation.pacing.find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data)
 
-    # NOTE: changes of heart_model_parameters or pacing magnitude/duration will change the ap/h_min/max thresholds
-    if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
-        params = dict(pacing_start_time=10, pacing_cycle_length=300, s1_t=0, s1_s2_delta_t=0)
-    elif simulation_parameters['arrhythmia_flag'] == 1: # rotor
-        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=250)
-    elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
-        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=290)
-    elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging, manually assign s1 and s2 region
-        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=230)
+    if simulation_parameters['arrhythmia_flag'] in (0,): # focal (perpetual pacings at one location)
+        params = dict(pacing_start_time=0, pacing_cycle_length=800, s1_t=0, s1_s2_delta_t=0) # s1_t, s1_s2_delta_t are not used
+    elif simulation_parameters['arrhythmia_flag'] in (1,2): # rotor (via s1-s2 pacing), fibriilation
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=250) # pacing_cycle_length is not used
+    elif simulation_parameters['arrhythmia_flag'] == 3: # according to node_flag
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=0) # pacing_cycle_length, s1_t, s1_s2_delta_t are not used
     arrhythmia_parameters = {
         'pacing_start_time': params['pacing_start_time'], # ms
         'pacing_cycle_length': params['pacing_cycle_length'], # ms
@@ -102,28 +96,20 @@ def assign_simulation_parameters(name_prefix, geometry_data, s1, s2, node_flag):
         's1_s2_delta_t': params['s1_s2_delta_t'], # ms. time interval between s1 and s2
     }
 
-    if simulation_parameters['arrhythmia_flag'] in (0, 4, 5, 6): # focal
+    if simulation_parameters['arrhythmia_flag'] in (0,1,3):
         ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13) # ms: Mitchell-Schaeffer model parameters
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3) # ap: Aliev-Panfilov model parameters
-    elif simulation_parameters['arrhythmia_flag'] == 1: # simple rotor
-        ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
-        ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
     elif simulation_parameters['arrhythmia_flag'] == 2: # fibrillation
         ms = dict(tau_in=0.3,  tau_out=12, tau_open=80, tau_close=80, v_gate=0.13)
-        # ms = dict(tau_in=0.3,  tau_out=12, tau_open=30, tau_close=80, v_gate=0.13)
-        ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
-    elif simulation_parameters['arrhythmia_flag'] == 3: # for debugging
-        ms = dict(tau_in=0.3,  tau_out=6, tau_open=120, tau_close=80, v_gate=0.13)
         ap = dict(k=8.0, a=0.15, epsilon_0=0.002, mu1=0.2, mu2=0.3)
 
     n_voxel = geometry_data['voxel'].shape[0]
-
     if simulation_parameters['heart_model_flag'] == 0: # Mitchell-Schaeffer model
         heart_model_parameters = {
-            'tau_in_voxel': np.ones(n_voxel) * ms['tau_in'], # determines the shape of action potential
-            'tau_out_voxel': np.ones(n_voxel) * ms['tau_out'], # determines the shape of action potential
-            'tau_open_voxel': np.ones(n_voxel) * ms['tau_open'], # determines the shape of action potential
-            'tau_close_voxel': np.ones(n_voxel) * ms['tau_close'], # determines the shape of action potential
+            'tau_in_voxel': np.ones(n_voxel) * ms['tau_in'], # determines the shape of action potential up stroke
+            'tau_out_voxel': np.ones(n_voxel) * ms['tau_out'], # determines the shape of action potential down stroke
+            'tau_open_voxel': np.ones(n_voxel) * ms['tau_open'], # determines the time from end of an action potential to start of next action potential
+            'tau_close_voxel': np.ones(n_voxel) * ms['tau_close'], # determines the time of action potential duration
             'v_gate_voxel': np.ones(n_voxel) * ms['v_gate'], # gating variable threshold
             'c_voxel': np.ones(n_voxel) * 7.0, # diffusion coefficient
         }
