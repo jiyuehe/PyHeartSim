@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import threading
 import time
@@ -18,56 +17,6 @@ from flask import Flask, Response, jsonify, render_template, send_from_directory
 
 
 TOOL_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = TOOL_DIR.parent
-RESULT_SUFFIX = "_simulation_results_2998.npz"
-MESH_SUFFIX = "_mesh.npz"
-
-
-def _latest_match(folders: list[Path], pattern: str) -> Path | None:
-    matches: list[Path] = []
-    for folder in folders:
-        if folder.is_dir():
-            matches.extend(folder.glob(pattern))
-    return max(matches, key=lambda path: path.stat().st_mtime) if matches else None
-
-
-def _default_result_path() -> Path:
-    environment_path = os.environ.get("PYHEARTSIM_RESULT")
-    if environment_path:
-        return Path(environment_path).expanduser()
-    result_path = _latest_match(
-        [PROJECT_DIR / "result", Path("/home/j/Desktop/hdd/share_folder/simulation_results")],
-        f"*{RESULT_SUFFIX}",
-    )
-    if result_path is None:
-        raise FileNotFoundError(
-            "No simulation result was found. Pass --result or set PYHEARTSIM_RESULT."
-        )
-    return result_path
-
-
-def _default_mesh_path(result_path: Path) -> Path:
-    environment_path = os.environ.get("PYHEARTSIM_MESH")
-    if environment_path:
-        return Path(environment_path).expanduser()
-    if not result_path.name.endswith(RESULT_SUFFIX):
-        raise ValueError(f"Cannot infer a mesh from {result_path.name!r}; pass --mesh.")
-
-    prefix = result_path.name[: -len(RESULT_SUFFIX)]
-    mesh_name = f"{prefix}{MESH_SUFFIX}"
-    candidates = [
-        result_path.parent / mesh_name,
-        PROJECT_DIR / "data" / mesh_name,
-        Path("/home/j/Desktop/hdd/share_folder/carto3_files/data npz") / mesh_name,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    searched = "\n  ".join(str(path) for path in candidates)
-    raise FileNotFoundError(
-        "No matching mesh was found. Pass --mesh or set PYHEARTSIM_MESH. "
-        f"Searched:\n  {searched}"
-    )
 
 
 def _float32(values: np.ndarray) -> np.ndarray:
@@ -133,6 +82,11 @@ def create_app(mesh_path: Path, result_path: Path) -> Flask:
         FRAME_COUNT=int(action_potential.shape[0]),
     )
 
+    @app.after_request
+    def disable_browser_cache(response: Response) -> Response:
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.get("/")
     def index():
         return render_template("ui_movie.html")
@@ -143,13 +97,8 @@ def create_app(mesh_path: Path, result_path: Path) -> Flask:
 
     @app.get("/api/metadata")
     def metadata():
-        name = (
-            result_path.name[: -len(RESULT_SUFFIX)]
-            if result_path.name.endswith(RESULT_SUFFIX)
-            else result_path.stem
-        )
         return jsonify(
-            name=name,
+            name=result_path.stem,
             voxel_count=int(voxel.shape[0]),
             frame_count=int(action_potential.shape[0]),
             physical_time=physical_time.tolist(),
@@ -161,7 +110,6 @@ def create_app(mesh_path: Path, result_path: Path) -> Flask:
     @app.get("/api/voxels")
     def voxels():
         response = Response(voxel.tobytes(), mimetype="application/octet-stream")
-        response.headers["Cache-Control"] = "public, max-age=3600"
         response.headers["X-Array-Dtype"] = "float32-little-endian"
         response.headers["X-Array-Shape"] = f"{voxel.shape[0]},3"
         return response
@@ -172,7 +120,6 @@ def create_app(mesh_path: Path, result_path: Path) -> Flask:
             return jsonify(error=f"Frame {frame_id} is out of range."), 404
         values = action_potential[frame_id]
         response = Response(values.tobytes(), mimetype="application/octet-stream")
-        response.headers["Cache-Control"] = "public, max-age=3600"
         response.headers["X-Array-Dtype"] = "float32-little-endian"
         response.headers["X-Array-Shape"] = str(values.shape[0])
         return response
@@ -192,8 +139,12 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Play a PyHeartSim all-voxel result in a web browser."
     )
-    parser.add_argument("--result", type=Path, help="Path to *_simulation_results.npz")
-    parser.add_argument("--mesh", type=Path, help="Path to the matching *_mesh.npz")
+    parser.add_argument(
+        "--result", required=True, type=Path, help="Path to *_simulation_results.npz"
+    )
+    parser.add_argument(
+        "--mesh", required=True, type=Path, help="Path to the matching *_mesh.npz"
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Flask bind host")
     parser.add_argument("--port", default=5002, type=int, help="Flask bind port")
     parser.add_argument(
@@ -245,17 +196,9 @@ def run_viewer(
 
 def main() -> None:
     arguments = parse_arguments()
-    result_path = (
-        arguments.result.expanduser() if arguments.result else _default_result_path()
-    )
-    mesh_path = (
-        arguments.mesh.expanduser()
-        if arguments.mesh
-        else _default_mesh_path(result_path)
-    )
     run_viewer(
-        mesh_path=mesh_path,
-        result_path=result_path,
+        mesh_path=arguments.mesh.expanduser(),
+        result_path=arguments.result.expanduser(),
         host=arguments.host,
         port=arguments.port,
         open_browser=not arguments.no_browser,

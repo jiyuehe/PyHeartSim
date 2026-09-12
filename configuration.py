@@ -75,7 +75,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
         't_final': 2000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
-        'arrhythmia_flag': 0,
+        'arrhythmia_flag': 1,
         # 0: focal (perpetual pacings at one location)
         # 1: rotor (via s1-s2 pacing)
         # 2: fibrillation (starts with a rotor via s1-s2 pacing, then becomes fibrillation)
@@ -139,7 +139,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
     if simulation_parameters['arrhythmia_flag'] in (0,): # focal (perpetual pacings at one location)
         params = dict(pacing_start_time=0, pacing_cycle_length=800, s1_t=0, s1_s2_delta_t=0) # s1_t, s1_s2_delta_t are not used
     elif simulation_parameters['arrhythmia_flag'] in (1,2): # rotor (via s1-s2 pacing), fibriilation
-        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=250) # pacing_cycle_length is not used
+        params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=220) # pacing_cycle_length is not used
     elif simulation_parameters['arrhythmia_flag'] == 3: # according to node_flag
         params = dict(pacing_start_time=0, pacing_cycle_length=0, s1_t=0, s1_s2_delta_t=0) # pacing_cycle_length, s1_t, s1_s2_delta_t are not used
     arrhythmia_parameters = {

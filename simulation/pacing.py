@@ -51,7 +51,7 @@ def find_out_s2_pacing_voxel_ids_for_rotor_arrhythmia(s1, geometry_data):
     candidate_s2 = largest_cluster[0] # s2 pacing voxel id
 
     # if the amount of voxels in the largest cluster is larger than a threshold, select a subset of connected voxels: started from the first voxel, then add neighboring voxels until reaching the threshold, according to breadth first search
-    n_threshold = 300
+    n_threshold = 400
     if len(largest_cluster) > n_threshold:
         visited = np.zeros(n_voxel, dtype=bool)
         s2_pacing_voxel_id = []
