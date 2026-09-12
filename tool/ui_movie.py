@@ -84,7 +84,11 @@ def create_app(mesh_path: Path, result_path: Path) -> Flask:
 
     @app.after_request
     def disable_browser_cache(response: Response) -> Response:
-        response.headers["Cache-Control"] = "no-store"
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
         return response
 
     @app.get("/")
@@ -174,7 +178,7 @@ def run_viewer(
     result_path = Path(result_path).expanduser()
     app = create_app(mesh_path, result_path)
     url_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
-    url = f"http://{url_host}:{port}"
+    url = f"http://{url_host}:{port}/?run={time.time_ns()}"
 
     print(f"Mesh:  {mesh_path.resolve()}")
     print(f"Result: {result_path.resolve()}")

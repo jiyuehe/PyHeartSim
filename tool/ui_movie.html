@@ -133,7 +133,7 @@
         }
 
         async function fetchChecked(url) {
-            const response = await fetch(url);
+            const response = await fetch(url, { cache: 'no-store' });
             if (!response.ok) {
                 let detail = `${response.status} ${response.statusText}`;
                 try {
