@@ -128,6 +128,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         ])
         fig.update_layout(scene=dict(
             aspectmode='data',
+            dragmode='orbit',
             xaxis=dict(visible=False, showgrid=False, showbackground=False),
             yaxis=dict(visible=False, showgrid=False, showbackground=False),
             zaxis=dict(visible=False, showgrid=False, showbackground=False),
@@ -182,6 +183,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         ])
         fig.update_layout(scene=dict(
             aspectmode='data',
+            dragmode='orbit',
             xaxis=dict(visible=False, showgrid=False, showbackground=False),
             yaxis=dict(visible=False, showgrid=False, showbackground=False),
             zaxis=dict(visible=False, showgrid=False, showbackground=False),
@@ -263,6 +265,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
         ])
         fig.update_layout(scene=dict(
             aspectmode='data',
+            dragmode='orbit',
             xaxis=dict(visible=False, showgrid=False, showbackground=False),
             yaxis=dict(visible=False, showgrid=False, showbackground=False),
             zaxis=dict(visible=False, showgrid=False, showbackground=False),

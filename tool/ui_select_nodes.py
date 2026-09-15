@@ -36,7 +36,6 @@ def serve_css():
 
 # load geometry data
 directory = configuration.directory_setup()
-directory['result'] = directory['mesh_obj']
 
 name_prefixs = configuration.mesh_name()
 name_prefix = name_prefixs[112]

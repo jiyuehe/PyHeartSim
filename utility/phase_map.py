@@ -168,7 +168,7 @@ def plot(phase_at_t, voxel_electrode):
         showscale=False,
     ))
     fig_plotly.update_layout(
-        scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
+        scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data', dragmode='orbit'),
         margin=dict(l=0, r=0, t=0, b=0)
     )
     fig_plotly.show()

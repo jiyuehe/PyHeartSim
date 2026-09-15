@@ -81,7 +81,7 @@
     </script>
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 
         const byId = (id) => document.getElementById(id);
         const canvasContainer = byId('canvas-container');
@@ -369,12 +369,16 @@
             camera.far = radius * 20;
             camera.updateProjectionMatrix();
             camera.lookAt(0, 0, 0);
-            const controls = new OrbitControls(camera, renderer.domElement);
+            const controls = new TrackballControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.08;
-            controls.rotateSpeed = 0.7;
-            controls.zoomSpeed = 0.9;
-            controls.panSpeed = 0.7;
+            controls.dynamicDampingFactor = 0.12;
+            controls.noRotate = false;
+            controls.noPan = false;
+            controls.noZoom = false;
+            controls.rotateSpeed = 2.0;
+            controls.zoomSpeed = 1.0;
+            controls.panSpeed = 1.0;
+            controls.staticMoving = false;
 
             function render() {
                 requestAnimationFrame(render);

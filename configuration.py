@@ -86,7 +86,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
     node_flag = []
 
     if simulation_parameters['arrhythmia_flag'] == 3: # load node_flag for simulation with designed tissue properties
-        file_path = directory['mesh_obj'] / f'{name_prefix}_node_flag.npy'
+        file_path = directory['result'] / f'{name_prefix}_node_flag.npy'
         vertex_flag = np.load(file_path)
         node = geometry_data['voxel']
         vertex = geometry_data['vertex']
@@ -130,7 +130,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
             ))
         fig = go.Figure(data=traces)
         fig.update_layout(
-            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data'),
+            scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False, aspectmode='data', dragmode='orbit'),
             legend=dict(itemsizing='constant'),
             margin=dict(l=0, r=0, t=0, b=0)
         )

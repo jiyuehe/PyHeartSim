@@ -32,7 +32,7 @@
         <div id="line-width-group" style="display:flex; gap:10px; align-items:center; flex-wrap:nowrap;">
             <label>Line&nbsp;width:</label>
             <input type="range" id="line-width" min="2" max="60" value="8" style="width:80px;">
-            <span id="line-width-value">5px</span>
+            <span id="line-width-value">15px</span>
             <div class="separator"></div>
         </div>
         <button class="btn-undo" id="btn-undo" title="Undo last selection">Undo</button>
@@ -72,7 +72,7 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 
         // ---- state ----
         let nodePositions = null; // Float32Array (centered for display)
@@ -119,9 +119,16 @@
             60, window.innerWidth / window.innerHeight, 0.01, 1000
         );
 
-        const controls = new OrbitControls(camera, renderer.domElement);
+        const controls = new TrackballControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
+        controls.dynamicDampingFactor = 0.12;
+        controls.noRotate = false;
+        controls.noPan = false;
+        controls.noZoom = false;
+        controls.rotateSpeed = 2.0;
+        controls.zoomSpeed = 1.0;
+        controls.panSpeed = 1.0;
+        controls.staticMoving = false;
 
         // lasso overlay
         const lassoCanvas = document.getElementById('lasso-canvas');
