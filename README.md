@@ -54,7 +54,7 @@ Example action potentials and electrograms:
   - For solving the heart model equations,  
     - **4th-order Runge–Kutta** is implemented for the reaction part,  
     - **Crank-Nicolson** is implemented for the diffusion part,  
-    - **Phase-field method** is implemented for the boundary condition.
+    - **Phase-field method** is implemented for the geometry boundary.
 
 # Instructions
 - Install dependencies: I have kept the dependencies intentionally minimal. Run  
