@@ -44,7 +44,9 @@ def run_simulation(input_arguments):
     start = time.time()
     if cuda.is_available(): # GPU parallel
         print("GPU parallel computing for simulation")
-        action_potential, h, physical_time = simulation.simulation_gpu.compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters)
+        action_potential, h, physical_time = simulation.simulation_gpu.compute(
+            n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters, D0=D0
+        )
     end = time.time()
     print(f'simulation completed in {end - start:.1f} seconds')
 

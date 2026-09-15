@@ -183,12 +183,11 @@ def build_shell_geometry(vertex, face, Delta, thickness,
 
 
 
-def build_diffusion_matrix(P_2d, neighbors, phi, face_fraction, Delta):
+def build_diffusion_matrix(P_2d, neighbors, phi, face_fraction, Delta, D0):
     """Assemble K for diag(phi) du/dt = K u using shared face conductances.
 
-    Only D0=I is supported. P_2d[:, 20] is treated as physical scalar diffusion
-    inside the flux; its harmonic face mean is zero if either cell is blocked.
-    This intentionally differs from legacy row scaling for heterogeneous c.
+    D0 is always available in the active code path and is used to compute the
+    anisotropic face conductance projected onto the face normal.
     """
     P_2d = np.asarray(P_2d)
     neighbors = np.asarray(neighbors)
@@ -209,9 +208,6 @@ def build_diffusion_matrix(P_2d, neighbors, phi, face_fraction, Delta):
     direct = neighbors[:, :6]
     if np.any(fractions[direct < 0] != 0):
         raise ValueError('Missing neighbors must have zero face fraction')
-    expected = 4.0 * (direct >= 0)
-    if not np.allclose(P_2d[:, :6], expected) or not np.allclose(P_2d[:, 6:15], 0):
-        raise ValueError('Phase-field diffusion currently requires isotropic D0=I; tensor diffusion is unsupported')
     c = np.asarray(P_2d[:, 20], dtype=np.float64)
     if np.any(~np.isfinite(c)) or np.any(c < 0):
         raise ValueError('Diffusion coefficients must be nonnegative and finite')
@@ -227,13 +223,20 @@ def build_diffusion_matrix(P_2d, neighbors, phi, face_fraction, Delta):
             raise ValueError('Both sides of a shared face must have the same fraction')
         if direction % 2:
             continue
-        conductance = np.zeros(len(i))
-        conducting = (c[i] > 0) & (c[j] > 0)
-        # Stable harmonic mean, including exact insulating blocks.
-        lo = np.minimum(c[i[conducting]], c[j[conducting]])
-        hi = np.maximum(c[i[conducting]], c[j[conducting]])
-        conductance[conducting] = 2 * lo / (1 + lo / hi)
-        conductance *= fractions[i, direction] / Delta ** 2
+
+        axis = direction // 2
+        nvec = np.zeros(3, dtype=np.float64)
+        nvec[axis] = 1.0
+        D_i = np.asarray([np.asarray(D0[k], dtype=np.float64) for k in i], dtype=np.float64)
+        D_j = np.asarray([np.asarray(D0[k], dtype=np.float64) for k in j], dtype=np.float64)
+
+        D_face = 0.5 * (
+            np.einsum('i,...ij,j->...', nvec, D_i, nvec) +
+            np.einsum('i,...ij,j->...', nvec, D_j, nvec)
+        )
+        c_face = 0.5 * (c[i] + c[j])
+        conductance = D_face * c_face * fractions[i, direction] / Delta ** 2
+
         rows.extend((i, j, i, j))
         cols.extend((j, i, i, j))
         values.extend((conductance, conductance, -conductance, -conductance))

@@ -136,20 +136,16 @@ def reaction_step_gpu_rk4(heart_model_flag, d_u_current, d_h_current, d_u_star, 
     )
 
 
-def prepare_diffusion_system_gpu(P_2d, neighbors, geometry_data, dt):
+def prepare_diffusion_system_gpu(P_2d, neighbors, geometry_data, dt, D0):
     """Cache a mass-weighted phase-field system; both geometry arrays are required."""
     has_phi = 'phase_field' in geometry_data
     has_faces = 'phase_field_face_fraction' in geometry_data
-    # Legacy check allowed both arrays to be absent:
-    # if has_phi != has_faces:
     if not has_phi or not has_faces:
         raise ValueError('Phase-field geometry requires both volume and face fractions')
-    # n = len(P_2d)  # Only needed by the disabled legacy fallback.
     Delta = float(geometry_data['Delta'])
-    # if has_phi:  # Phase-field weights are now mandatory.
     phi = np.asarray(geometry_data['phase_field'], dtype=np.float64)
     K = simulation.phase_field.build_diffusion_matrix(
-        P_2d, neighbors, phi, geometry_data['phase_field_face_fraction'], Delta
+        P_2d, neighbors, phi, geometry_data['phase_field_face_fraction'], Delta, D0
     )
     substeps = 1
     # Keep geometry weights and the implicit solve in double precision: small
@@ -214,7 +210,7 @@ def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gp
     
     return u_next
 
-def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
+def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters, D0):
     node_flag = arrhythmia_parameters['node_flag']
     temporary_block_voxel_id = []
     permanent_block_voxel_id = []
@@ -267,7 +263,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
 
     # Build baseline diffusion matrix on GPU (only once).
     baseline_system = prepare_diffusion_system_gpu(
-        P_2d_permanently_blocked, neighbor_id_2d, geometry_data, dt_float
+        P_2d_permanently_blocked, neighbor_id_2d, geometry_data, dt_float, D0=D0
     )
 
     # Pre-build the temporary-block matrix on top of the permanent blocks.
@@ -275,7 +271,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         P_2d_blocked = P_2d_permanently_blocked.copy()
         P_2d_blocked[temporary_block_voxel_id, 20] = 0.0
         temporary_system = prepare_diffusion_system_gpu(
-            P_2d_blocked, neighbor_id_2d, geometry_data, dt_float
+            P_2d_blocked, neighbor_id_2d, geometry_data, dt_float, D0=D0
         )
     else:
         temporary_system = baseline_system
