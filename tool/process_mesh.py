@@ -206,7 +206,7 @@ if do_flag == 1:
         Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
         # NOTE: 
         # Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
-        thickness = 4 # how many voxels across endocardium to epicardium
+        thickness = 2 # how many voxels across endocardium to epicardium
         # Static embedded-boundary weights; increase to 8 to check quadrature.
         phase_geometry = utility.phase_field.build_shell_geometry(
             vertex, face, Delta=Delta, thickness=thickness, samples_per_axis=4
