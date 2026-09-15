@@ -14,7 +14,7 @@
 
 import numpy as np
 
-def extract_diffusion_tensor_components(D0, n_voxel, dtype=np.float64):
+def extract_diffusion_tensor_components(D0, n_voxel, dtype=np.float32):
     D11 = np.zeros(n_voxel, dtype=dtype)
     D12 = np.zeros(n_voxel, dtype=dtype)
     D13 = np.zeros(n_voxel, dtype=dtype)
@@ -38,7 +38,7 @@ def extract_diffusion_tensor_components(D0, n_voxel, dtype=np.float64):
     
     return D11, D12, D13, D21, D22, D23, D31, D32, D33
 
-def compute_electrode_distances(electrode_xyz, voxel, dtype=np.float64):
+def compute_electrode_distances(electrode_xyz, voxel, dtype=np.float32):
     n_voxel = voxel.shape[0]
     n_electrode = electrode_xyz.shape[0]
     
@@ -102,7 +102,7 @@ def compute_gradients(action_potential, neighbor_id_2d, Delta):
     
     return dvdx, dvdy, dvdz
 
-def broadcast_diffusion_tensors(D11, D12, D13, D21, D22, D23, D31, D32, D33, n_electrode, dtype=np.float64):
+def broadcast_diffusion_tensors(D11, D12, D13, D21, D22, D23, D31, D32, D33, n_electrode, dtype=np.float32):
     D11_b = np.tile(D11[:, np.newaxis], (1, n_electrode)).astype(dtype)
     D12_b = np.tile(D12[:, np.newaxis], (1, n_electrode)).astype(dtype)
     D13_b = np.tile(D13[:, np.newaxis], (1, n_electrode)).astype(dtype)

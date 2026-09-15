@@ -196,8 +196,7 @@ if do_flag == 1:
 # convert mesh to Cartesian voxels
 do_flag = 0
 if do_flag == 1:
-    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
-        name_prefix = name_prefixes[n]
+    for name_prefix in name_prefixes.values():
         print(f'processing {name_prefix}')
 
         # load the refined and holes cut .obj mesh
@@ -207,13 +206,26 @@ if do_flag == 1:
         Delta = 1 # voxel spacing, unit: mm. This is a high resolution voxelization, for computing heart simulation
         # NOTE: 
         # Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
-        thickness = 2 # how many voxels across endocardium to epicardium
-        voxel = utility.voxelization.convert(vertex, face, Delta, thickness)
-        neighbor_id_2d = utility.voxelization.find_neighbor_voxel_ids(voxel) # for each voxel, find its neighbor voxels
+        thickness = 4 # how many voxels across endocardium to epicardium
+        # Static embedded-boundary weights; increase to 8 to check quadrature.
+        phase_geometry = utility.phase_field.build_shell_geometry(
+            vertex, face, Delta=Delta, thickness=thickness, samples_per_axis=4
+        )
+        voxel = phase_geometry['voxel']
 
-        # create voxels for the 3mm resolution mesh, for saving simulation data
-        Delta = 3 # voxel spacing, unit: mm
-        thickness = 2 # how many voxels across endocardium to epicardium
+        debug_plot = 0
+        if debug_plot == 1:
+            fig = plt.figure(figsize=(20, 20))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(voxel[:, 0], voxel[:, 1], voxel[:, 2], s=1, c='b', alpha=0.5)
+            ax.view_init(elev=70, azim=-70)
+            ax.set_axis_off()
+            common.set_axes_equal(ax)
+
+        simulation_Delta = Delta # keep the 1mm solver spacing before selecting saved locations
+
+        # create voxels for the 3mm resolution geometry, for saving simulation results as a npz file after simulating on the 1mm resolution geometry
+        Delta = 3 # spacing of saved result locations, unit: mm
         voxel2 = utility.voxelization.convert(vertex, face, Delta, thickness)
 
         voxel2_id_of_vertex, vertex_id_of_voxel2 = utility.voxelization.id_mapping_between_voxel_and_vertex(voxel2, vertex) # for each vertex, find its nearest voxel2 id
@@ -223,7 +235,7 @@ if do_flag == 1:
         tree = cKDTree(voxel)
         _, voxel_id_of_voxel3mm = tree.query(voxel3mm, k=1) # for each voxel3mm, find the voxel's (1mm spacing) id of the nearest voxel (1mm spacing)
 
-        voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int) # rescale coordinates: 3mm spacing -> 1mm spacing (divide by Delta=3), so neighboring voxels are 1 unit apart, ready for use as indices
+        voxel3mm_1mm_spacing = np.round(voxel3mm / Delta).astype(int) # electrode grid coordinates
 
         # load the mesh npz
         data = np.load(directory['mesh_npz'] / f'{name_prefix}_mesh.npz', allow_pickle=True)
@@ -232,9 +244,11 @@ if do_flag == 1:
         # save the processed mesh data
         mesh['vertex'] = vertex # high resolution mesh
         mesh['face'] = face # high resolution mesh
-        mesh['Delta'] = Delta # voxel spacing, unit: mm
-        mesh['voxel'] = voxel
-        mesh['neighbor_id_2d'] = neighbor_id_2d # for each voxel, its neighbor voxel ids
+        mesh.update(phase_geometry)
+        mesh['Delta'] = simulation_Delta # diffusion and electrogram computation use the 1mm grid
+        # Partial boundary cells change voxel IDs, so rebuild vertex mappings.
+        _, mesh['voxel_id_of_vertex'] = tree.query(vertex, k=1)
+        _, mesh['vertex_id_of_voxel'] = cKDTree(vertex).query(voxel, k=1)
         mesh['voxel3mm'] = voxel3mm # coordinates: these are voxels of 3mm spacing
         mesh['voxel3mm_1mm_spacing'] = voxel3mm_1mm_spacing # coordinates: these are the voxel3mm but re-scale to have 1mm spacing, so neighboring voxels are 1 unit apart, ready for use as indices
         mesh['voxel_id_of_simulation_electrode'] = voxel_id_of_voxel3mm # voxel ids: for each voxel3mm, the id of the nearest voxel (1mm spacing)

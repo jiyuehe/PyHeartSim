@@ -15,6 +15,8 @@
 import numpy as np
 from numba import cuda
 from simulation.pacing import assign_pacing_parameters, apply_pacing
+from simulation.phase_field import build_diffusion_matrix as build_phase_diffusion_matrix
+from simulation.phase_field import diffusion_substeps
 
 # CuPy for GPU sparse operations
 try: # need this try-except for MacOS compatibility
@@ -135,126 +137,190 @@ def reaction_step_gpu_rk4(heart_model_flag, d_u_current, d_h_current, d_u_star, 
         heart_model_flag, d_u_current, d_h_current, d_u_star, d_h_next, d_P_2d, d_J_stim, dt
     )
 
-def build_diffusion_matrix_gpu(P_2d, neighbor_id_2d_2, Delta):
-    n_voxel = P_2d.shape[0]
-    
-    # Build on CPU first (this is fast enough)
-    row_indices = []
-    col_indices = []
-    data_values = []
-    
-    for n in range(n_voxel):
-        D_coeff = P_2d[n, 20] / (4 * Delta**2)
-        
-        # Diagonal entry
-        diagonal_sum = -(P_2d[n, 0] + P_2d[n, 1] + P_2d[n, 2] + P_2d[n, 3] + P_2d[n, 4] + P_2d[n, 5])
-        row_indices.append(n)
-        col_indices.append(n)
-        data_values.append(D_coeff * diagonal_sum)
-        
-        # Direct neighbors
-        neighbor_coeffs = [
-            (neighbor_id_2d_2[n, 0], P_2d[n, 0]),
-            (neighbor_id_2d_2[n, 1], P_2d[n, 1]),
-            (neighbor_id_2d_2[n, 2], P_2d[n, 2]),
-            (neighbor_id_2d_2[n, 3], P_2d[n, 3]),
-            (neighbor_id_2d_2[n, 4], P_2d[n, 4]),
-            (neighbor_id_2d_2[n, 5], P_2d[n, 5]),
-        ]
-        
-        for neighbor_id, coeff in neighbor_coeffs:
-            if neighbor_id >= 0 and neighbor_id < n_voxel:
-                row_indices.append(n)
-                col_indices.append(neighbor_id)
-                data_values.append(D_coeff * coeff)
-        
-        # Cross-derivative terms
-        if neighbor_id_2d_2[n, 0] >= 0 and neighbor_id_2d_2[n, 0] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 0])
-            data_values.append(D_coeff * P_2d[n, 6])
-        if neighbor_id_2d_2[n, 1] >= 0 and neighbor_id_2d_2[n, 1] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 1])
-            data_values.append(-D_coeff * P_2d[n, 6])
-        
-        if neighbor_id_2d_2[n, 2] >= 0 and neighbor_id_2d_2[n, 2] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 2])
-            data_values.append(D_coeff * P_2d[n, 7])
-        if neighbor_id_2d_2[n, 3] >= 0 and neighbor_id_2d_2[n, 3] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 3])
-            data_values.append(-D_coeff * P_2d[n, 7])
-        
-        if neighbor_id_2d_2[n, 4] >= 0 and neighbor_id_2d_2[n, 4] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 4])
-            data_values.append(D_coeff * P_2d[n, 8])
-        if neighbor_id_2d_2[n, 5] >= 0 and neighbor_id_2d_2[n, 5] < n_voxel:
-            row_indices.append(n)
-            col_indices.append(neighbor_id_2d_2[n, 5])
-            data_values.append(-D_coeff * P_2d[n, 8])
-        
-        cross_terms = [
-            (neighbor_id_2d_2[n, 6], neighbor_id_2d_2[n, 8], P_2d[n, 9]),
-            (neighbor_id_2d_2[n, 9], neighbor_id_2d_2[n, 7], P_2d[n, 10]),
-            (neighbor_id_2d_2[n, 14], neighbor_id_2d_2[n, 16], P_2d[n, 11]),
-            (neighbor_id_2d_2[n, 17], neighbor_id_2d_2[n, 15], P_2d[n, 12]),
-            (neighbor_id_2d_2[n, 10], neighbor_id_2d_2[n, 12], P_2d[n, 13]),
-            (neighbor_id_2d_2[n, 13], neighbor_id_2d_2[n, 11], P_2d[n, 14]),
-        ]
-        
-        for nb1, nb2, coeff in cross_terms:
-            if nb1 >= 0 and nb1 < n_voxel:
-                row_indices.append(n)
-                col_indices.append(nb1)
-                data_values.append(D_coeff * coeff)
-            if nb2 >= 0 and nb2 < n_voxel:
-                row_indices.append(n)
-                col_indices.append(nb2)
-                data_values.append(-D_coeff * coeff)
-    
-    # Create sparse matrix and transfer to GPU
-    row_indices = cp.array(row_indices, dtype=cp.int32)
-    col_indices = cp.array(col_indices, dtype=cp.int32)
-    data_values = cp.array(data_values, dtype=cp.float32)
-    
-    L_gpu = cp_sparse.coo_matrix((data_values, (row_indices, col_indices)), 
-                                  shape=(n_voxel, n_voxel))
-    return L_gpu.tocsr()
+# Legacy diffusion builder disabled: all meshes now require phase-field weights.
+# def build_diffusion_matrix_gpu(P_2d, neighbor_id_2d_2, Delta):
+#     n_voxel = P_2d.shape[0]
+#
+#     # Build on CPU first (this is fast enough)
+#     row_indices = []
+#     col_indices = []
+#     data_values = []
+#
+#     for n in range(n_voxel):
+#         D_coeff = P_2d[n, 20] / (4 * Delta**2)
+#
+#         # Diagonal entry
+#         diagonal_sum = -(P_2d[n, 0] + P_2d[n, 1] + P_2d[n, 2] + P_2d[n, 3] + P_2d[n, 4] + P_2d[n, 5])
+#         row_indices.append(n)
+#         col_indices.append(n)
+#         data_values.append(D_coeff * diagonal_sum)
+#
+#         # Direct neighbors
+#         neighbor_coeffs = [
+#             (neighbor_id_2d_2[n, 0], P_2d[n, 0]),
+#             (neighbor_id_2d_2[n, 1], P_2d[n, 1]),
+#             (neighbor_id_2d_2[n, 2], P_2d[n, 2]),
+#             (neighbor_id_2d_2[n, 3], P_2d[n, 3]),
+#             (neighbor_id_2d_2[n, 4], P_2d[n, 4]),
+#             (neighbor_id_2d_2[n, 5], P_2d[n, 5]),
+#         ]
+#
+#         for neighbor_id, coeff in neighbor_coeffs:
+#             if neighbor_id >= 0 and neighbor_id < n_voxel:
+#                 row_indices.append(n)
+#                 col_indices.append(neighbor_id)
+#                 data_values.append(D_coeff * coeff)
+#
+#         # Cross-derivative terms
+#         if neighbor_id_2d_2[n, 0] >= 0 and neighbor_id_2d_2[n, 0] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 0])
+#             data_values.append(D_coeff * P_2d[n, 6])
+#         if neighbor_id_2d_2[n, 1] >= 0 and neighbor_id_2d_2[n, 1] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 1])
+#             data_values.append(-D_coeff * P_2d[n, 6])
+#
+#         if neighbor_id_2d_2[n, 2] >= 0 and neighbor_id_2d_2[n, 2] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 2])
+#             data_values.append(D_coeff * P_2d[n, 7])
+#         if neighbor_id_2d_2[n, 3] >= 0 and neighbor_id_2d_2[n, 3] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 3])
+#             data_values.append(-D_coeff * P_2d[n, 7])
+#
+#         if neighbor_id_2d_2[n, 4] >= 0 and neighbor_id_2d_2[n, 4] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 4])
+#             data_values.append(D_coeff * P_2d[n, 8])
+#         if neighbor_id_2d_2[n, 5] >= 0 and neighbor_id_2d_2[n, 5] < n_voxel:
+#             row_indices.append(n)
+#             col_indices.append(neighbor_id_2d_2[n, 5])
+#             data_values.append(-D_coeff * P_2d[n, 8])
+#
+#         cross_terms = [
+#             (neighbor_id_2d_2[n, 6], neighbor_id_2d_2[n, 8], P_2d[n, 9]),
+#             (neighbor_id_2d_2[n, 9], neighbor_id_2d_2[n, 7], P_2d[n, 10]),
+#             (neighbor_id_2d_2[n, 14], neighbor_id_2d_2[n, 16], P_2d[n, 11]),
+#             (neighbor_id_2d_2[n, 17], neighbor_id_2d_2[n, 15], P_2d[n, 12]),
+#             (neighbor_id_2d_2[n, 10], neighbor_id_2d_2[n, 12], P_2d[n, 13]),
+#             (neighbor_id_2d_2[n, 13], neighbor_id_2d_2[n, 11], P_2d[n, 14]),
+#         ]
+#
+#         for nb1, nb2, coeff in cross_terms:
+#             if nb1 >= 0 and nb1 < n_voxel:
+#                 row_indices.append(n)
+#                 col_indices.append(nb1)
+#                 data_values.append(D_coeff * coeff)
+#             if nb2 >= 0 and nb2 < n_voxel:
+#                 row_indices.append(n)
+#                 col_indices.append(nb2)
+#                 data_values.append(-D_coeff * coeff)
+#
+#     # Create sparse matrix and transfer to GPU
+#     row_indices = cp.array(row_indices, dtype=cp.int32)
+#     col_indices = cp.array(col_indices, dtype=cp.int32)
+#     data_values = cp.array(data_values, dtype=cp.float64)
+#
+#     L_gpu = cp_sparse.coo_matrix((data_values, (row_indices, col_indices)),
+#                                   shape=(n_voxel, n_voxel))
+#     return L_gpu.tocsr()
+#
 
-def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gpu_cached, tol=1e-6):
+def prepare_diffusion_system_gpu(P_2d, neighbors, geometry_data, dt):
+    """Cache a mass-weighted phase-field system; both geometry arrays are required."""
+    has_phi = 'phase_field' in geometry_data
+    has_faces = 'phase_field_face_fraction' in geometry_data
+    # Legacy check allowed both arrays to be absent:
+    # if has_phi != has_faces:
+    if not has_phi or not has_faces:
+        raise ValueError('Phase-field geometry requires both volume and face fractions')
+    # n = len(P_2d)  # Only needed by the disabled legacy fallback.
+    Delta = float(geometry_data['Delta'])
+    # if has_phi:  # Phase-field weights are now mandatory.
+    phi = np.asarray(geometry_data['phase_field'], dtype=np.float64)
+    K = build_phase_diffusion_matrix(
+        P_2d, neighbors, phi, geometry_data['phase_field_face_fraction'], Delta
+    )
+    substeps = diffusion_substeps(K, phi, dt)
+    # Keep geometry weights and the implicit solve in double precision: small
+    # occupied cells must not disappear through cancellation or mass flooring.
+    L_gpu = cp_sparse.csr_matrix(K, dtype=cp.float64)
+    mass_gpu = cp.asarray(phi)
+    step_dt = float(dt) / substeps
+    A_gpu = cp_sparse.diags(mass_gpu, format='csr') - (step_dt / 2) * L_gpu
+    # Geometry and dt are fixed: one cached sparse product replaces the
+    # per-substep mass multiply, diffusion product, scaling and addition.
+    B_gpu = cp_sparse.diags(mass_gpu, format='csr') + (step_dt / 2) * L_gpu
+    inverse_diagonal = 1.0 / A_gpu.diagonal()
+    # Jacobi preconditioning is a pointwise multiply, not a sparse matvec.
+    preconditioner = cp_linalg.LinearOperator(
+        A_gpu.shape, matvec=lambda x: inverse_diagonal * x,
+        rmatvec=lambda x: inverse_diagonal * x, dtype=A_gpu.dtype,
+    )
+    return dict(L=L_gpu, A=A_gpu, mass=mass_gpu, preconditioner=preconditioner,
+                B=B_gpu, dt=step_dt, substeps=substeps, method='cg')
+
+    # Legacy fallback disabled.
+    # safe_neighbors = np.asarray(neighbors).copy()
+    # safe_neighbors[safe_neighbors == -1] = 0
+    # L_gpu = build_diffusion_matrix_gpu(P_2d, safe_neighbors, Delta)
+    # A_gpu = cp_sparse.identity(n, format='csr', dtype=cp.float64) - (dt / 2) * L_gpu
+    # return dict(L=L_gpu, A=A_gpu, mass=None, preconditioner=None,
+    #             dt=dt, substeps=1, method='gmres')
+
+
+def crank_nicolson_diffusion_step_gpu(u_star_gpu, L_matrix_gpu, dt, method, A_gpu_cached,
+                                    tol=1e-6, *, mass_gpu, preconditioner_gpu=None,
+                                    rhs_matrix_gpu=None):
     # Solve implicit diffusion step using Crank-Nicolson on GPU
     
-    # Solves: (I - dt/2 * L) * u_next = u_star + dt/2 * L * u_star
+    # Solves: (M - dt/2 * L) * u_next = M*u_star + dt/2 * L * u_star.
+    # M = diag(phi); an identity-mass fallback is no longer supported.
     
     # Args:
     #     u_star_gpu: CuPy array - voltage after reaction step
     #     L_matrix_gpu: CuPy sparse CSR matrix - diffusion operator
     #     dt: time step
     #     method: 'cg' (Conjugate Gradient) or 'gmres'
-    #     A_gpu_cached: Pre-computed (I - dt/2 * L) matrix
+    #     A_gpu_cached: Pre-computed (M - dt/2 * L) matrix
     #     tol: tolerance for iterative solvers
     
     # Returns:
     #     u_next: CuPy array - voltage after diffusion step
 
-    # Compute RHS: b = u_star + dt/2 * L * u_star
-    b_gpu = u_star_gpu + (dt / 2.0) * (L_matrix_gpu @ u_star_gpu)
+    # Compute RHS: b = M*u_star + dt/2 * L * u_star
+    # Legacy identity-mass fallback disabled:
+    # mass_u = u_star_gpu if mass_gpu is None else mass_gpu * u_star_gpu
+    if mass_gpu is None:
+        raise ValueError("Phase-field diffusion requires mass_gpu (voxel-volume fractions)")
+    if rhs_matrix_gpu is None:
+        mass_u = mass_gpu * u_star_gpu
+        b_gpu = mass_u + (dt / 2.0) * (L_matrix_gpu @ u_star_gpu)
+    else:
+        b_gpu = rhs_matrix_gpu @ u_star_gpu
+    # solver_options = dict(atol=tol, maxiter=10000)  # Legacy tolerances.
+    # if mass_gpu is not None:
+    solver_options = dict(rtol=tol, atol=1e-7, maxiter=10000, M=preconditioner_gpu)
     
     # Solve linear system on GPU using available CuPy solvers
     if method == 'cg':
-        u_next, info = cp_linalg.cg(A_gpu_cached, b_gpu, x0=u_star_gpu, atol=tol, maxiter=10000)
-        if info != 0:
-            print(f"Warning: GPU CG did not converge (info={info})")
+        u_next, info = cp_linalg.cg(A_gpu_cached, b_gpu, x0=u_star_gpu, **solver_options)
+        # Legacy warning-only behavior disabled:
+        # if info != 0 and mass_gpu is None:
+        #     print(f"Warning: GPU CG did not converge (info={info})")
     elif method == 'gmres':
-        u_next, info = cp_linalg.gmres(A_gpu_cached, b_gpu, x0=u_star_gpu, atol=tol, maxiter=10000, restart=50)
-        if info != 0:
-            print(f"Warning: GPU GMRES did not converge (info={info})")
+        u_next, info = cp_linalg.gmres(A_gpu_cached, b_gpu, x0=u_star_gpu, restart=50, **solver_options)
+        # Legacy warning-only behavior disabled:
+        # if info != 0 and mass_gpu is None:
+        #     print(f"Warning: GPU GMRES did not converge (info={info})")
     else:
         raise ValueError(f"Unknown solver method: {method}. Use 'cg' or 'gmres'")
     
+    # if mass_gpu is not None and info != 0:
+    if info != 0:
+        raise RuntimeError(f'Phase-field diffusion solver failed to converge (info={info})')
     return u_next
 
 def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_parameters):
@@ -267,7 +333,6 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
 
     # geometry data
     neighbor_id_2d = geometry_data['neighbor_id_2d']
-    Delta = geometry_data['Delta']
     
     # simulation parameters
     t_final = float(simulation_parameters['t_final'])
@@ -279,11 +344,11 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     
     # set initial value at rest
     if simulation_parameters['heart_model_flag'] == 0:
-        u_current = np.zeros(n_voxel, dtype=np.float32)
-        h_current = np.ones(n_voxel, dtype=np.float32)
+        u_current = np.zeros(n_voxel, dtype=np.float64)
+        h_current = np.ones(n_voxel, dtype=np.float64)
     elif simulation_parameters['heart_model_flag'] == 1:
-        u_current = np.zeros(n_voxel, dtype=np.float32)
-        h_current = np.zeros(n_voxel, dtype=np.float32)
+        u_current = np.zeros(n_voxel, dtype=np.float64)
+        h_current = np.zeros(n_voxel, dtype=np.float64)
     
     # calculate the number of samples needed for 1 kHz sampling
     if simulation_parameters['heart_model_flag'] == 0:
@@ -291,23 +356,18 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     elif simulation_parameters['heart_model_flag'] == 1:
         n_samples = int(np.round(t_final * simulation_parameters['time_scale']))
     
-    sim_u_voxel = np.zeros((n_samples, n_voxel), dtype=np.float32)
-    sim_h_voxel = np.zeros((n_samples, n_voxel), dtype=np.float32)
-    physical_time = np.zeros(n_samples, dtype=np.float32)
-    
-    neighbor_id_2d_2 = neighbor_id_2d.copy()
-    neighbor_id_2d_2[neighbor_id_2d_2 == -1] = 0
+    sim_u_voxel = np.zeros((n_samples, n_voxel), dtype=np.float64)
+    sim_h_voxel = np.zeros((n_samples, n_voxel), dtype=np.float64)
+    physical_time = np.zeros(n_samples, dtype=np.float64)
     
     # GPU configuration
     threads_per_block = 256
     blocks_per_grid = (n_voxel + threads_per_block - 1) // threads_per_block
     
-    # Convert to float32 and ensure contiguous arrays
-    P_2d = np.ascontiguousarray(P_2d.astype(np.float32))
-    neighbor_id_2d_2 = np.ascontiguousarray(neighbor_id_2d_2.astype(np.int32))
-    J_stim = np.ascontiguousarray(J_stim.astype(np.float32))
-    dt_float = np.float32(dt)
-    Delta_float = np.float32(Delta)
+    # Convert to float64 and ensure contiguous arrays
+    P_2d = np.ascontiguousarray(P_2d.astype(np.float64))
+    J_stim = np.ascontiguousarray(J_stim.astype(np.float64))
+    dt_float = np.float64(dt)
     
     # Permanent blocks are part of the baseline diffusion operator, so they
     # remain non-conductive for the whole simulation.
@@ -315,31 +375,30 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     P_2d_permanently_blocked[permanent_block_voxel_id, 20] = 0.0
 
     # Build baseline diffusion matrix on GPU (only once).
-    L_matrix_gpu = build_diffusion_matrix_gpu(
-        P_2d_permanently_blocked, neighbor_id_2d_2, Delta_float
+    baseline_system = prepare_diffusion_system_gpu(
+        P_2d_permanently_blocked, neighbor_id_2d, geometry_data, dt_float
     )
-    
-    # Pre-compute the Crank-Nicolson system matrix (I - dt/2 * L) - only once
-    I_gpu = cp_sparse.identity(n_voxel, format='csr', dtype=cp.float32)
-    A_gpu_cached = I_gpu - (dt_float / 2.0) * L_matrix_gpu
 
     # Pre-build the temporary-block matrix on top of the permanent blocks.
     if len(temporary_block_voxel_id) > 0:
         P_2d_blocked = P_2d_permanently_blocked.copy()
         P_2d_blocked[temporary_block_voxel_id, 20] = 0.0
-        L_matrix_gpu_temporary_blocked = build_diffusion_matrix_gpu(P_2d_blocked, neighbor_id_2d_2, Delta_float)
-        A_gpu_cached_temporary_blocked = I_gpu - (dt_float / 2.0) * L_matrix_gpu_temporary_blocked
+        temporary_system = prepare_diffusion_system_gpu(
+            P_2d_blocked, neighbor_id_2d, geometry_data, dt_float
+        )
     else:
-        L_matrix_gpu_temporary_blocked = L_matrix_gpu
-        A_gpu_cached_temporary_blocked = A_gpu_cached
+        temporary_system = baseline_system
+    # # if baseline_system['mass'] is not None:  # Always weighted now.
+    # print('Using phase-field volume/face fractions; diffusion substeps: '
+    #       f"baseline={baseline_system['substeps']}, temporary block={temporary_system['substeps']}")
     
     # Allocate GPU memory for CUDA kernels (CuPy arrays for unified memory access)
-    d_u_current = cp.zeros(n_voxel, dtype=cp.float32)
-    d_h_current = cp.zeros(n_voxel, dtype=cp.float32)
-    d_u_star = cp.zeros(n_voxel, dtype=cp.float32)
-    d_h_next = cp.zeros(n_voxel, dtype=cp.float32)
+    d_u_current = cp.zeros(n_voxel, dtype=cp.float64)
+    d_h_current = cp.zeros(n_voxel, dtype=cp.float64)
+    d_u_star = cp.zeros(n_voxel, dtype=cp.float64)
+    d_h_next = cp.zeros(n_voxel, dtype=cp.float64)
     d_P_2d = cp.asarray(P_2d)
-    d_J_stim = cp.zeros(n_voxel, dtype=cp.float32)
+    d_J_stim = cp.zeros(n_voxel, dtype=cp.float64)
     
     # Initialize with starting values
     d_u_current[:] = cp.asarray(u_current)
@@ -358,18 +417,16 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     number_of_steps_per_ms = int(1 / (dt * simulation_parameters['time_scale']))
     
     for model_time_step in range(total_model_time_steps):
-        if ((model_time_step+1) % (total_model_time_steps//5)) == 0:
+        if ((model_time_step+1) % max(1, total_model_time_steps//5)) == 0:
             print(f'simulating {(model_time_step+1)/total_model_time_steps*100:.1f}%')
         
         model_time = model_time_step * dt
 
         # temporary block for creating rotor or macro re-entry
-        if model_time >= 0 and model_time < 350 * dt:
-            active_L = L_matrix_gpu_temporary_blocked
-            active_A = A_gpu_cached_temporary_blocked
+        if model_time >= 0 and model_time < 200:
+            active_system = temporary_system
         else:
-            active_L = L_matrix_gpu
-            active_A = A_gpu_cached
+            active_system = baseline_system
         
         # apply pacing - this is CPU-side since it has complex conditionals
         J_stim.fill(0.0)
@@ -387,7 +444,17 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         )
         
         # Step 2: Diffusion step (GPU Crank-Nicolson) - d_u_star already on GPU
-        u_next = crank_nicolson_diffusion_step_gpu(d_u_star, active_L, dt_float, method='gmres', A_gpu_cached=active_A, tol=1e-5)
+        u_next = d_u_star
+        for _ in range(active_system['substeps']):
+            u_next = crank_nicolson_diffusion_step_gpu(
+                u_next, active_system['L'], active_system['dt'],
+                method=active_system['method'], A_gpu_cached=active_system['A'],
+                # tol=1e-6 if active_system['mass'] is not None else 1e-5,
+                tol=1e-6,
+                mass_gpu=active_system['mass'],
+                preconditioner_gpu=active_system['preconditioner'],
+                rhs_matrix_gpu=active_system['B'],
+            )
         
         # Update for next iteration (stay on GPU)
         d_u_current[:] = u_next

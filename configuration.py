@@ -72,7 +72,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
         # 1: save action potential of all voxels
         # 0: only save action potential of electrode voxels
         'voxel_id_of_simulation_electrode': geometry_data['voxel_id_of_simulation_electrode'], # electrode locations for computing electrograms
-        't_final': 2000, # ms
+        't_final': 1000, # ms
         'dt': 0.5, # ms. 0.5 is good. if dt is too large, simulation will become numerically unstable
         'heart_model_flag': 0, # 0: Mitchell-Schaeffer, 1: Aliev-Panfilov
         'arrhythmia_flag': 3,
@@ -168,7 +168,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
             'tau_open_voxel': np.ones(n_voxel) * ms['tau_open'], # determines the time from end of an action potential to start of next action potential
             'tau_close_voxel': np.ones(n_voxel) * ms['tau_close'], # determines the time of action potential duration
             'v_gate_voxel': np.ones(n_voxel) * ms['v_gate'], # gating variable threshold
-            'c_voxel': np.ones(n_voxel) * 7.0, # diffusion coefficient
+            'c_voxel': np.ones(n_voxel) * 0.6, # diffusion coefficient
         }
     elif simulation_parameters['heart_model_flag'] == 1: # Aliev-Panfilov model
         heart_model_parameters = {
