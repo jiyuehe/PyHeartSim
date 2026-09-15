@@ -22,6 +22,7 @@ from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import utility
+import simulation
 import common
 import configuration
 
@@ -208,7 +209,7 @@ if do_flag == 1:
         # Delta = 1 is the most convenient, or grid will not be at integer values. integer values make it easy for 3D convolution that is common in neural networks
         thickness = 2 # how many voxels across endocardium to epicardium
         # Static embedded-boundary weights; increase to 8 to check quadrature.
-        phase_geometry = utility.phase_field.build_shell_geometry(
+        phase_geometry = simulation.phase_field.build_shell_geometry(
             vertex, face, Delta=Delta, thickness=thickness, samples_per_axis=4
         )
         voxel = phase_geometry['voxel']

@@ -18,4 +18,3 @@ from . import lat_map
 from . import phase_map
 from . import mesh_related
 from . import voxelization
-from . import phase_field

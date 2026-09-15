@@ -16,8 +16,6 @@ import numpy as np
 from numba import cuda # pip install numba
 from . import unipolar_electrogram_equation_parts as eq_parts
 
-# GPU PARALLELIZED VERSION
-# --------------------------------------------------
 @cuda.jit
 def compute_egm_kernel_batched(n_voxel, n_electrode, n_time, D11, D12, D13, D21, D22, D23, 
                                 D31, D32, D33, c_voxel, l, l_x, l_y, l_z, 
@@ -127,7 +125,7 @@ def compute(electrode_xyz, voxel, D0, c_voxel, action_potential, Delta, neighbor
         n_time_batch = t_end - t_start
         
         if (batch_idx + 1) % max(1, num_batches // 5) == 0 or batch_idx == num_batches - 1:
-            print(f'compute electrogram {t_end / T * 100:.0f}%')
+            print(f'compute electrogram {t_end / T * 100:.0f}%', end='\r')
         
         # Transfer gradient batch to GPU (make contiguous for transfer)
         d_dvdx = cuda.to_device(np.ascontiguousarray(dvdx[t_start:t_end, :]))

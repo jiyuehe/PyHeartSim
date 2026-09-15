@@ -17,3 +17,4 @@ from . import pacing
 from . import simulation_gpu
 from . import unipolar_electrogram_equation_parts
 from . import unipolar_electrogram_gpu
+from . import phase_field

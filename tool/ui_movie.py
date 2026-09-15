@@ -14,9 +14,17 @@ from pathlib import Path
 
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, send_from_directory
+from werkzeug.serving import WSGIRequestHandler
 
 
 TOOL_DIR = Path(__file__).resolve().parent
+
+
+class MovieRequestHandler(WSGIRequestHandler):
+    def log_request(self, code="-", size="-") -> None:
+        if self.path.startswith("/api/frame/"):
+            return
+        super().log_request(code, size)
 
 
 def _float32(values: np.ndarray) -> np.ndarray:
@@ -195,6 +203,7 @@ def run_viewer(
         port=port,
         threaded=True,
         use_reloader=False,
+        request_handler=MovieRequestHandler,
     )
 
 
