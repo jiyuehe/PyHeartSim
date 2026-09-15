@@ -179,8 +179,7 @@ def build_shell_geometry(vertex, face, Delta, thickness,
                 phase_field=phi.astype(np.float64),
                 phase_field_face_fraction=face_fraction.astype(np.float64),
                 phase_field_thickness_mm=float(thickness * Delta),
-                phase_field_samples_per_axis=int(samples_per_axis),
-                phase_field_method='shell_volume_fraction_v1')
+                phase_field_samples_per_axis=int(samples_per_axis))
 
 
 
@@ -242,16 +241,3 @@ def build_diffusion_matrix(P_2d, neighbors, phi, face_fraction, Delta):
                           shape=(n, n)).tocsr()
     K.eliminate_zeros()
     return K
-
-
-def diffusion_substeps(K, phi, dt):
-    # """Keep the CN RHS nonnegative without changing tiny cut-cell volumes.
-
-    # dt_sub * sum_j(g_ij) <= 2 phi_i makes both CN factors positivity preserving
-    # for this scalar face-flux operator (up to iterative-solver error).
-    # """
-    # if not np.isfinite(dt) or dt <= 0:
-    #     raise ValueError('dt must be positive and finite')
-    # rate = np.max(-K.diagonal() / np.asarray(phi))
-    # return max(1, int(np.ceil(dt * rate / 2)))
-    return 1

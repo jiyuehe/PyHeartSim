@@ -68,7 +68,7 @@ def identify_tip_of_pulmonary_veins(vertex, face, neighbor_vertices_ids):
     vertex_id_trail = []
     for v_id in range(n_vertices):
         if (v_id + 1) % (n_vertices // 10) == 0:
-            print(f"{(v_id + 1) / n_vertices * 100:.2f}%")
+            print(f"{(v_id + 1) / n_vertices * 100:.2f}%", end='\r')
 
         # greedy ascent: follow neighbors with increasing distance from center of mass until no neighbor has a larger distance
         trail = [v_id] # start from the current vertex

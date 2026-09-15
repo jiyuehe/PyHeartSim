@@ -69,7 +69,7 @@ def convert(vertex, face, Delta, thickness):
     voxel_temp = []
     for n in range(vertex.shape[0]):
         if (n+1) % (vertex.shape[0] // 5) == 0:
-            print(f'create voxels for each vertex {(n+1) / vertex.shape[0] * 100:.0f}%')
+            print(f'create voxels for each vertex {(n+1) / vertex.shape[0] * 100:.0f}%', end='\r')
         
         # create a cube of points around this vertex
         sub_grid = []
@@ -137,7 +137,7 @@ def find_neighbor_voxel_ids(voxel):
 
     for voxel_id in range(voxel.shape[0]):
         if (voxel_id+1) % (voxel.shape[0] // 5) == 0:
-            print(f'find neighbor voxels {(voxel_id+1) / voxel.shape[0] * 100:.0f}%')
+            print(f'find neighbor voxels {(voxel_id+1) / voxel.shape[0] * 100:.0f}%', end='\r')
         
         # calculate all neighbor positions at once
         neighbor_positions = voxel[voxel_id] + offsets
@@ -230,7 +230,7 @@ def id_mapping_between_voxel_and_vertex(voxel, vertex):
 
     for n in range(N):
         if (n + 1) % (N // 5) == 0:
-            print(f'find the nearest voxel id of each vertex {(n + 1) / N * 100:.0f}%')
+            print(f'find the nearest voxel id of each vertex {(n + 1) / N * 100:.0f}%', end='\r')
         xyz = vertex[n, :]
         
         # find nearest voxel using KDTree
@@ -277,7 +277,7 @@ def id_mapping_between_voxel_and_vertex(voxel, vertex):
 
     for n in range(N):
         if (n + 1) % (N // 5) == 0:
-            print(f'find the nearest vertex id of each voxel {(n + 1) / N * 100:.0f}%')
+            print(f'find the nearest vertex id of each voxel {(n + 1) / N * 100:.0f}%', end='\r')
         
         xyz = voxel[n, :]
         

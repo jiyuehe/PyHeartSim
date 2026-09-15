@@ -14,9 +14,7 @@
 
 import numpy as np
 from numba import cuda
-from simulation.pacing import assign_pacing_parameters, apply_pacing
-from simulation.phase_field import build_diffusion_matrix as build_phase_diffusion_matrix
-from simulation.phase_field import diffusion_substeps
+import simulation
 
 # CuPy for GPU sparse operations
 try: # need this try-except for MacOS compatibility
@@ -150,10 +148,10 @@ def prepare_diffusion_system_gpu(P_2d, neighbors, geometry_data, dt):
     Delta = float(geometry_data['Delta'])
     # if has_phi:  # Phase-field weights are now mandatory.
     phi = np.asarray(geometry_data['phase_field'], dtype=np.float64)
-    K = build_phase_diffusion_matrix(
+    K = simulation.phase_field.build_diffusion_matrix(
         P_2d, neighbors, phi, geometry_data['phase_field_face_fraction'], Delta
     )
-    substeps = diffusion_substeps(K, phi, dt)
+    substeps = 1
     # Keep geometry weights and the implicit solve in double precision: small
     # occupied cells must not disappear through cancellation or mass flooring.
     L_gpu = cp_sparse.csr_matrix(K, dtype=cp.float64)
@@ -233,7 +231,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
     arrhythmia_flag = simulation_parameters['arrhythmia_flag']
     
     # pacing parameters
-    J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t = assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, neighbor_id_2d, simulation_parameters)
+    J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t = simulation.pacing.assign_pacing_parameters(arrhythmia_parameters, arrhythmia_flag, n_voxel, neighbor_id_2d, simulation_parameters)
     
     # set initial value at rest
     if simulation_parameters['heart_model_flag'] == 0:
@@ -320,7 +318,7 @@ def compute(n_voxel, P_2d, geometry_data, simulation_parameters, arrhythmia_para
         
         # apply pacing - this is CPU-side since it has complex conditionals
         J_stim.fill(0.0)
-        J_stim = apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, sim_u_voxel, sim_h_voxel, neighbor_id_2d)
+        J_stim = simulation.pacing.apply_pacing(arrhythmia_parameters, simulation_parameters, arrhythmia_flag, model_time, J_stim, s1_pacing_voxel_id, s2_pacing_voxel_id, s1_t, J_stim_magnitude, pacing_duration, s2_t, sim_u_voxel, sim_h_voxel, neighbor_id_2d)
         
         # Transfer J_stim to GPU
         d_J_stim[:] = cp.asarray(J_stim)

@@ -26,16 +26,15 @@ import simulation
 import common
 import configuration
 
-#%%
 # directory folder
 directory = configuration.directory_setup()
 name_prefixes = configuration.mesh_name()
 
+#%%
 # save the original mesh as png figure
 do_flag = 0
 if do_flag == 1:
-    for n in range(len(name_prefixes)):
-        name_prefix = name_prefixes[n]
+    for name_prefix in name_prefixes.values():
         print(f'plot {name_prefix}')
 
         vertex, face = common.load_obj(directory['mesh_obj'], name_prefix)
@@ -60,8 +59,7 @@ if do_flag == 1:
 # automatically refine the mesh and save as figure
 do_flag = 0
 if do_flag == 1: 
-    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
-        name_prefix = name_prefixes[n]
+    for name_prefix in name_prefixes.values():
         print(f'processing {name_prefix}')
 
         # automatically refine the mesh
@@ -131,8 +129,7 @@ if do_flag == 1:
 # automatically identify the tip of the pulmonary veins
 do_flag = 0
 if do_flag == 1:
-    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
-        name_prefix = name_prefixes[n]
+    for name_prefix in name_prefixes.values():
         print(f'processing {name_prefix}')
 
         vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined')
@@ -171,8 +168,7 @@ if do_flag == 1:
 # save the cut mesh as png figure
 do_flag = 0
 if do_flag == 1:
-    for n in range(len(name_prefixes)): # range(len(name_prefixes)), [mesh_id]
-        name_prefix = name_prefixes[n]
+    for name_prefix in name_prefixes.values():
         print(f'processing {name_prefix}')
 
         vertex, face = common.load_obj(directory['mesh_obj'], name_prefix + '_refined_cut')
@@ -195,9 +191,12 @@ if do_flag == 1:
 
 #%%
 # convert mesh to Cartesian voxels
-do_flag = 0
+do_flag = 1
 if do_flag == 1:
+    debug_name_prefix = name_prefixes[112] # set to None to run the entire list
     for name_prefix in name_prefixes.values():
+        if debug_name_prefix is not None and name_prefix != debug_name_prefix:
+            continue
         print(f'processing {name_prefix}')
 
         # load the refined and holes cut .obj mesh
@@ -257,5 +256,5 @@ if do_flag == 1:
         file_path = directory['mesh_npz'] / f'{name_prefix}_mesh.npz' # save as .npz, the most compatible format for different versions of Python and Numpy
         np.savez(file_path, **mesh)
 
-print('done')
+print('\ndone')
 #%%
