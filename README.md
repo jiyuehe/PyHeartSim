@@ -51,8 +51,10 @@ Example action potentials and electrograms:
 - Programming:  
   - It is deliberately written in a procedural programming style, using **simple** function calls rather than object oriented constructs like classes and inheritance, to maintain simplicity and ease of debugging.  
   - The code runs on Nvidia **GPU** for fast parallel computing.  
-  - For solving the heart model equations, **4th-order Runge–Kutta** is implemented for the reaction part, and **Crank-Nicolson** is implemented for the diffusion part. 
-  - **Phase-field method** is implemented for the boundry condition.
+  - For solving the heart model equations,  
+    - **4th-order Runge–Kutta** is implemented for the reaction part,  
+    - **Crank-Nicolson** is implemented for the diffusion part,  
+    - **Phase-field method** is implemented for the boundry condition.
 
 # Instructions
 - Install dependencies: I have kept the dependencies intentionally minimal. Run  
