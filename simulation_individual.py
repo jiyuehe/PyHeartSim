@@ -89,7 +89,7 @@ def run_simulation(input_arguments):
 
     # save simulation results
     name_prefix = input_arguments['name_prefix']
-    name_suffix = input_arguments['s1'][0] if isinstance(input_arguments['s1'], (list, np.ndarray)) else input_arguments['s1']
+    name_suffix = input_arguments['name_suffix']
     np.savez(result_folder / f'{name_prefix}_simulation_results_{name_suffix}', **simulation_results)
 
 #%%
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     name_prefix = name_prefixs[112]
     name_suffix = '20'
 
-    plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
-    plot_phase_map_flag = 1 # 1: plot phase map. 0: do not plot phase map
+    plot_lat_map_flag = 0 # 1: plot local activation time map. 0: do not plot local activation time map
+    plot_phase_map_flag = 0 # 1: plot phase map. 0: do not plot phase map
 
     # load geometry data
     file_path = directory['data'] / f'{name_prefix}_mesh.npz'
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     input_arguments['name_prefix'] = name_prefix
     input_arguments['name_suffix'] = name_suffix
     input_arguments['geometry_data'] = geometry_data
-    input_arguments['result_folder'] = Path('/home/j/Desktop/ssd/git/PyHeartSim/result')
+    input_arguments['result_folder'] = directory['result'] # Path('/home/j/Desktop/ssd/git/PyHeartSim/result')
     input_arguments['s1'] = arrhythmia_parameters['s1_pacing_voxel_id']
     input_arguments['s2'] = arrhythmia_parameters['s2_pacing_voxel_id']
     input_arguments['simulation_parameters'] = simulation_parameters
@@ -127,11 +127,11 @@ if __name__ == "__main__":
     run_simulation(input_arguments)
 
     name_prefix = input_arguments['name_prefix']
-    name_suffix = input_arguments['s1'][0] if isinstance(input_arguments['s1'], (list, np.ndarray)) else input_arguments['s1']
+    # name_suffix = input_arguments['s1'][0] if isinstance(input_arguments['s1'], (list, np.ndarray)) else input_arguments['s1']
     file_name =  f'{name_prefix}_simulation_results_{name_suffix}.npz'
 
     # plot some action potentials and electrograms
-    do_flag = 1
+    do_flag = 0
     if do_flag == 1: 
         # load simulation results
         simulation_results = dict(np.load(input_arguments['result_folder'] / file_name, allow_pickle=False))
