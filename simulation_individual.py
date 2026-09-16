@@ -213,8 +213,8 @@ if __name__ == "__main__":
 
     # display simulation movie
     ui_movie.run_viewer(
-        mesh_path=directory['data'] / f'{name_prefix}_mesh.npz',
-        result_path=input_arguments['result_folder'] / file_name,
+        mesh_path = directory['data'] / f'{name_prefix}_mesh.npz',
+        result_path = input_arguments['result_folder'] / file_name,
     )
 
     print('done')

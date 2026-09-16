@@ -11,7 +11,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
-
+import configuration
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, send_from_directory
 from werkzeug.serving import WSGIRequestHandler
@@ -219,4 +219,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    directory = configuration.directory_setup() # set up directories
+    name_prefixs = configuration.mesh_name()
+    name_prefix = name_prefixs[112]
+    name_suffix = '10'
+    file_name =  f'{name_prefix}_simulation_results_{name_suffix}.npz'
+
+    DEFAULT_MESH = None
+    DEFAULT_RESULT = None
+
+    run_viewer(mesh_path = directory['data'] / f'{name_prefix}_mesh.npz', result_path = directory['result'] / file_name)
+
