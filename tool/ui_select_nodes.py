@@ -47,7 +47,9 @@ geometry_data = {k: data[k] for k in data.files}
 node = geometry_data['vertex'] # triangular mesh vertices xyz coordinates
 face = geometry_data['face'] # triangular mesh faces vertex indices
 
-flag_file = directory['result'] / f'{name_prefix}_node_flag.npy'
+# default suffix for node flag files
+DEFAULT_SUFFIX = '00'
+flag_file = directory['result'] / f'{name_prefix}_node_flag_{DEFAULT_SUFFIX}.npy'
 if os.path.exists(flag_file):
     node_flag = np.load(flag_file).copy()
 else:
@@ -72,7 +74,44 @@ def save_flags():
     global node_flag
     data = request.get_json()
     node_flag = np.array(data['flags'], dtype=int)
-    np.save(flag_file, node_flag)
+    # accept optional suffix from the client; fall back to default
+    suffix = data.get('suffix', DEFAULT_SUFFIX) or DEFAULT_SUFFIX
+    out_path = directory['result'] / f'{name_prefix}_node_flag_{suffix}.npy'
+    np.save(out_path, node_flag)
+
+    # update global flag_file to the most recently saved file
+    try:
+        globals()['flag_file'] = out_path
+    except Exception:
+        pass
+    return jsonify({'status': 'saved', 'path': str(out_path)})
+
+
+@app.route('/api/load', methods=['POST'])
+def load_flags():
+    global node_flag
+    data = request.get_json()
+    suffix = data.get('suffix', DEFAULT_SUFFIX) or DEFAULT_SUFFIX
+    in_path = directory['result'] / f'{name_prefix}_node_flag_{suffix}.npy'
+    if os.path.exists(in_path):
+        node_flag = np.load(in_path).copy()
+        try:
+            globals()['flag_file'] = in_path
+        except Exception:
+            pass
+        return jsonify({'status': 'loaded', 'flags': node_flag.tolist()})
+    else:
+        # If the file does not exist, create it with zeros for all nodes
+        try:
+            node_flag = np.zeros(len(node), dtype=int)
+            np.save(in_path, node_flag)
+            try:
+                globals()['flag_file'] = in_path
+            except Exception:
+                pass
+            return jsonify({'status': 'created', 'flags': node_flag.tolist()})
+        except Exception as e:
+            return jsonify({'status': 'error', 'error': str(e)}), 500
 
     return jsonify({'status': 'saved'})
 

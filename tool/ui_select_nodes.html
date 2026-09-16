@@ -35,6 +35,8 @@
             <span id="line-width-value">15px</span>
             <div class="separator"></div>
         </div>
+        <label style="margin-right:6px;">Suffix:</label>
+        <input id="suffix-input" type="text" value="00" maxlength="8" style="width:48px; margin-right:8px;">
         <button class="btn-undo" id="btn-undo" title="Undo last selection">Undo</button>
         <button class="btn-clear" id="btn-clear" title="Clear all flags">Clear All</button>
         <button class="btn-save" id="btn-save" title="Save flags to file">Save</button>
@@ -46,7 +48,7 @@
     </div>
 
     <div id="instructions" style="display:none;">
-        Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Region: Shift + Drag &nbsp;|&nbsp; Line: choose Line mode + Shift + Drag
+        Rotate: Left drag &nbsp;|&nbsp; Pan: Right drag &nbsp;|&nbsp; Zoom: Scroll
     </div>
 
     <div id="output-panel" style="display:none;">
@@ -85,6 +87,7 @@
         let LINE_SELECTION_MAX_DISTANCE_PIXELS = parseInt(document.getElementById('line-width').value);
         let isSelecting = false;
         let isShiftPressed = false;
+        let selectionPointerDown = false;
         let selectionPoints = [];
         let selectionMode = 'line';
         let meshAdjacency = null;
@@ -119,16 +122,20 @@
             60, window.innerWidth / window.innerHeight, 0.01, 1000
         );
 
-        const controls = new TrackballControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dynamicDampingFactor = 0.12;
-        controls.noRotate = false;
-        controls.noPan = false;
-        controls.noZoom = false;
-        controls.rotateSpeed = 2.0;
-        controls.zoomSpeed = 1.0;
-        controls.panSpeed = 1.0;
-        controls.staticMoving = false;
+        function createControls() {
+            const newControls = new TrackballControls(camera, renderer.domElement);
+            newControls.enableDamping = true;
+            newControls.dynamicDampingFactor = 0.12;
+            newControls.noRotate = false;
+            newControls.noPan = false;
+            newControls.noZoom = false;
+            newControls.rotateSpeed = 2.0;
+            newControls.zoomSpeed = 1.0;
+            newControls.panSpeed = 1.0;
+            newControls.staticMoving = false;
+            return newControls;
+        }
+        let controls = createControls();
 
         // lasso overlay
         const lassoCanvas = document.getElementById('lasso-canvas');
@@ -711,6 +718,24 @@
             updateModeIndicator();
         });
 
+        function finishSelection() {
+            if (!isSelecting) return;
+            isSelecting = false;
+            selectionPointerDown = false;
+
+            if (controls) {
+                controls.dispose();
+            }
+            controls = createControls();
+            canvas.style.cursor = 'default';
+
+            if (selectionPoints.length >= 2) {
+                performSelection();
+            }
+            clearSelectionOverlay();
+            updateModeIndicator();
+        }
+
         // shift key state for mode indicator
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Shift') {
@@ -723,6 +748,9 @@
             if (e.key === 'Shift') {
                 isShiftPressed = false;
                 updateModeIndicator();
+                if (isSelecting && !selectionPointerDown) {
+                    finishSelection();
+                }
             }
         });
 
@@ -732,7 +760,14 @@
 
             if (shouldStartRegionSelection || shouldStartLineSelection) {
                 e.preventDefault();
+                e.stopPropagation();
                 isSelecting = true;
+                selectionPointerDown = true;
+
+                if (controls) {
+                    controls.dispose();
+                }
+                controls = createControls();
                 controls.enabled = false;
                 canvas.style.cursor = 'crosshair';
                 selectionPoints = [{ x: e.clientX, y: e.clientY }];
@@ -747,18 +782,15 @@
             }
         });
 
-        canvas.addEventListener('mouseup', function(e) {
+        window.addEventListener('mouseup', function(e) {
             if (isSelecting && e.button === 0) {
-                isSelecting = false;
-                controls.enabled = true;
-                canvas.style.cursor = 'default';
+                finishSelection();
+            }
+        });
 
-                if (selectionPoints.length >= 2) {
-                    performSelection();
-                }
-                clearSelectionOverlay();
-
-                updateModeIndicator();
+        window.addEventListener('blur', function() {
+            if (isSelecting) {
+                finishSelection();
             }
         });
 
@@ -767,10 +799,11 @@
 
         // ---- UI buttons ----
         document.getElementById('btn-save').addEventListener('click', async function() {
+            const suffix = (document.getElementById('suffix-input') && document.getElementById('suffix-input').value) || '00';
             const resp = await fetch('/api/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flags: Array.from(nodeFlags) })
+                body: JSON.stringify({ flags: Array.from(nodeFlags), suffix: suffix })
             });
             const result = await resp.json();
             showStatus('Saved!', 3000);
@@ -794,6 +827,45 @@
             updateNodeCount();
             showStatus('Undone');
         });
+
+        // reload flags when the suffix input changes (or user presses Enter)
+        async function loadSuffixFlags(suffix) {
+            if (!suffix) suffix = '00';
+            suffix = suffix.trim();
+            try {
+                const resp = await fetch('/api/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ suffix: suffix })
+                });
+                if (resp.status === 200) {
+                    const data = await resp.json();
+                    if (data.flags) {
+                        nodeFlags = new Int32Array(data.flags);
+                        updateColors();
+                        updateNodeCount();
+                        showStatus('Loaded flags for suffix ' + suffix, 3000);
+                        return;
+                    }
+                }
+                showStatus('Flag file not found for suffix ' + suffix, 3000);
+            } catch (err) {
+                showStatus('Error loading flags: ' + (err.message || err), 3000);
+            }
+        }
+
+        const suffixInput = document.getElementById('suffix-input');
+        if (suffixInput) {
+            suffixInput.addEventListener('change', function(e) {
+                loadSuffixFlags(e.target.value);
+            });
+            suffixInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loadSuffixFlags(e.target.value);
+                }
+            });
+        }
 
         document.getElementById('depth-threshold').addEventListener('input', function(e) {
             document.getElementById('depth-value').textContent = e.target.value + '%';
