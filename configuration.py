@@ -57,7 +57,7 @@ def mesh_name():
 
     return name_prefixes
 
-def assign_simulation_parameters(directory, name_prefix, geometry_data):
+def assign_simulation_parameters(directory, name_prefix, name_suffix, geometry_data):
     if name_prefix == 'sheet':
         geometry_flag = 0  # 2D
     else:
@@ -86,7 +86,7 @@ def assign_simulation_parameters(directory, name_prefix, geometry_data):
     node_flag = []
 
     if simulation_parameters['arrhythmia_flag'] == 3: # load node_flag for simulation with designed tissue properties
-        file_path = directory['result'] / f'{name_prefix}_node_flag.npy'
+        file_path = directory['result'] / f'{name_prefix}_node_flag_{name_suffix}.npy'
         vertex_flag = np.load(file_path)
         node = geometry_data['voxel']
         vertex = geometry_data['vertex']

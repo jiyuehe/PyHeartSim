@@ -99,6 +99,7 @@ if __name__ == "__main__":
     directory = configuration.directory_setup() # set up directories
     name_prefixs = configuration.mesh_name()
     name_prefix = name_prefixs[112]
+    name_suffix = '20'
 
     plot_lat_map_flag = 1 # 1: plot local activation time map. 0: do not plot local activation time map
     plot_phase_map_flag = 1 # 1: plot phase map. 0: do not plot phase map
@@ -109,10 +110,11 @@ if __name__ == "__main__":
     geometry_data = {k: data[k] for k in data.files}
 
     # simulation parameter settings
-    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(directory, name_prefix, geometry_data)
+    simulation_parameters, arrhythmia_parameters, heart_model_parameters = configuration.assign_simulation_parameters(directory, name_prefix, name_suffix, geometry_data)
 
     input_arguments = {}
     input_arguments['name_prefix'] = name_prefix
+    input_arguments['name_suffix'] = name_suffix
     input_arguments['geometry_data'] = geometry_data
     input_arguments['result_folder'] = Path('/home/j/Desktop/ssd/git/PyHeartSim/result')
     input_arguments['s1'] = arrhythmia_parameters['s1_pacing_voxel_id']
